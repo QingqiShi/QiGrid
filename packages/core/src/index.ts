@@ -1,2 +1,10 @@
 export { createGrid } from "./createGrid";
-export type { ColumnDef, GridInstance, GridOptions, Row } from "./types";
+export type {
+  ColumnDef,
+  GridInstance,
+  GridOptions,
+  GridState,
+  Listener,
+  Row,
+  Unsubscribe,
+} from "./types";

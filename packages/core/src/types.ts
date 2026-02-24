@@ -15,8 +15,22 @@ export interface Row<TData> {
   original: TData;
 }
 
+export interface GridState<TData> {
+  data: TData[];
+  columns: ColumnDef<TData>[];
+  rowModel: Row<TData>[];
+}
+
+export type Listener = () => void;
+export type Unsubscribe = () => void;
+
 export interface GridInstance<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
   getRows: () => Row<TData>[];
+  getState: () => GridState<TData>;
+  setState: (updater: (prev: GridState<TData>) => Partial<GridState<TData>>) => void;
+  setData: (data: TData[]) => void;
+  setColumns: (columns: ColumnDef<TData>[]) => void;
+  subscribe: (listener: Listener) => Unsubscribe;
 }

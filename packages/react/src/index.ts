@@ -1,2 +1,10 @@
-export type { ColumnDef, GridInstance, GridOptions, Row } from "@qigrid/core";
+export type {
+  ColumnDef,
+  GridInstance,
+  GridOptions,
+  GridState,
+  Listener,
+  Row,
+  Unsubscribe,
+} from "@qigrid/core";
 export { useGrid } from "./useGrid";

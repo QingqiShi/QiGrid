@@ -1,0 +1,10 @@
+{
+  "extends": "@qigrid/tsconfig/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "isolatedDeclarations": false
+  },
+  "include": ["src"]
+}

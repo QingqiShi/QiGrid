@@ -1,4 +1,5 @@
 export type {
+  Column,
   ColumnDef,
   GridInstance,
   GridOptions,

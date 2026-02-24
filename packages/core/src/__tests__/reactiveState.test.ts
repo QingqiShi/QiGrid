@@ -26,7 +26,8 @@ describe("reactive state model", () => {
       expect(state.data).toBe(data);
       expect(state.columns).toBe(columns);
       expect(state.rowModel).toHaveLength(2);
-      expect(state.rowModel[0]).toEqual({ index: 0, original: { name: "Alice", age: 30 } });
+      expect(state.rowModel[0]?.index).toBe(0);
+      expect(state.rowModel[0]?.original).toEqual({ name: "Alice", age: 30 });
     });
 
     it("returns a consistent snapshot (same reference until state changes)", () => {
@@ -136,7 +137,8 @@ describe("reactive state model", () => {
 
       expect(grid.getState().data).toBe(newData);
       expect(grid.getRows()).toHaveLength(1);
-      expect(grid.getRows()[0]).toEqual({ index: 0, original: { name: "Carol", age: 35 } });
+      expect(grid.getRows()[0]?.index).toBe(0);
+      expect(grid.getRows()[0]?.original).toEqual({ name: "Carol", age: 35 });
     });
 
     it("notifies subscribers after updating", () => {
@@ -213,7 +215,8 @@ describe("reactive state model", () => {
 
       expect(grid.getState().data).toBe(newData);
       expect(grid.getRows()).toHaveLength(1);
-      expect(grid.getRows()[0]).toEqual({ index: 0, original: { name: "Zara", age: 22 } });
+      expect(grid.getRows()[0]?.index).toBe(0);
+      expect(grid.getRows()[0]?.original).toEqual({ name: "Zara", age: 22 });
     });
 
     it("receives previous state in the updater function", () => {

@@ -8,6 +8,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "e2e": "turbo run e2e",
+    "bench": "turbo run bench",
     "dev": "turbo run dev --filter=@qigrid/playground"
   },
   "devDependencies": {

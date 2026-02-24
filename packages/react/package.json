@@ -25,7 +25,8 @@
     "build": "tsdown",
     "check": "tsc --noEmit",
     "lint": "biome check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "bench": "vitest bench"
   },
   "dependencies": {
     "@qigrid/core": "workspace:*"

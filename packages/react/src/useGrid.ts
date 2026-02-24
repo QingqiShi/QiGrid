@@ -29,5 +29,14 @@ export function useGrid<TData>(options: GridOptions<TData>): GridInstance<TData>
     }
   }, [grid, options.columns]);
 
+  useEffect(() => {
+    if (
+      options.columnFilters !== undefined &&
+      grid.getState().columnFilters !== options.columnFilters
+    ) {
+      grid.setColumnFilters(options.columnFilters);
+    }
+  }, [grid, options.columnFilters]);
+
   return grid;
 }

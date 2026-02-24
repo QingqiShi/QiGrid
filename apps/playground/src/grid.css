@@ -84,6 +84,49 @@ body {
   user-select: none;
 }
 
+.sortable-header {
+  cursor: pointer;
+}
+
+.sortable-header:hover {
+  background: #e2e8f0;
+}
+
+.sort-indicator {
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+.filter-row .filter-cell {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: #fff;
+  outline: none;
+}
+
+.filter-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.filter-input::placeholder {
+  color: #94a3b8;
+}
+
 .grid-table td {
   padding: 8px 16px;
   border-bottom: 1px solid #f1f5f9;

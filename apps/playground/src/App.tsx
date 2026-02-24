@@ -1,6 +1,6 @@
-import type { ColumnDef } from "@qigrid/react";
+import type { ColumnDef, SortingState } from "@qigrid/react";
 import { useGrid } from "@qigrid/react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
 
@@ -40,6 +40,12 @@ function formatSalary(value: number): string {
   return `$${value.toLocaleString("en-US")}`;
 }
 
+function getSortIndicator(sorting: SortingState, columnId: string): string {
+  const sort = sorting.find((s) => s.columnId === columnId);
+  if (sort === undefined) return "";
+  return sort.direction === "asc" ? " \u2191" : " \u2193";
+}
+
 function CellValue({ col, value }: { col: ColumnDef<Employee>; value: unknown }) {
   const str = String(value);
 
@@ -74,24 +80,57 @@ export function App() {
   const options = useMemo(() => ({ data, columns }), []);
   const grid = useGrid(options);
   const rows = grid.getRows();
+  const { sorting } = grid.getState();
+  const totalRows = grid.getState().data.length;
+
+  const handleHeaderClick = useCallback(
+    (columnId: string) => {
+      grid.toggleSort(columnId);
+    },
+    [grid],
+  );
 
   return (
     <div className="playground">
       <h1>QiGrid Playground</h1>
       <p className="subtitle">
-        Rendering {rows.length} rows via <code>@qigrid/react</code> &rarr; <code>@qigrid/core</code>
+        Showing {rows.length} of {totalRows} rows via <code>@qigrid/react</code> &rarr;{" "}
+        <code>@qigrid/core</code>
       </p>
 
       <div className="grid-container">
         <div className="grid-info">
-          {grid.columns.length} columns &middot; {rows.length} rows
+          {grid.columns.length} columns &middot; Showing {rows.length} of {totalRows} rows
         </div>
         <div className="grid-scroll">
           <table className="grid-table">
             <thead>
               <tr>
                 {grid.columns.map((col) => (
-                  <th key={col.id}>{col.header}</th>
+                  <th
+                    key={col.id}
+                    className="sortable-header"
+                    onClick={() => handleHeaderClick(col.id)}
+                  >
+                    {col.header}
+                    <span className="sort-indicator">{getSortIndicator(sorting, col.id)}</span>
+                  </th>
+                ))}
+              </tr>
+              <tr className="filter-row">
+                {grid.columns.map((col) => (
+                  <th key={`filter-${col.id}`} className="filter-cell">
+                    <input
+                      type="text"
+                      className="filter-input"
+                      placeholder={`Filter ${col.header}...`}
+                      aria-label={`Filter ${col.header}`}
+                      data-column-id={col.id}
+                      onChange={(e) => {
+                        grid.setColumnFilter(col.id, e.target.value);
+                      }}
+                    />
+                  </th>
                 ))}
               </tr>
             </thead>

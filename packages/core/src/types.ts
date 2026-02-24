@@ -3,7 +3,23 @@ export interface ColumnDef<TData> {
   accessorKey?: keyof TData & string;
   accessorFn?: (row: TData) => unknown;
   header: string;
+  filterFn?: (value: unknown, filterValue: unknown) => boolean;
+  sortingFn?: (a: unknown, b: unknown) => number;
 }
+
+export interface ColumnSort {
+  columnId: string;
+  direction: "asc" | "desc";
+}
+
+export type SortingState = ColumnSort[];
+
+export interface ColumnFilter {
+  columnId: string;
+  value: unknown;
+}
+
+export type ColumnFiltersState = ColumnFilter[];
 
 export interface Column<TData> {
   id: string;
@@ -16,6 +32,8 @@ export interface Column<TData> {
 export interface GridOptions<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
+  columnFilters?: ColumnFiltersState;
+  sorting?: SortingState;
 }
 
 export interface Row<TData> {
@@ -27,6 +45,8 @@ export interface Row<TData> {
 export interface GridState<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
+  columnFilters: ColumnFiltersState;
+  sorting: SortingState;
   rowModel: Row<TData>[];
 }
 
@@ -42,5 +62,9 @@ export interface GridInstance<TData> {
   setState: (updater: (prev: GridState<TData>) => Partial<GridState<TData>>) => void;
   setData: (data: TData[]) => void;
   setColumns: (columns: ColumnDef<TData>[]) => void;
+  setColumnFilters: (filters: ColumnFiltersState) => void;
+  setColumnFilter: (columnId: string, value: unknown) => void;
+  setSorting: (sorting: SortingState) => void;
+  toggleSort: (columnId: string) => void;
   subscribe: (listener: Listener) => Unsubscribe;
 }

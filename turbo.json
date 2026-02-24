@@ -12,6 +12,10 @@
     "test": {
       "dependsOn": ["^build"]
     },
+    "bench": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "e2e": {
       "dependsOn": ["^build"]
     },

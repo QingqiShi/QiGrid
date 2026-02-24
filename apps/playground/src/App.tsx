@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { useGrid } from "@qigrid/react";
 import type { ColumnDef } from "@qigrid/react";
+import { useGrid } from "@qigrid/react";
+import { useMemo } from "react";
 
 interface Person {
   name: string;
@@ -27,8 +27,7 @@ export function App() {
     <div style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>
       <h1>QiGrid Playground</h1>
       <p>
-        Import chain verified: <code>@qigrid/react</code> &rarr;{" "}
-        <code>@qigrid/core</code>
+        Import chain verified: <code>@qigrid/react</code> &rarr; <code>@qigrid/core</code>
       </p>
       <table style={{ borderCollapse: "collapse", marginTop: 16 }}>
         <thead>
@@ -47,13 +46,8 @@ export function App() {
           {rows.map((row) => (
             <tr key={row.index}>
               {grid.columns.map((col) => (
-                <td
-                  key={col.id}
-                  style={{ border: "1px solid #ccc", padding: "8px 16px" }}
-                >
-                  {col.accessorKey != null
-                    ? String(row.original[col.accessorKey])
-                    : ""}
+                <td key={col.id} style={{ border: "1px solid #ccc", padding: "8px 16px" }}>
+                  {col.accessorKey != null ? String(row.original[col.accessorKey]) : ""}
                 </td>
               ))}
             </tr>

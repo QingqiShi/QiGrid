@@ -1,0 +1,18 @@
+import { expect, test } from "@playwright/test";
+
+test("renders the QiGrid playground", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("h1")).toHaveText("QiGrid Playground");
+  await expect(page.locator("table")).toBeVisible();
+
+  // Verify the table has the expected column headers
+  const headers = page.locator("th");
+  await expect(headers).toHaveCount(2);
+  await expect(headers.nth(0)).toHaveText("Name");
+  await expect(headers.nth(1)).toHaveText("Age");
+
+  // Verify data rows are rendered
+  const rows = page.locator("tbody tr");
+  await expect(rows).toHaveCount(3);
+});

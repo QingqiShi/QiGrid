@@ -28,3 +28,8 @@ pnpm-debug.log*
 
 # vite
 vite.config.ts.timestamp-*
+
+# playwright
+test-results/
+playwright-report/
+blob-report/

@@ -4,9 +4,15 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testName}/{arg}{ext}",
   use: {
     baseURL: "http://localhost:5173",
     headless: true,
+  },
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+    },
   },
   webServer: {
     command: "pnpm dev",

@@ -34,7 +34,9 @@ describe("createGrid", () => {
     const rows = grid.getRows();
 
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toEqual({ index: 0, original: { name: "Alice", age: 30 } });
-    expect(rows[1]).toEqual({ index: 1, original: { name: "Bob", age: 25 } });
+    expect(rows[0]?.index).toBe(0);
+    expect(rows[0]?.original).toEqual({ name: "Alice", age: 30 });
+    expect(rows[1]?.index).toBe(1);
+    expect(rows[1]?.original).toEqual({ name: "Bob", age: 25 });
   });
 });

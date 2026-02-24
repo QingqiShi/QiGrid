@@ -1,5 +1,6 @@
 export { createGrid } from "./createGrid";
 export type {
+  Column,
   ColumnDef,
   GridInstance,
   GridOptions,

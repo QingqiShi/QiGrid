@@ -5,6 +5,14 @@ export interface ColumnDef<TData> {
   header: string;
 }
 
+export interface Column<TData> {
+  id: string;
+  accessorKey: (keyof TData & string) | undefined;
+  accessorFn: ((row: TData) => unknown) | undefined;
+  header: string;
+  getValue: (row: TData) => unknown;
+}
+
 export interface GridOptions<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
@@ -13,6 +21,7 @@ export interface GridOptions<TData> {
 export interface Row<TData> {
   index: number;
   original: TData;
+  getValue: (columnId: string) => unknown;
 }
 
 export interface GridState<TData> {
@@ -27,6 +36,7 @@ export type Unsubscribe = () => void;
 export interface GridInstance<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
+  getColumns: () => Column<TData>[];
   getRows: () => Row<TData>[];
   getState: () => GridState<TData>;
   setState: (updater: (prev: GridState<TData>) => Partial<GridState<TData>>) => void;

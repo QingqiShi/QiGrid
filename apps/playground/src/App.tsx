@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@qigrid/react";
 import { useGrid } from "@qigrid/react";
 import { useMemo } from "react";
-import { generateEmployees, type Employee } from "./data";
+import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
 
 const data = generateEmployees(100);
@@ -37,16 +37,10 @@ const deptColors: Record<string, string> = {
 };
 
 function formatSalary(value: number): string {
-  return "$" + value.toLocaleString("en-US");
+  return `$${value.toLocaleString("en-US")}`;
 }
 
-function CellValue({
-  col,
-  value,
-}: {
-  col: ColumnDef<Employee>;
-  value: unknown;
-}) {
+function CellValue({ col, value }: { col: ColumnDef<Employee>; value: unknown }) {
   const str = String(value);
 
   switch (col.id) {
@@ -55,9 +49,7 @@ function CellValue({
     case "email":
       return <span className="cell-email">{str}</span>;
     case "salary":
-      return (
-        <span className="cell-salary">{formatSalary(value as number)}</span>
-      );
+      return <span className="cell-salary">{formatSalary(value as number)}</span>;
     case "startDate":
       return <span className="cell-date">{str}</span>;
     case "department":
@@ -87,8 +79,7 @@ export function App() {
     <div className="playground">
       <h1>QiGrid Playground</h1>
       <p className="subtitle">
-        Rendering {rows.length} rows via <code>@qigrid/react</code> &rarr;{" "}
-        <code>@qigrid/core</code>
+        Rendering {rows.length} rows via <code>@qigrid/react</code> &rarr; <code>@qigrid/core</code>
       </p>
 
       <div className="grid-container">

@@ -1,0 +1,127 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background: #f5f7fa;
+  color: #1a1a2e;
+}
+
+.playground {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.playground h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.playground .subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.playground .subtitle code {
+  background: #e5e7eb;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.grid-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.grid-info {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.grid-scroll {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.grid-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.grid-table th {
+  background: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.grid-table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.grid-table tbody tr:hover {
+  background: #f0f9ff;
+}
+
+.grid-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.grid-table tbody tr:nth-child(even):hover {
+  background: #f0f9ff;
+}
+
+/* Column-specific styles */
+.cell-id {
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-salary {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.cell-email {
+  color: #3b82f6;
+}
+
+.cell-date {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+}
+
+.cell-department {
+  /* department badge styling applied inline via JS */
+}

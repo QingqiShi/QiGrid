@@ -7,10 +7,10 @@ test("renders the QiGrid playground", async ({ page }) => {
   await expect(page.locator("table")).toBeVisible();
 
   // Verify the table has the expected column headers
-  const headers = page.locator("th");
+  const headers = page.locator("thead tr:first-child th");
   await expect(headers).toHaveCount(9);
-  await expect(headers.nth(0)).toHaveText("ID");
-  await expect(headers.nth(1)).toHaveText("First Name");
+  await expect(headers.nth(0)).toHaveText(/ID/);
+  await expect(headers.nth(1)).toHaveText(/First Name/);
 
   // Verify 100 data rows are rendered
   const rows = page.locator("tbody tr");

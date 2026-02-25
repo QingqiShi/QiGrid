@@ -1,4 +1,4 @@
-export { buildColumnModel } from "./columns";
+export { buildColumnModel, computeTotalWidth } from "./columns";
 export { createGrid } from "./createGrid";
 export { defaultFilterFn, filterRows } from "./filtering";
 export { buildRowModel } from "./rowModel";

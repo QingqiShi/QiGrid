@@ -5,6 +5,9 @@ export interface ColumnDef<TData> {
   header: string;
   filterFn?: (value: unknown, filterValue: unknown) => boolean;
   sortingFn?: (a: unknown, b: unknown) => number;
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
 }
 
 export interface ColumnSort {
@@ -27,6 +30,9 @@ export interface Column<TData> {
   accessorFn: ((row: TData) => unknown) | undefined;
   header: string;
   getValue: (row: TData) => unknown;
+  width: number;
+  minWidth: number;
+  maxWidth: number;
 }
 
 export interface GridOptions<TData> {

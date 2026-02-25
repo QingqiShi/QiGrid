@@ -1,5 +1,5 @@
 import type { ColumnFiltersState, GridOptions, Row, SortingState } from "@qigrid/core";
-import { buildColumnModel, filterRows, sortRows } from "@qigrid/core";
+import { buildColumnModel, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
 import { useCallback, useMemo, useReducer } from "react";
 import type { GridAction, GridInternalState, UseGridReturn } from "./types";
 
@@ -38,6 +38,12 @@ function gridReducer(state: GridInternalState, action: GridAction): GridInternal
           : [...existing, { columnId, value }];
       return { ...state, columnFilters: newFilters };
     }
+
+    case "SET_COLUMN_WIDTH":
+      return {
+        ...state,
+        columnWidths: { ...state.columnWidths, [action.columnId]: action.width },
+      };
   }
 }
 
@@ -47,10 +53,38 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
   const [state, dispatch] = useReducer(gridReducer, {
     sorting: options.sorting ?? [],
     columnFilters: options.columnFilters ?? [],
+    columnWidths: {},
   });
 
-  // Stage 1: Column model
-  const columnModel = useMemo(() => buildColumnModel(columnDefs), [columnDefs]);
+  // Stage 1: Build base column model from defs
+  const baseColumnModel = useMemo(() => buildColumnModel(columnDefs), [columnDefs]);
+
+  // Stage 1b: Apply width overrides from state, prune stale entries
+  const columnModel = useMemo(() => {
+    const columnIds = new Set(baseColumnModel.map((c) => c.id));
+
+    // Check if any overrides exist for current columns
+    let hasOverrides = false;
+    for (const id of Object.keys(state.columnWidths)) {
+      if (columnIds.has(id)) {
+        hasOverrides = true;
+        break;
+      }
+    }
+
+    if (!hasOverrides) return baseColumnModel;
+
+    return baseColumnModel.map((col) => {
+      const override = state.columnWidths[col.id];
+      if (override === undefined) return col;
+      const clampedWidth = Math.min(Math.max(override, col.minWidth), col.maxWidth);
+      if (clampedWidth === col.width) return col;
+      return { ...col, width: clampedWidth };
+    });
+  }, [baseColumnModel, state.columnWidths]);
+
+  // Stage 1c: Total width
+  const totalWidth = useMemo(() => computeTotalWidth(columnModel), [columnModel]);
 
   // Stage 2: Filtered data
   const filteredData = useMemo(
@@ -97,10 +131,16 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
     [],
   );
 
+  const setColumnWidth = useCallback(
+    (columnId: string, width: number) => dispatch({ type: "SET_COLUMN_WIDTH", columnId, width }),
+    [],
+  );
+
   return useMemo(
     () => ({
       rows,
       columns: columnModel,
+      totalWidth,
       sorting: state.sorting,
       columnFilters: state.columnFilters,
       data,
@@ -109,10 +149,12 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setSorting,
       setColumnFilter,
       setColumnFilters,
+      setColumnWidth,
     }),
     [
       rows,
       columnModel,
+      totalWidth,
       state.sorting,
       state.columnFilters,
       data,
@@ -121,6 +163,7 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setSorting,
       setColumnFilter,
       setColumnFilters,
+      setColumnWidth,
     ],
   );
 }

@@ -177,4 +177,112 @@ describe("useGrid", () => {
     expect(row?.getValue("name")).toBe("Alice");
     expect(row?.getValue("age")).toBe(20);
   });
+
+  describe("column sizing", () => {
+    it("columns include default widths", () => {
+      const data = makeData("Alice");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      for (const col of result.current.columns) {
+        expect(col.width).toBe(150);
+        expect(col.minWidth).toBe(50);
+        expect(col.maxWidth).toBe(Number.POSITIVE_INFINITY);
+      }
+    });
+
+    it("columns include explicit widths from ColumnDef", () => {
+      const data = makeData("Alice");
+      const cols: ColumnDef<Person>[] = [
+        {
+          id: "name",
+          accessorKey: "name",
+          header: "Name",
+          width: 200,
+          minWidth: 100,
+          maxWidth: 400,
+        },
+        { id: "age", accessorKey: "age", header: "Age", width: 80 },
+      ];
+      const { result } = renderHook(() => useGrid({ data, columns: cols }));
+
+      expect(result.current.columns[0]?.width).toBe(200);
+      expect(result.current.columns[0]?.minWidth).toBe(100);
+      expect(result.current.columns[0]?.maxWidth).toBe(400);
+      expect(result.current.columns[1]?.width).toBe(80);
+    });
+
+    it("exposes totalWidth as sum of column widths", () => {
+      const data = makeData("Alice");
+      const cols: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 200 },
+        { id: "age", accessorKey: "age", header: "Age", width: 100 },
+      ];
+      const { result } = renderHook(() => useGrid({ data, columns: cols }));
+
+      expect(result.current.totalWidth).toBe(300);
+    });
+
+    it("setColumnWidth updates a column width and clamps to min/max", () => {
+      const data = makeData("Alice");
+      const cols: ColumnDef<Person>[] = [
+        {
+          id: "name",
+          accessorKey: "name",
+          header: "Name",
+          width: 200,
+          minWidth: 100,
+          maxWidth: 400,
+        },
+        { id: "age", accessorKey: "age", header: "Age", width: 100 },
+      ];
+      const { result } = renderHook(() => useGrid({ data, columns: cols }));
+
+      // Set within range
+      act(() => result.current.setColumnWidth("name", 300));
+      expect(result.current.columns[0]?.width).toBe(300);
+      expect(result.current.totalWidth).toBe(400);
+
+      // Clamp below min
+      act(() => result.current.setColumnWidth("name", 50));
+      expect(result.current.columns[0]?.width).toBe(100);
+
+      // Clamp above max
+      act(() => result.current.setColumnWidth("name", 500));
+      expect(result.current.columns[0]?.width).toBe(400);
+    });
+
+    it("setColumnWidth is a stable function reference", () => {
+      const data = makeData("Alice");
+      const { result, rerender } = renderHook(() => useGrid({ data, columns }));
+
+      const fn = result.current.setColumnWidth;
+      rerender();
+      expect(result.current.setColumnWidth).toBe(fn);
+    });
+
+    it("prunes stale width overrides when columnDefs change", () => {
+      const data = makeData("Alice");
+      const cols1: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 200 },
+        { id: "age", accessorKey: "age", header: "Age", width: 100 },
+      ];
+      const cols2: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 200 },
+      ];
+
+      const { result, rerender } = renderHook(({ columns: c }) => useGrid({ data, columns: c }), {
+        initialProps: { columns: cols1 },
+      });
+
+      // Set a width override on the "age" column
+      act(() => result.current.setColumnWidth("age", 250));
+      expect(result.current.columns[1]?.width).toBe(250);
+
+      // Remove "age" column — the override should not cause issues
+      rerender({ columns: cols2 });
+      expect(result.current.columns).toHaveLength(1);
+      expect(result.current.columns[0]?.id).toBe("name");
+      expect(result.current.columns[0]?.width).toBe(200);
+    });
+  });
 });

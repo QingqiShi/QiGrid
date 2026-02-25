@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildColumnModel } from "../columns";
+import { buildColumnModel, computeTotalWidth } from "../columns";
 import { createGrid } from "../createGrid";
 import type { ColumnDef } from "../types";
 
@@ -158,6 +158,100 @@ describe("column model", () => {
 
       // Same row object now resolves the new column
       expect(row?.getValue("age")).toBe(30);
+    });
+  });
+
+  describe("column sizing", () => {
+    it("applies default widths when none specified", () => {
+      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
+
+      expect(col?.width).toBe(150);
+      expect(col?.minWidth).toBe(50);
+      expect(col?.maxWidth).toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it("uses explicit widths from ColumnDef", () => {
+      const columns: ColumnDef<Person>[] = [
+        {
+          id: "name",
+          accessorKey: "name",
+          header: "Name",
+          width: 200,
+          minWidth: 100,
+          maxWidth: 300,
+        },
+      ];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
+
+      expect(col?.width).toBe(200);
+      expect(col?.minWidth).toBe(100);
+      expect(col?.maxWidth).toBe(300);
+    });
+
+    it("clamps width below minWidth to minWidth", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 30, minWidth: 80 },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.width).toBe(80);
+    });
+
+    it("clamps width above maxWidth to maxWidth", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 500, maxWidth: 250 },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.width).toBe(250);
+    });
+
+    it("clamps default width to minWidth when minWidth exceeds default", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", minWidth: 200 },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.width).toBe(200);
+    });
+
+    it("clamps default width to maxWidth when maxWidth is below default", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", maxWidth: 80 },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.width).toBe(80);
+    });
+  });
+
+  describe("computeTotalWidth", () => {
+    it("sums column widths", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", width: 200 },
+        { id: "age", accessorKey: "age", header: "Age", width: 100 },
+        { id: "email", accessorKey: "email", header: "Email", width: 300 },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(computeTotalWidth(cols)).toBe(600);
+    });
+
+    it("returns 0 for empty column list", () => {
+      expect(computeTotalWidth([])).toBe(0);
+    });
+
+    it("uses default widths in sum when unspecified", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name" },
+        { id: "age", accessorKey: "age", header: "Age" },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(computeTotalWidth(cols)).toBe(300);
     });
   });
 });

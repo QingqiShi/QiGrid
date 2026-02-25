@@ -1,35 +1,41 @@
-# TASK-011: Column sizing model
+# TASK-011: Refactor core to stateless pure functions
 
-**Phase:** 1 — Foundation
-**Blocked by:** none (builds on TASK-007 column model)
+**Phase:** 0 — Architecture refactor
+**Blocked by:** none
+
+## Why
+
+The current core (`createGrid()`) is a stateful engine — it owns state, exposes subscribe/getState, and manages its own notification system. This forces React into an external-store bridge pattern (`useSyncExternalStore`), which deoptimizes concurrent rendering. Since we have no cross-framework requirement, core should be stateless and let React own state and scheduling.
 
 ## Goal
 
-Add width management to the column model so every column has a computed width. This is foundational — virtualization, auto-sizing, and any future resize interaction all depend on it.
+Refactor `@qigrid/core` from a stateful `createGrid()` factory to a library of pure transform functions. Each function takes data in and returns transformed data out — no state, no subscriptions, no side effects.
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- `ColumnDef<TData>` gains optional sizing props: `width?: number`, `minWidth?: number`, `maxWidth?: number`
-- `Column<TData>` exposes computed `width`, `minWidth`, `maxWidth`
-- Defaults: `width: 150`, `minWidth: 50`, `maxWidth: Infinity`
-- `GridInstance` exposes `setColumnWidth(columnId: string, width: number)` — clamps to min/max, updates state, notifies subscribers
-- `GridInstance` exposes `getTotalWidth(): number` — sum of all column widths
-- `GridState` includes `columnWidths: Record<string, number>` for runtime overrides
-- `getColumns()` returns columns with their current effective width (def default → runtime override, clamped)
-- Column width changes trigger subscriber notifications
+- Export pure transform functions for each pipeline stage:
+  - Sorting: takes rows + sorting state, returns sorted rows
+  - Filtering: takes rows + column filters + column defs, returns filtered rows
+  - Column model: takes column defs, returns resolved columns with getValue
+- Each function is independently importable and tree-shakeable
+- No internal state, no subscribe/notify pattern, no `Listener`/`Unsubscribe` types
+- `createGrid` may remain temporarily for backwards compat but should not be the recommended API
+- Types updated: remove `GridState`, `GridInstance`, `Listener`, `Unsubscribe` (or deprecate)
+- `Row`, `Column`, `ColumnDef`, `ColumnSort`, `ColumnFilter` types preserved
 
 ### Tests
 
-- Default widths (150px when unspecified)
-- Explicit widths from ColumnDef
-- min/max clamping (value below min → min, value above max → max)
-- `setColumnWidth` updates state and notifies
-- `getTotalWidth` sums correctly
-- `getColumns()` reflects runtime width overrides
-- Width changes after `setColumns()` reset runtime overrides for removed columns
+- Existing sort/filter unit tests adapted to call pure functions directly
+- Same behavioral coverage — just different call sites
+- All tests pass
 
-### Quality gate
+### What NOT to do
+
+- Do not touch `@qigrid/react` or the playground — TASK-012 handles that
+- Do not add new features (grouping, virtualization, etc.) — just refactor what exists
+
+## Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass

@@ -65,15 +65,14 @@ CI enforces this gate. Optional modules and UI bindings are excluded from the bu
 
 | Operation | Dataset | Target |
 |---|---|---|
-| `createGrid` (cold start, full pipeline) | 100k rows | ≤ 20ms |
-| Sort toggle (single column, strings) | 100k rows | ≤ 40ms |
-| Filter change (string includes) | 100k rows | ≤ 30ms |
+| Sort (single column, strings) | 100k rows | ≤ 40ms |
+| Filter (string includes) | 100k rows | ≤ 30ms |
 | Group by (single column) | 100k rows | ≤ 60ms |
 | Full pipeline (filter + sort + group) | 100k rows | ≤ 100ms |
-| `setScrollTop` (virtual range recalc) | 1M rows | ≤ 1ms |
-| `getVisibleRows` | 1M rows | ≤ 0.5ms |
+| Virtual range computation | 1M rows | ≤ 1ms |
+| Visible row slicing | 1M rows | ≤ 0.5ms |
 
-Individual stage benchmarks measure each transform in isolation. The full pipeline benchmark validates end-to-end latency with all stages active.
+Each benchmark measures a pure function call. The full pipeline benchmark validates all stages composed together.
 
 ### Rendering benchmarks
 
@@ -101,7 +100,7 @@ Row model should not duplicate source data. The grid holds references to the ori
 ```
 qigrid/
   packages/
-    core/           # framework-agnostic grid engine (state, sorting, filtering, virtualization, grouping)
+    core/           # stateless transform functions (sorting, filtering, virtualization, grouping)
     react/          # React bindings — useGrid hook + optional components (VirtualGrid, etc.)
   apps/
     playground/     # Vite app for integration demos and manual testing
@@ -118,20 +117,25 @@ qigrid/
 
 ### Package boundaries
 
-- **`@qigrid/core`** — zero React dependency. Pure TypeScript. Owns all grid state, data transformations (sort, filter, group, expand), virtualization math, column/row models, keyboard focus model, and export logic. Exports a `createGrid(options)` factory returning a grid instance with methods and reactive state.
-- **`@qigrid/react`** — depends on `@qigrid/core`. Provides a `useGrid<TData>(options)` hook wrapping the core instance via `useSyncExternalStore`. Exports optional components and hooks for virtualization, column auto-sizing, etc.
+- **`@qigrid/core`** — zero React dependency. Pure TypeScript. Exports **stateless transform functions** (sort, filter, group, expand, virtualize, export) and type definitions. No state management, no subscriptions — just data in, data out.
+- **`@qigrid/react`** — depends on `@qigrid/core`. **Owns all state.** The `useGrid` hook manages grid state via React primitives (`useState`/`useReducer`) and derives the row model through a `useMemo` pipeline that calls core transform functions. This lets React control scheduling — expensive operations like sorting 100k rows can use `useTransition` for non-blocking updates. Exports optional components (e.g., `<VirtualGrid>`) and hooks (e.g., `useColumnAutoSize`).
 
 ### API design principles
 
-The grid is generic over row data type `TData`. Columns define accessors (key-based or function-based). The grid is configured via an options object and returns a stateful instance. See the code in `packages/core/src/types.ts` for current type definitions.
+- The grid is generic over row data type `TData`. Columns define accessors (key-based or function-based).
+- **Core is stateless.** Each transform is a pure function: rows in, transformed rows out. No side effects, no subscriptions, no internal caches.
+- **React owns state and scheduling.** `useGrid` is the primary API. It manages sorting/filtering/grouping state, computes derived row models via `useMemo`, and leverages React's concurrent features (`useTransition`, `useDeferredValue`) for responsiveness under load.
+- The consumer controls state transitions — `useGrid` returns state and updater functions, not an opaque instance.
 
 ### Derived model pipeline
 
-Models are computed in stages. Changes in one domain only recompute downstream stages:
+Models are computed in stages via chained `useMemo` calls. Each stage only recomputes when its specific inputs change:
 
 ```
 data → filter → sort → group → expand → flatten → virtualize → visible rows
 ```
+
+Each arrow is a pure function from core. React memoizes each stage independently.
 
 ### Virtualization strategy
 

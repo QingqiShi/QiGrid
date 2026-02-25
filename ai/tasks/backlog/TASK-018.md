@@ -1,36 +1,45 @@
-# TASK-018: Data export
+# TASK-018: Keyboard navigation
 
-**Phase:** 4 — Polish
-**Blocked by:** TASK-014 (export should respect grouping)
+**Phase:** 3 — Core features
+**Blocked by:** TASK-015 (needs virtualization awareness for PageUp/PageDown)
 
 ## Goal
 
-Export the current grid data (respecting active filters, sorting, grouping) as CSV, TSV, or JSON.
+Implement cell-level keyboard navigation. Users can move focus between cells using arrow keys. Works with virtualization (focus moves can trigger scroll).
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- `GridInstance` exposes `exportData(format: 'csv' | 'tsv' | 'json'): string`
-- Export uses `getRows()` output (i.e., reflects current filter/sort/group state)
-- CSV/TSV: header row from column headers, data rows from cell values. Proper escaping (quotes, commas, newlines).
-- JSON: array of objects keyed by column ID
-- Group rows are included in export with indentation or a group indicator (configurable or sensible default)
-- Detail rows are excluded from export by default
+- Pure function to compute next focus position: takes current cell, direction, grid bounds, page size → returns new cell position
+- Directions: up, down, left, right
+- Home/End: first/last column in current row
+- PageUp/PageDown: move by page size (containerHeight / rowHeight rows)
+- Clamps at grid boundaries (doesn't wrap)
+
+### React (`@qigrid/react`)
+
+- Focused cell state managed by `useGrid` or a companion hook
+- Grid container is focusable (`tabIndex={0}`) and captures keyboard events
+- Arrow keys, Home, End, PageUp, PageDown handled via `onKeyDown`
+- When focus moves beyond the visible virtual range, scroll to bring the focused cell into view
+- Focused cell rendered with a visual indicator (e.g., outline/border)
+- Enter/Space on a focused cell fires an optional `onCellAction` callback
 
 ### Playground
 
-- Add an "Export CSV" button that downloads a `.csv` file
-- Exported file reflects current filters/sorting
+- Click a cell to focus it
+- Arrow keys move between cells
+- Focused cell has visible highlight
+- PageUp/PageDown scrolls and moves focus
 
 ### Tests
 
-- CSV output matches expected format (headers, escaping, newlines)
-- TSV output uses tabs
-- JSON output is valid JSON with correct structure
-- Export respects active filters (only exports visible rows)
-- Export respects sorting order
-- Special characters in cell values are properly escaped
+- Arrow key movement in all 4 directions
+- Boundary clamping (can't move past edges)
+- Home/End within row
+- PageUp/PageDown moves by page size
+- Virtualized: focus beyond viewport scrolls to reveal cell
 
 ### Quality gate
 

@@ -1,46 +1,54 @@
-# TASK-016: Keyboard navigation
+# TASK-016: Row grouping
 
 **Phase:** 3 — Core features
-**Blocked by:** TASK-013 (needs virtualization awareness for PageUp/PageDown)
+**Blocked by:** TASK-015 (needs virtualization for grouped row rendering)
 
 ## Goal
 
-Implement cell-level keyboard navigation. Users can move focus between cells using arrow keys. Works with virtualization (focus moves can trigger scroll).
+Implement row grouping as pure functions in core. Users can group rows by one or more columns, producing a hierarchical row model with group header rows and leaf rows. Groups are collapsible.
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- `GridState` includes `focusedCell: { rowIndex: number; columnIndex: number } | null`
-- `GridInstance` exposes `setFocusedCell(rowIndex: number, columnIndex: number)` and `moveFocus(direction: 'up' | 'down' | 'left' | 'right')`
-- `moveFocus` clamps at grid boundaries (doesn't wrap)
-- Home/End: move to first/last column in current row
-- PageUp/PageDown: move by `Math.floor(containerHeight / rowHeight)` rows (virtualization-aware)
-- Focus changes trigger subscriber notification
-- When virtualized, moving focus beyond visible range triggers `setScrollTop` to bring focused cell into view
+- Pure function to group rows: takes rows + column IDs to group by + column model → returns grouped structure
+- Pure function to flatten grouped rows: takes grouped structure + expanded group IDs → returns flat list interleaving group rows and leaf rows
+  - Group rows have a `type: 'group'` discriminator, `groupValue`, `depth`, `childCount`, `isExpanded`
+  - Leaf rows have `type: 'leaf'` (or equivalent discriminator)
+- Collapsed groups hide their children from the flattened output
+- Multi-level grouping: grouping by [A, B] creates nested groups
+- Pipeline: filter → group → sort (within groups) → flatten → virtualize
+- Group IDs are deterministic (e.g., `"department:Engineering"` or `"department:Engineering>role:Senior"`)
 
 ### React (`@qigrid/react`)
 
-- `<VirtualGrid>` (or equivalent) renders focused cell with a visual indicator (e.g., outline/border)
-- Grid container is focusable (`tabIndex={0}`) and captures keyboard events
-- Arrow keys, Home, End, PageUp, PageDown handled via `onKeyDown`
-- Enter/Space on a focused cell fires an optional `onCellAction` callback
+- `useGrid` (or a companion hook) manages grouping state and expanded group IDs
+- Exposes updaters to set grouping columns and toggle group expansion
+
+### Edge cases
+
+- Group by column with all identical values (single group)
+- Group by column with all unique values (N groups of 1)
+- Empty data
+- Filter applies before grouping (groups reflect filtered data)
+- Sort applies within groups (leaf rows sorted within their group)
 
 ### Playground
 
-- Click a cell to focus it
-- Arrow keys move between cells
-- Focused cell has visible highlight
-- PageUp/PageDown scrolls and moves focus
+- Add a "Group by" dropdown (e.g., group by department)
+- Group headers are visually distinct (indented, bold, show count)
+- Click group header to expand/collapse
+- Grouping works alongside sorting and filtering
 
 ### Tests
 
-- Arrow key movement in all 4 directions
-- Boundary clamping (can't move past edges)
-- Home/End within row
-- PageUp/PageDown moves by page size
-- Focus change triggers notification
-- Virtualized: focus beyond viewport scrolls to reveal cell
+- Single-level grouping produces correct group + leaf rows
+- Multi-level grouping produces nested structure
+- Expand/collapse toggles child visibility
+- Filter → group pipeline order
+- Sort within groups
+- Empty groups after filtering
+- Group IDs are stable
 
 ### Quality gate
 

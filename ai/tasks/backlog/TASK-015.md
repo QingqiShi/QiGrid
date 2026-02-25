@@ -1,46 +1,42 @@
-# TASK-015: Row expansion / detail views
+# TASK-015: Virtualized scroll container (React component + playground)
 
-**Phase:** 3 — Core features
-**Blocked by:** TASK-014 (shares expand/collapse mechanics and row type discriminator)
+**Phase:** 2 — Virtualization
+**Blocked by:** TASK-013, TASK-014
 
 ## Goal
 
-Allow individual rows to be expanded to show a detail view. Expanded rows insert a detail row below the original. Works with virtualization (expanded rows affect virtual height).
+Build the React component that renders a virtualized grid using core's pure virtualization functions. Update the playground to demonstrate virtualization with 10k+ rows.
 
 ## Acceptance criteria
 
-### Core (`@qigrid/core`)
+### React (`@qigrid/react`)
 
-- `GridState` includes `expandedRowIds: Set<string>` (or equivalent, keyed by row index or a user-provided `getRowId`)
-- `GridOptions` accepts optional `getRowId?: (row: TData) => string` for stable row identity
-- `GridInstance` exposes `toggleRowExpanded(rowId: string)` and `setExpandedRowIds(ids: Set<string>)`
-- When a row is expanded, a detail row (`type: 'detail'`, `parentRowId`) is inserted after it in `getRows()`
-- Detail rows participate in virtualization (count toward totalHeight, can be windowed)
-- `Row` type gains `isExpanded: boolean` for expanded leaf rows
-
-### Edge cases
-
-- Expand/collapse while scrolled mid-list (no scroll jump)
-- Expand all / collapse all
-- Expanded row removed by filter (expansion state preserved, detail row hidden)
-- Works with grouping (expand a leaf row within a group)
+- Export a `<VirtualGrid>` component (or equivalent API — could be hooks + render helpers)
+- Outer container: scrollable div with configurable height
+- Inner spacer sized to `totalHeight x totalWidth` for native scrollbars
+- Visible rows absolutely positioned using CSS transforms for GPU compositing
+- On scroll, recomputes virtual range using core's pure function and re-renders
+- Only renders rows returned by the visible row slice
+- Column headers are sticky
+- Cells use column widths from TASK-013
+- Accepts data from `useGrid` — does not manage its own grid state
 
 ### Playground
 
-- Click a row to expand it, showing a detail panel below
-- Detail panel shows additional row data (e.g., full employee record)
-- Expand/collapse is visually indicated (chevron icon or similar)
+- Switch from `<table>` to `<VirtualGrid>`
+- Increase dataset to 10,000 rows
+- Smooth scrolling with 10k rows
+- Info bar shows total rows + visible range
+- Sorting and filtering still work through the virtualized container
 
 ### Tests
 
-- Toggle expand inserts detail row
-- Toggle collapse removes detail row
-- Expanded rows affect `getRows()` count
-- Virtualization accounts for detail rows in totalHeight
-- Filter hides expanded row → detail row also hidden
-- `getRowId` used for stable identity when provided
-- Works alongside grouping
+- Playwright e2e: scroll to middle, verify correct rows rendered
+- Playwright e2e: scroll to bottom, verify last rows rendered
+- Existing Playwright tests updated for new layout (or baselines updated)
+- React unit test: renders only visible rows, not full dataset
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `cd apps/playground && npx playwright test` passes

@@ -1,38 +1,37 @@
-# TASK-020: Bundle size CI gate + final validation
+# TASK-020: Data export
 
-**Phase:** 4 — Polish
-**Blocked by:** TASK-019
+**Phase:** 4 — Polish (stretch goal)
+**Blocked by:** TASK-016 (export should respect grouping)
 
 ## Goal
 
-Add automated bundle size enforcement to CI. Validate the complete v1 feature set meets all acceptance criteria from the SPEC.
+Export the current grid data (respecting active filters, sorting, grouping) as CSV, TSV, or JSON.
 
 ## Acceptance criteria
 
-### Bundle size gate
+### Core (`@qigrid/core`)
 
-- Add a script that measures the minified + gzipped size of `@qigrid/core` ESM output
-- Script fails (exit code 1) if size exceeds 30kb
-- Integrate into `pnpm turbo build` or as a separate turbo task (`pnpm turbo size`)
-- Output the size in CI logs for visibility
+- Pure function: takes rows + columns + format → returns formatted string
+- Formats: `csv`, `tsv`, `json`
+- CSV/TSV: header row from column headers, data rows from cell values. Proper escaping (quotes, commas, newlines).
+- JSON: array of objects keyed by column ID
+- Group rows included with a group indicator (configurable or sensible default)
+- Detail rows excluded by default
 
-### Final validation checklist
+### Playground
 
-- [ ] Sorting works (client-side, single and multi-column)
-- [ ] Filtering works (client-side, column filters with AND logic)
-- [ ] Row virtualization works (10k+ rows, smooth scroll)
-- [ ] Row grouping works (single and multi-level, expand/collapse)
-- [ ] Row expansion / detail views work
-- [ ] Column auto-sizing works (model + measurement hook)
-- [ ] Keyboard navigation works (arrow keys, Home/End, PageUp/PageDown)
-- [ ] Data export works (CSV/TSV/JSON)
-- [ ] Bundle size ≤30kb minified + gzipped
-- [ ] All performance benchmarks pass targets (TASK-019)
-- [ ] Playground demonstrates all features
-- [ ] All tests pass (unit, e2e, visual regression, benchmarks)
-- [ ] Zero runtime dependencies (React is sole peerDependency)
+- Add an "Export CSV" button that downloads a `.csv` file
+- Exported file reflects current filters/sorting
+
+### Tests
+
+- CSV output matches expected format (headers, escaping, newlines)
+- TSV output uses tabs
+- JSON output is valid JSON with correct structure
+- Export respects active filters (only exports visible rows)
+- Export respects sorting order
+- Special characters in cell values are properly escaped
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
-- Bundle size gate passes

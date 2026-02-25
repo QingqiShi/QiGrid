@@ -1,43 +1,37 @@
-# TASK-013: Virtualized scroll container (React component + playground)
+# TASK-013: Column sizing model
 
-**Phase:** 2 — Virtualization
-**Blocked by:** TASK-011, TASK-012
+**Phase:** 1 — Foundation
+**Blocked by:** TASK-012
 
 ## Goal
 
-Build the React component that renders a virtualized grid using the core virtualization engine. Update the playground to demonstrate virtualization with 10k+ rows.
+Add width management to the column model so every column has a computed width. This is foundational — virtualization, auto-sizing, and any future resize interaction all depend on it.
 
 ## Acceptance criteria
 
+### Core (`@qigrid/core`)
+
+- `ColumnDef<TData>` gains optional sizing props: `width?: number`, `minWidth?: number`, `maxWidth?: number`
+- `Column<TData>` exposes computed `width`, `minWidth`, `maxWidth`
+- Defaults: `width: 150`, `minWidth: 50`, `maxWidth: Infinity`
+- Pure function to resolve column widths: takes column defs + optional runtime overrides, returns columns with effective widths (clamped to min/max)
+- Pure function to compute total width from resolved columns
+
 ### React (`@qigrid/react`)
 
-- Export a `<VirtualGrid>` component (or equivalent API — could be hooks + render helpers)
-- Outer container: `div` with `overflow: auto`, configurable height
-- Inner spacer: `div` sized to `totalHeight x totalWidth` for native scrollbars
-- Visible rows absolutely positioned using `transform: translateY()` for GPU compositing
-- Calls `grid.setScrollTop(scrollTop)` on scroll events
-- Only renders rows from `getVisibleRows()` in the DOM
-- Column headers are sticky (`position: sticky; top: 0`)
-- Cells use column widths from TASK-011
-- Accepts grid instance from `useGrid` — does not create its own
-- `div`-based layout (not `<table>`) for absolute positioning
-
-### Playground
-
-- Switch from `<table>` to `<VirtualGrid>`
-- Increase dataset to 10,000 rows
-- Smooth scrolling with 10k rows
-- Info bar shows total rows + visible range
-- Sorting and filtering (TASK-009/010) still work through the virtualized container
+- `useGrid` exposes column width state and an updater to change individual column widths
+- Width changes are clamped to min/max constraints
+- Column model returned from `useGrid` includes effective widths
 
 ### Tests
 
-- Playwright e2e: scroll to middle, verify correct rows rendered
-- Playwright e2e: scroll to bottom, verify last rows rendered
-- Existing Playwright tests updated for new layout (or baselines updated)
-- React unit test: renders only visible rows, not full dataset
+- Default widths (150px when unspecified)
+- Explicit widths from ColumnDef
+- min/max clamping (value below min → min, value above max → max)
+- Width updater clamps and triggers re-render
+- Total width sums correctly
+- Width overrides reset for removed columns when column defs change
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
-- `cd apps/playground && npx playwright test` passes

@@ -1,40 +1,47 @@
-# TASK-017: Column auto-sizing model
+# TASK-017: Row expansion / detail views
 
 **Phase:** 3 — Core features
-**Blocked by:** TASK-011 (needs column width model)
+**Blocked by:** TASK-016 (shares expand/collapse mechanics and row type discriminator)
 
 ## Goal
 
-Add auto-sizing support to the column model. Core provides the model and callback hooks — actual DOM measurement is done by the consumer or React layer.
+Allow individual rows to be expanded to show a detail view. Expanded rows insert a detail row below the original. Works with virtualization (expanded rows affect virtual height).
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- `ColumnDef<TData>` gains optional `enableAutoSize?: boolean` (default true)
-- `GridInstance` exposes `autoSizeColumn(columnId: string, measuredWidth: number)` — sets column width to `max(minWidth, min(maxWidth, measuredWidth))`
-- `GridInstance` exposes `autoSizeAllColumns(measurements: Record<string, number>)` — batch auto-size
-- Auto-size respects existing min/max constraints from TASK-011
+- Pure function to insert detail rows: takes flat row list + expanded row IDs + optional getRowId → returns rows with detail rows inserted after expanded entries
+- Detail rows have `type: 'detail'` and reference their parent row
+- Leaf rows gain an `isExpanded` flag
 
 ### React (`@qigrid/react`)
 
-- Export a `useColumnAutoSize` hook (or equivalent) that:
-  - Accepts the grid instance and a ref to the grid container
-  - Measures the rendered width of header text and a sample of cell content
-  - Calls `autoSizeColumn` with the measured width
-- The hook is opt-in — consumers call it explicitly (e.g., on a button click or on mount)
+- `useGrid` (or companion hook) manages expanded row IDs state
+- Exposes updaters to toggle row expansion and set expanded IDs
+- Optional `getRowId` for stable row identity (falls back to index)
+
+### Edge cases
+
+- Expand/collapse while scrolled mid-list (no scroll jump)
+- Expand all / collapse all
+- Expanded row removed by filter (expansion state preserved, detail row hidden)
+- Works with grouping (expand a leaf row within a group)
 
 ### Playground
 
-- Add an "Auto-size columns" button that triggers auto-sizing
-- Columns resize to fit their content after clicking
+- Click a row to expand it, showing a detail panel below
+- Detail panel shows additional row data
+- Expand/collapse is visually indicated
 
 ### Tests
 
-- `autoSizeColumn` respects min/max clamping
-- `autoSizeAllColumns` updates multiple columns in one notification
-- Auto-size with `enableAutoSize: false` is a no-op for that column
-- React hook measures and applies widths
+- Toggle expand inserts detail row
+- Toggle collapse removes detail row
+- Expanded rows affect row count
+- Virtualization accounts for detail rows in totalHeight
+- Filter hides expanded row → detail row also hidden
+- Works alongside grouping
 
 ### Quality gate
 

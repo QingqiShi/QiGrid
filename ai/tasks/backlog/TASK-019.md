@@ -1,53 +1,40 @@
-# TASK-019: Performance benchmarks + validation
+# TASK-019: Column auto-sizing model
 
-**Phase:** 4 — Polish
-**Blocked by:** TASK-013 (needs virtualization to benchmark)
+**Phase:** 3 — Core features
+**Blocked by:** TASK-013 (needs column width model)
 
 ## Goal
 
-Build a comprehensive benchmark suite and validate that the grid meets its performance targets. Define CI-enforceable thresholds.
-
-## Performance targets
-
-### Bundle size
-
-| Package | Target |
-|---|---|
-| `@qigrid/core` (all v1 features, minified + gzipped) | ≤30kb |
-
-### Core engine benchmarks (Vitest bench, median)
-
-| Operation | Dataset | Target |
-|---|---|---|
-| `createGrid` (no sort/filter) | 100k rows | ≤50ms |
-| Sort toggle (single column, strings) | 100k rows | ≤40ms |
-| Filter change (string includes) | 100k rows | ≤30ms |
-| Group by (single column) | 100k rows | ≤60ms |
-| `setScrollTop` (virtual range recalc) | 1M rows | ≤1ms |
-| `getVisibleRows` | 1M rows | ≤0.5ms |
-
-### Rendering benchmarks
-
-| Operation | Dataset | Target |
-|---|---|---|
-| `<VirtualGrid>` mount (via renderHook) | 10k rows | ≤100ms |
-| Scroll update (setScrollTop + re-render) | 100k rows | ≤16ms (one frame) |
-
-### Virtualization validation
-
-- DOM node count stays constant regardless of dataset size (visible rows + overscan only)
-- Scrolling 100k rows produces no long tasks (>50ms) in a Playwright trace
+Add auto-sizing support to the column model. Core provides a pure clamping function. Actual DOM measurement is done by the consumer or React layer.
 
 ## Acceptance criteria
 
-- All existing bench files updated with the above scenarios
-- New bench cases added for grouping, virtualization
-- All targets pass on CI
-- Bundle size measured and reported (add to build output or a separate script)
-- Playwright test: load 100k rows, verify smooth scroll (no blank regions)
-- If any target is missed, document it in this task file with analysis and create a follow-up task
+### Core (`@qigrid/core`)
+
+- `ColumnDef<TData>` gains optional `enableAutoSize?: boolean` (default true)
+- Pure function to compute auto-sized width: takes measured width + min/max constraints → returns clamped width
+- Batch variant: takes a map of columnId → measured width, returns a map of columnId → clamped width
+
+### React (`@qigrid/react`)
+
+- Export a `useColumnAutoSize` hook that:
+  - Accepts the grid data/columns and a ref to the grid container
+  - Measures the rendered width of header text and a sample of cell content
+  - Returns auto-sized widths that can be fed into the column width state
+- The hook is opt-in — consumers call it explicitly (e.g., on a button click or on mount)
+
+### Playground
+
+- Add an "Auto-size columns" button that triggers auto-sizing
+- Columns resize to fit their content after clicking
+
+### Tests
+
+- Clamping respects min/max
+- Batch auto-size handles multiple columns
+- Auto-size with `enableAutoSize: false` is a no-op for that column
+- React hook measures and applies widths
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
-- `pnpm turbo bench` passes all timing thresholds

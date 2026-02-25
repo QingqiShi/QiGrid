@@ -1,8 +1,17 @@
-import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
+import type { CellRange } from "@qigrid/core";
+import {
+  computeVirtualRange,
+  DEFAULT_OVERSCAN,
+  getCellRangeEdges,
+  isCellInRanges,
+  sliceVisibleRows,
+} from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
+
+const EMPTY_RANGES: CellRange[] = [];
 
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
@@ -18,6 +27,12 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     onVirtualRangeChange,
     deferScrollUpdates,
     onColumnResize,
+    focusedCell,
+    selectedRanges,
+    onCellMouseDown,
+    onCellMouseEnter,
+    onSelectionMouseUp,
+    onGridKeyDown,
   } = props;
 
   const [scrollTop, setScrollTop] = useState(0);
@@ -94,8 +109,56 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
 
   const rowAreaHeight = containerHeight - stickyHeight;
 
+  // Selection helpers
+  const ranges = selectedRanges ?? EMPTY_RANGES;
+  const hasSelection = ranges.length > 0;
+
+  const getCellSelectionStyle = useCallback(
+    (rowIndex: number, colIndex: number) => {
+      if (!hasSelection) return undefined;
+      if (!isCellInRanges({ rowIndex, columnIndex: colIndex }, ranges)) return undefined;
+
+      const edges = getCellRangeEdges({ rowIndex, columnIndex: colIndex }, ranges);
+      const borderColor = "rgba(14, 101, 235, 0.8)";
+      return {
+        borderTop: edges.top ? `2px solid ${borderColor}` : undefined,
+        borderBottom: edges.bottom ? `2px solid ${borderColor}` : undefined,
+        borderLeft: edges.left ? `2px solid ${borderColor}` : undefined,
+        borderRight: edges.right ? `2px solid ${borderColor}` : undefined,
+      };
+    },
+    [hasSelection, ranges],
+  );
+
+  // Track drag state in a ref to avoid re-renders
+  const isDraggingRef = useRef(false);
+
+  // Document-level pointerup listener for ending drag selection
+  useEffect(() => {
+    if (!onSelectionMouseUp) return;
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        onSelectionMouseUp();
+      }
+    };
+    document.addEventListener("pointerup", handleMouseUp);
+    return () => document.removeEventListener("pointerup", handleMouseUp);
+  }, [onSelectionMouseUp]);
+
+  const gridRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="vgrid" data-testid="virtual-grid">
+    // biome-ignore lint/a11y/useSemanticElements: headless grid uses divs intentionally
+    <div
+      className="vgrid"
+      data-testid="virtual-grid"
+      ref={gridRef}
+      role="grid"
+      tabIndex={0}
+      onKeyDown={onGridKeyDown}
+      style={{ outline: "none" }}
+    >
       <div
         className="vgrid-body"
         onScroll={handleScroll}
@@ -181,15 +244,39 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                   willChange: "transform",
                 }}
               >
-                {columns.map((col) => (
-                  <div
-                    key={col.id}
-                    className="vgrid-cell"
-                    style={{ width: col.width, flexShrink: 0 }}
-                  >
-                    {renderCell(row, col)}
-                  </div>
-                ))}
+                {columns.map((col, colIndex) => {
+                  const isFocused =
+                    focusedCell != null &&
+                    focusedCell.rowIndex === row.index &&
+                    focusedCell.columnIndex === colIndex;
+                  const isSelected =
+                    hasSelection &&
+                    isCellInRanges({ rowIndex: row.index, columnIndex: colIndex }, ranges);
+                  const selStyle = getCellSelectionStyle(row.index, colIndex);
+                  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}`;
+
+                  return (
+                    <div
+                      key={col.id}
+                      className={className}
+                      style={{ width: col.width, flexShrink: 0, ...selStyle }}
+                      onPointerDown={(e) => {
+                        if (!onCellMouseDown) return;
+                        isDraggingRef.current = true;
+                        onCellMouseDown(
+                          { rowIndex: row.index, columnIndex: colIndex },
+                          { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey },
+                        );
+                      }}
+                      onPointerEnter={() => {
+                        if (!onCellMouseEnter || !isDraggingRef.current) return;
+                        onCellMouseEnter({ rowIndex: row.index, columnIndex: colIndex });
+                      }}
+                    >
+                      {renderCell(row, col)}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>

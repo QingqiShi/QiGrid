@@ -1,4 +1,6 @@
 export type {
+  CellCoord,
+  CellRange,
   Column,
   ColumnDef,
   ColumnFilter,

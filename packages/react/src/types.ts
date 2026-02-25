@@ -1,4 +1,6 @@
 import type {
+  CellCoord,
+  CellRange,
   Column,
   ColumnDef,
   ColumnFiltersState,
@@ -35,6 +37,24 @@ export interface VirtualGridProps<TData> {
   /** Callback fired during column resize drag. When provided, resize handles
    *  are rendered on the right edge of each header cell. */
   onColumnResize?: (columnId: string, width: number) => void;
+
+  // --- Selection props ---
+
+  /** Currently focused cell coordinate (from useGrid). */
+  focusedCell?: CellCoord | null;
+  /** Currently selected ranges (from useGrid). */
+  selectedRanges?: CellRange[];
+  /** Called when a cell is clicked for selection. */
+  onCellMouseDown?: (
+    coord: CellCoord,
+    event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean },
+  ) => void;
+  /** Called during drag selection as the pointer moves over cells. */
+  onCellMouseEnter?: (coord: CellCoord) => void;
+  /** Called when the pointer is released after drag selection. */
+  onSelectionMouseUp?: () => void;
+  /** Called for keyboard events on the grid (arrow keys, etc). */
+  onGridKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
 }
 
 export interface UseGridReturn<TData> {
@@ -73,12 +93,35 @@ export interface UseGridReturn<TData> {
 
   /** Set the width of a single column (clamped to min/max). */
   setColumnWidth: (columnId: string, width: number) => void;
+
+  // --- Selection ---
+
+  /** Currently focused cell (rowIndex + columnIndex into rows/columns arrays). */
+  focusedCell: CellCoord | null;
+  /** Active selection ranges. */
+  selectedRanges: CellRange[];
+  /** Focus a cell and select it (clears previous selection). */
+  selectCell: (coord: CellCoord) => void;
+  /** Extend selection from anchor to target cell. */
+  extendSelection: (coord: CellCoord) => void;
+  /** Add a new independent selection range (for Ctrl+Click). */
+  addRange: (range: CellRange) => void;
+  /** Select all cells. */
+  selectAll: () => void;
+  /** Clear all selection (keep focus if present). */
+  clearSelection: () => void;
+  /** Move focus by a delta, optionally extending selection. */
+  moveFocus: (deltaRow: number, deltaCol: number, extend?: boolean) => void;
 }
 
 export interface GridInternalState {
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
   columnWidths: Record<string, number>;
+  focusedCell: CellCoord | null;
+  selectionRanges: CellRange[];
+  /** Internal: the anchor cell from which shift-extend builds a range. */
+  selectionAnchor: CellCoord | null;
 }
 
 export type GridAction =
@@ -86,4 +129,17 @@ export type GridAction =
   | { type: "TOGGLE_SORT"; columnId: string }
   | { type: "SET_COLUMN_FILTERS"; filters: ColumnFiltersState }
   | { type: "SET_COLUMN_FILTER"; columnId: string; value: unknown }
-  | { type: "SET_COLUMN_WIDTH"; columnId: string; width: number };
+  | { type: "SET_COLUMN_WIDTH"; columnId: string; width: number }
+  | { type: "SELECT_CELL"; coord: CellCoord }
+  | { type: "EXTEND_SELECTION"; coord: CellCoord }
+  | { type: "ADD_RANGE"; range: CellRange }
+  | { type: "SELECT_ALL"; rowCount: number; colCount: number }
+  | { type: "CLEAR_SELECTION" }
+  | {
+      type: "MOVE_FOCUS";
+      deltaRow: number;
+      deltaCol: number;
+      extend: boolean;
+      rowCount: number;
+      colCount: number;
+    };

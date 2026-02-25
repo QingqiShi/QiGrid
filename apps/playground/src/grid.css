@@ -165,6 +165,25 @@ body {
   color: #64748b;
 }
 
+/* Selection styles */
+.vgrid-cell--selected {
+  background: rgba(14, 101, 235, 0.08);
+}
+
+.vgrid-cell--focused {
+  outline: 2px solid rgb(14, 101, 235);
+  outline-offset: -2px;
+}
+
+.vgrid-row:hover .vgrid-cell--selected {
+  background: rgba(14, 101, 235, 0.12);
+}
+
+/* Prevent text selection during drag */
+.vgrid {
+  user-select: none;
+}
+
 /* Resize handle */
 .vgrid-resize-handle {
   position: absolute;

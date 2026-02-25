@@ -26,6 +26,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@qigrid/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@qigrid/react':
         specifier: workspace:*
         version: link:../../packages/react

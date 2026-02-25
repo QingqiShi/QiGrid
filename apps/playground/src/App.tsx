@@ -1,5 +1,6 @@
-import type { Column, ColumnDef, SortingState, VirtualRange } from "@qigrid/react";
+import type { CellCoord, Column, ColumnDef, SortingState, VirtualRange } from "@qigrid/react";
 import { useGrid, VirtualGrid } from "@qigrid/react";
+import { serializeRangeToTSV } from "@qigrid/core";
 import { useCallback, useMemo, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
@@ -91,10 +92,100 @@ export function App() {
     toggleSort,
     setColumnFilter,
     setColumnWidth,
+    focusedCell,
+    selectedRanges,
+    selectCell,
+    extendSelection,
+    addRange,
+    selectAll,
+    clearSelection,
+    moveFocus,
   } = grid;
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
+
+  // --- Selection event handlers ---
+  const handleCellMouseDown = useCallback(
+    (coord: CellCoord, event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
+      const isMultiSelect = event.ctrlKey || event.metaKey;
+      if (event.shiftKey) {
+        extendSelection(coord);
+      } else if (isMultiSelect) {
+        addRange({ start: coord, end: coord });
+      } else {
+        selectCell(coord);
+      }
+    },
+    [selectCell, extendSelection, addRange],
+  );
+
+  const handleCellMouseEnter = useCallback(
+    (coord: CellCoord) => {
+      extendSelection(coord);
+    },
+    [extendSelection],
+  );
+
+  const handleSelectionMouseUp = useCallback(() => {
+    // Drag ended — no cleanup needed, state is already correct
+  }, []);
+
+  const handleGridKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const isMultiSelect = event.ctrlKey || event.metaKey;
+
+      switch (event.key) {
+        case "ArrowUp":
+          event.preventDefault();
+          moveFocus(-1, 0, event.shiftKey);
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          moveFocus(1, 0, event.shiftKey);
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          moveFocus(0, -1, event.shiftKey);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          moveFocus(0, 1, event.shiftKey);
+          break;
+        case "Tab":
+          event.preventDefault();
+          if (event.shiftKey) {
+            moveFocus(0, -1);
+          } else {
+            moveFocus(0, 1);
+          }
+          break;
+        case "a":
+          if (isMultiSelect) {
+            event.preventDefault();
+            selectAll();
+          }
+          break;
+        case "Escape":
+          event.preventDefault();
+          clearSelection();
+          break;
+        case "c":
+          if (isMultiSelect && selectedRanges.length > 0) {
+            event.preventDefault();
+            const columnIds = cols.map((c) => c.id);
+            const parts = selectedRanges.map((range) =>
+              serializeRangeToTSV(rows, columnIds, range),
+            );
+            navigator.clipboard.writeText(parts.join("\n")).catch(() => {
+              // Clipboard write failed (insecure context, etc.) — silently ignore
+            });
+          }
+          break;
+      }
+    },
+    [moveFocus, selectAll, clearSelection, selectedRanges, cols, rows],
+  );
 
   const renderCell = useCallback((row: (typeof rows)[number], column: (typeof cols)[number]) => {
     const value =
@@ -164,6 +255,12 @@ export function App() {
           renderFilterCell={renderFilterCell}
           onVirtualRangeChange={setVirtualRange}
           onColumnResize={setColumnWidth}
+          focusedCell={focusedCell}
+          selectedRanges={selectedRanges}
+          onCellMouseDown={handleCellMouseDown}
+          onCellMouseEnter={handleCellMouseEnter}
+          onSelectionMouseUp={handleSelectionMouseUp}
+          onGridKeyDown={handleGridKeyDown}
         />
       </div>
     </div>

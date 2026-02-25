@@ -1,12 +1,27 @@
-import type { ColumnFiltersState, GridOptions, Row, SortingState } from "@qigrid/core";
-import { buildColumnModel, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
+import type {
+  CellCoord,
+  CellRange,
+  ColumnFiltersState,
+  GridOptions,
+  Row,
+  SortingState,
+} from "@qigrid/core";
+import { buildColumnModel, clampCell, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
 import { useCallback, useMemo, useReducer } from "react";
 import type { GridAction, GridInternalState, UseGridReturn } from "./types";
 
+/** Clear selection fields — used when data pipeline changes invalidate indices. */
+const EMPTY_SELECTION = {
+  focusedCell: null,
+  selectionRanges: [] as CellRange[],
+  selectionAnchor: null,
+} as const;
+
 function gridReducer(state: GridInternalState, action: GridAction): GridInternalState {
   switch (action.type) {
+    // --- Data pipeline actions (clear selection on change) ---
     case "SET_SORTING":
-      return { ...state, sorting: action.sorting };
+      return { ...state, sorting: action.sorting, ...EMPTY_SELECTION };
 
     case "TOGGLE_SORT": {
       const { columnId } = action;
@@ -23,11 +38,11 @@ function gridReducer(state: GridInternalState, action: GridAction): GridInternal
       } else {
         next = current.filter((s) => s.columnId !== columnId);
       }
-      return { ...state, sorting: next };
+      return { ...state, sorting: next, ...EMPTY_SELECTION };
     }
 
     case "SET_COLUMN_FILTERS":
-      return { ...state, columnFilters: action.filters };
+      return { ...state, columnFilters: action.filters, ...EMPTY_SELECTION };
 
     case "SET_COLUMN_FILTER": {
       const { columnId, value } = action;
@@ -36,7 +51,7 @@ function gridReducer(state: GridInternalState, action: GridAction): GridInternal
         value === "" || value === undefined || value === null
           ? existing
           : [...existing, { columnId, value }];
-      return { ...state, columnFilters: newFilters };
+      return { ...state, columnFilters: newFilters, ...EMPTY_SELECTION };
     }
 
     case "SET_COLUMN_WIDTH":
@@ -44,6 +59,88 @@ function gridReducer(state: GridInternalState, action: GridAction): GridInternal
         ...state,
         columnWidths: { ...state.columnWidths, [action.columnId]: action.width },
       };
+
+    // --- Selection actions ---
+    case "SELECT_CELL": {
+      const { coord } = action;
+      return {
+        ...state,
+        focusedCell: coord,
+        selectionAnchor: coord,
+        selectionRanges: [{ start: coord, end: coord }],
+      };
+    }
+
+    case "EXTEND_SELECTION": {
+      const anchor = state.selectionAnchor;
+      if (!anchor) return state;
+      // Replace the last range with anchor→coord
+      const newRange: CellRange = { start: anchor, end: action.coord };
+      const prevRanges = state.selectionRanges.length > 1 ? state.selectionRanges.slice(0, -1) : [];
+      return {
+        ...state,
+        focusedCell: action.coord,
+        selectionRanges: [...prevRanges, newRange],
+      };
+    }
+
+    case "ADD_RANGE":
+      return {
+        ...state,
+        focusedCell: action.range.end,
+        selectionAnchor: action.range.start,
+        selectionRanges: [...state.selectionRanges, action.range],
+      };
+
+    case "SELECT_ALL":
+      return {
+        ...state,
+        selectionRanges: [
+          {
+            start: { rowIndex: 0, columnIndex: 0 },
+            end: { rowIndex: action.rowCount - 1, columnIndex: action.colCount - 1 },
+          },
+        ],
+        selectionAnchor: { rowIndex: 0, columnIndex: 0 },
+      };
+
+    case "CLEAR_SELECTION":
+      return {
+        ...state,
+        selectionRanges: EMPTY_SELECTION.selectionRanges,
+        selectionAnchor: state.focusedCell,
+      };
+
+    case "MOVE_FOCUS": {
+      const { deltaRow, deltaCol, extend, rowCount, colCount } = action;
+      const current = state.focusedCell ?? { rowIndex: 0, columnIndex: 0 };
+      const next = clampCell(
+        { rowIndex: current.rowIndex + deltaRow, columnIndex: current.columnIndex + deltaCol },
+        rowCount,
+        colCount,
+      );
+
+      if (extend) {
+        // Shift+Arrow: extend selection from anchor
+        const anchor = state.selectionAnchor ?? next;
+        const newRange: CellRange = { start: anchor, end: next };
+        const prevRanges =
+          state.selectionRanges.length > 1 ? state.selectionRanges.slice(0, -1) : [];
+        return {
+          ...state,
+          focusedCell: next,
+          selectionRanges: [...prevRanges, newRange],
+        };
+      }
+
+      // Simple move: clear selection, set focus
+      return {
+        ...state,
+        focusedCell: next,
+        selectionAnchor: next,
+        selectionRanges: [{ start: next, end: next }],
+      };
+    }
   }
 }
 
@@ -54,6 +151,7 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
     sorting: options.sorting ?? [],
     columnFilters: options.columnFilters ?? [],
     columnWidths: {},
+    ...EMPTY_SELECTION,
   });
 
   // Stage 1: Build base column model from defs
@@ -136,6 +234,39 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
     [],
   );
 
+  // --- Selection callbacks ---
+  const selectCell = useCallback(
+    (coord: CellCoord) => dispatch({ type: "SELECT_CELL", coord }),
+    [],
+  );
+
+  const extendSelection = useCallback(
+    (coord: CellCoord) => dispatch({ type: "EXTEND_SELECTION", coord }),
+    [],
+  );
+
+  const addRange = useCallback((range: CellRange) => dispatch({ type: "ADD_RANGE", range }), []);
+
+  const selectAll = useCallback(
+    () => dispatch({ type: "SELECT_ALL", rowCount: rows.length, colCount: columnModel.length }),
+    [rows.length, columnModel.length],
+  );
+
+  const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
+
+  const moveFocus = useCallback(
+    (deltaRow: number, deltaCol: number, extend = false) =>
+      dispatch({
+        type: "MOVE_FOCUS",
+        deltaRow,
+        deltaCol,
+        extend,
+        rowCount: rows.length,
+        colCount: columnModel.length,
+      }),
+    [rows.length, columnModel.length],
+  );
+
   return useMemo(
     () => ({
       rows,
@@ -150,6 +281,14 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setColumnFilter,
       setColumnFilters,
       setColumnWidth,
+      focusedCell: state.focusedCell,
+      selectedRanges: state.selectionRanges,
+      selectCell,
+      extendSelection,
+      addRange,
+      selectAll,
+      clearSelection,
+      moveFocus,
     }),
     [
       rows,
@@ -164,6 +303,14 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setColumnFilter,
       setColumnFilters,
       setColumnWidth,
+      state.focusedCell,
+      state.selectionRanges,
+      selectCell,
+      extendSelection,
+      addRange,
+      selectAll,
+      clearSelection,
+      moveFocus,
     ],
   );
 }

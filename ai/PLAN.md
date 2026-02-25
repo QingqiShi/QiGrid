@@ -200,10 +200,3 @@ Each pipeline stage (filter, sort, group, expand, virtualize) interacts with eve
 ### Row grouping complexity
 
 Grouping introduces a hierarchical row model (group rows vs leaf rows), interacts with sorting (within-group), filtering (pre-group), expansion (group collapse), and virtualization (variable-height-like behavior with collapsed groups). Needs careful integration testing across all pipeline stages.
-
----
-
-## Known Issues
-
-- **react-component-benchmark v2.0.0** requires React ^18, incompatible with React 19. Using Vitest bench + renderHook instead.
-- **`pnpm turbo bench`** configured with `cache: false` (benchmarks must never be cached).

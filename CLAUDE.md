@@ -47,5 +47,6 @@ This section is updated as we discover things that affect how work should be don
 - **Biome v2 config** differs from v1 — no `files.ignore`, uses VCS gitignore instead.
 - **pnpm `--filter`** — run commands in a specific package from the repo root: `pnpm --filter @qigrid/react bench`. Never `cd` into sub-packages.
 - **Playwright e2e tests** — run from repo root: `pnpm --filter @qigrid/playground e2e`
-- **Visual regression baselines** — if the playground UI changes, Playwright screenshot tests will fail. Update baselines with `npx playwright test --update-snapshots` and commit the new baselines.
-- **Biome auto-fix** — run `pnpm --filter @qigrid/core biome check --write .` (and same for other packages you touched) before the quality gate to auto-fix formatting and import ordering.
+- **Visual regression baselines** — if the playground UI changes, Playwright screenshot tests will fail. Update baselines with `pnpm --filter @qigrid/playground e2e --update-snapshots` and commit the new baselines.
+- **Biome auto-fix** — run `pnpm --filter @qigrid/core lint --write` (and same for other packages you touched) before the quality gate to auto-fix formatting and import ordering.
+- **pnpm script args** — pass extra args directly (no `--` separator): `pnpm --filter @pkg script --flag`. A `--` becomes a literal arg to the script, which breaks tools like Playwright that interpret it as a test filter.

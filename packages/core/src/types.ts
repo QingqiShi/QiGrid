@@ -56,6 +56,21 @@ export interface GridState<TData> {
   rowModel: Row<TData>[];
 }
 
+export interface VirtualRange {
+  startIndex: number;
+  endIndex: number;
+  totalHeight: number;
+  offsetTop: number;
+}
+
+export interface VirtualRangeParams {
+  totalRowCount: number;
+  scrollTop: number;
+  containerHeight: number;
+  rowHeight: number;
+  overscan?: number;
+}
+
 export type Listener = () => void;
 export type Unsubscribe = () => void;
 

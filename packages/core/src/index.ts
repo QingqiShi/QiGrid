@@ -16,4 +16,11 @@ export type {
   Row,
   SortingState,
   Unsubscribe,
+  VirtualRange,
+  VirtualRangeParams,
 } from "./types";
+export {
+  computeVirtualRange,
+  DEFAULT_OVERSCAN,
+  sliceVisibleRows,
+} from "./virtualization";

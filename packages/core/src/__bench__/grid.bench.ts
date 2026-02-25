@@ -4,7 +4,8 @@ import { createGrid } from "../createGrid";
 import { filterRows } from "../filtering";
 import { buildRowModel } from "../rowModel";
 import { sortRows } from "../sorting";
-import type { ColumnDef } from "../types";
+import type { ColumnDef, Row } from "../types";
+import { computeVirtualRange, sliceVisibleRows } from "../virtualization";
 
 interface Employee {
   id: number;
@@ -124,5 +125,54 @@ describe("full pipeline 100k rows (pure)", () => {
       [{ columnId: "department", value: "Engineering" }],
       [{ columnId: "name", direction: "asc" }],
     );
+  });
+});
+
+// Virtualization benchmarks — lightweight row factory for 1M rows
+const rows1M: Row<{ id: number }>[] = Array.from({ length: 1_000_000 }, (_, i) => ({
+  index: i,
+  original: { id: i },
+  getValue: () => i,
+}));
+
+describe("computeVirtualRange 1M rows", () => {
+  bench("at top", () => {
+    computeVirtualRange({
+      totalRowCount: 1_000_000,
+      scrollTop: 0,
+      containerHeight: 600,
+      rowHeight: 36,
+    });
+  });
+
+  bench("at middle", () => {
+    computeVirtualRange({
+      totalRowCount: 1_000_000,
+      scrollTop: 18_000_000,
+      containerHeight: 600,
+      rowHeight: 36,
+    });
+  });
+
+  bench("at bottom", () => {
+    computeVirtualRange({
+      totalRowCount: 1_000_000,
+      scrollTop: 35_999_400,
+      containerHeight: 600,
+      rowHeight: 36,
+    });
+  });
+});
+
+describe("sliceVisibleRows 1M rows", () => {
+  const range = computeVirtualRange({
+    totalRowCount: 1_000_000,
+    scrollTop: 18_000_000,
+    containerHeight: 600,
+    rowHeight: 36,
+  });
+
+  bench("slice from middle", () => {
+    sliceVisibleRows(rows1M, range);
   });
 });

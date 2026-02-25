@@ -45,5 +45,6 @@ This section is updated as we discover things that affect how work should be don
 - **react-component-benchmark v2.0.0** requires React ^18, incompatible with React 19. Use Vitest bench + renderHook for React performance benchmarks.
 - **`pnpm turbo bench`** is configured with `cache: false` — benchmarks must never be cached.
 - **Biome v2 config** differs from v1 — no `files.ignore`, uses VCS gitignore instead.
-- **Playwright e2e tests** must be run from the playground directory: `cd apps/playground && npx playwright test`
+- **pnpm `--filter`** — run commands in a specific package from the repo root: `pnpm --filter @qigrid/react bench`. Never `cd` into sub-packages.
+- **Playwright e2e tests** — run from repo root: `pnpm --filter @qigrid/playground e2e`
 - **Visual regression baselines** — if the playground UI changes, Playwright screenshot tests will fail. Update baselines with `npx playwright test --update-snapshots` and commit the new baselines.

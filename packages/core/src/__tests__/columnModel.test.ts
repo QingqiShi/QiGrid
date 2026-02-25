@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildColumnModel } from "../columns";
 import { createGrid } from "../createGrid";
 import type { ColumnDef } from "../types";
 
@@ -13,14 +14,13 @@ const bob: Person = { name: "Bob", age: 25, email: "bob@example.com" };
 const data: Person[] = [alice, bob];
 
 describe("column model", () => {
-  describe("getColumns", () => {
+  describe("buildColumnModel", () => {
     it("returns processed Column objects from ColumnDefs", () => {
       const columns: ColumnDef<Person>[] = [
         { id: "name", accessorKey: "name", header: "Name" },
         { id: "age", accessorKey: "age", header: "Age" },
       ];
-      const grid = createGrid({ data, columns });
-      const cols = grid.getColumns();
+      const cols = buildColumnModel(columns);
 
       expect(cols).toHaveLength(2);
       expect(cols[0]?.id).toBe("name");
@@ -33,8 +33,8 @@ describe("column model", () => {
     it("carries forward all ColumnDef properties", () => {
       const accessorFn = (row: Person) => `${row.name} (${row.age})`;
       const columns: ColumnDef<Person>[] = [{ id: "display", accessorFn, header: "Display" }];
-      const grid = createGrid({ data, columns });
-      const col = grid.getColumns()[0];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
 
       expect(col?.id).toBe("display");
       expect(col?.header).toBe("Display");
@@ -42,17 +42,13 @@ describe("column model", () => {
       expect(col?.accessorKey).toBeUndefined();
     });
 
-    it("rebuilds column model when setColumns is called", () => {
-      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
-      const grid = createGrid({ data, columns });
-      const colsBefore = grid.getColumns();
+    it("rebuilds column model when called with new defs", () => {
+      const cols1 = buildColumnModel<Person>([{ id: "name", accessorKey: "name", header: "Name" }]);
+      const cols2 = buildColumnModel<Person>([{ id: "age", accessorKey: "age", header: "Age" }]);
 
-      grid.setColumns([{ id: "age", accessorKey: "age", header: "Age" }]);
-      const colsAfter = grid.getColumns();
-
-      expect(colsBefore).not.toBe(colsAfter);
-      expect(colsAfter).toHaveLength(1);
-      expect(colsAfter[0]?.id).toBe("age");
+      expect(cols1).not.toBe(cols2);
+      expect(cols2).toHaveLength(1);
+      expect(cols2[0]?.id).toBe("age");
     });
   });
 
@@ -62,8 +58,7 @@ describe("column model", () => {
         { id: "name", accessorKey: "name", header: "Name" },
         { id: "age", accessorKey: "age", header: "Age" },
       ];
-      const grid = createGrid({ data, columns });
-      const cols = grid.getColumns();
+      const cols = buildColumnModel(columns);
 
       expect(cols[0]?.getValue(alice)).toBe("Alice");
       expect(cols[1]?.getValue(alice)).toBe(30);
@@ -79,8 +74,8 @@ describe("column model", () => {
           header: "Info",
         },
       ];
-      const grid = createGrid({ data, columns });
-      const col = grid.getColumns()[0];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
 
       expect(col?.getValue(alice)).toBe("Alice - 30");
       expect(col?.getValue(bob)).toBe("Bob - 25");
@@ -88,8 +83,8 @@ describe("column model", () => {
 
     it("returns undefined when neither accessorKey nor accessorFn is set", () => {
       const columns: ColumnDef<Person>[] = [{ id: "empty", header: "Empty" }];
-      const grid = createGrid({ data, columns });
-      const col = grid.getColumns()[0];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
 
       expect(col?.getValue(alice)).toBeUndefined();
       expect(col?.getValue(bob)).toBeUndefined();
@@ -104,14 +99,14 @@ describe("column model", () => {
           header: "Name",
         },
       ];
-      const grid = createGrid({ data, columns });
-      const col = grid.getColumns()[0];
+      const cols = buildColumnModel(columns);
+      const col = cols[0];
 
       expect(col?.getValue(alice)).toBe("Alice");
     });
   });
 
-  describe("Row.getValue", () => {
+  describe("Row.getValue (stateful, via createGrid)", () => {
     it("delegates to the column's getValue", () => {
       const columns: ColumnDef<Person>[] = [
         { id: "name", accessorKey: "name", header: "Name" },

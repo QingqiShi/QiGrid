@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createGrid } from "../createGrid";
+import { filterRows } from "../filtering";
+import { buildRowModel } from "../rowModel";
 import type { ColumnDef, ColumnFiltersState } from "../types";
 
 interface Person {
@@ -22,65 +24,59 @@ const data: Person[] = [
   { name: "Eve", age: 30, active: true },
 ];
 
-describe("column filtering", () => {
+describe("column filtering (pure functions)", () => {
   describe("single column filter", () => {
     it("filters string column with case-insensitive includes", () => {
-      const grid = createGrid({ data, columns });
+      const result = filterRows(data, [{ columnId: "name", value: "ali" }], columns);
 
-      grid.setColumnFilters([{ columnId: "name", value: "ali" }]);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.original.name).toBe("Alice");
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe("Alice");
     });
 
     it("filters number column with strict equality", () => {
-      const grid = createGrid({ data, columns });
+      const result = filterRows(data, [{ columnId: "age", value: 30 }], columns);
 
-      grid.setColumnFilters([{ columnId: "age", value: 30 }]);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(2);
-      expect(rows[0]?.original.name).toBe("Alice");
-      expect(rows[1]?.original.name).toBe("Eve");
+      expect(result).toHaveLength(2);
+      expect(result[0]?.name).toBe("Alice");
+      expect(result[1]?.name).toBe("Eve");
     });
 
     it("filters boolean column with strict equality", () => {
-      const grid = createGrid({ data, columns });
+      const result = filterRows(data, [{ columnId: "active", value: false }], columns);
 
-      grid.setColumnFilters([{ columnId: "active", value: false }]);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(2);
-      expect(rows[0]?.original.name).toBe("Bob");
-      expect(rows[1]?.original.name).toBe("Diana");
+      expect(result).toHaveLength(2);
+      expect(result[0]?.name).toBe("Bob");
+      expect(result[1]?.name).toBe("Diana");
     });
   });
 
   describe("multi-column filter (AND logic)", () => {
     it("applies AND logic across multiple column filters", () => {
-      const grid = createGrid({ data, columns });
+      const result = filterRows(
+        data,
+        [
+          { columnId: "active", value: true },
+          { columnId: "age", value: 30 },
+        ],
+        columns,
+      );
 
-      grid.setColumnFilters([
-        { columnId: "active", value: true },
-        { columnId: "age", value: 30 },
-      ]);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(2);
-      expect(rows[0]?.original.name).toBe("Alice");
-      expect(rows[1]?.original.name).toBe("Eve");
+      expect(result).toHaveLength(2);
+      expect(result[0]?.name).toBe("Alice");
+      expect(result[1]?.name).toBe("Eve");
     });
 
     it("returns empty when AND filters exclude all rows", () => {
-      const grid = createGrid({ data, columns });
+      const result = filterRows(
+        data,
+        [
+          { columnId: "name", value: "Alice" },
+          { columnId: "active", value: false },
+        ],
+        columns,
+      );
 
-      grid.setColumnFilters([
-        { columnId: "name", value: "Alice" },
-        { columnId: "active", value: false },
-      ]);
-
-      expect(grid.getRows()).toHaveLength(0);
+      expect(result).toHaveLength(0);
     });
   });
 
@@ -96,16 +92,59 @@ describe("column filtering", () => {
         { id: "name", accessorKey: "name" as const, header: "Name" },
       ];
 
-      const grid = createGrid({ data, columns: customColumns });
+      const result = filterRows(data, [{ columnId: "age", value: 30 }], customColumns);
 
-      grid.setColumnFilters([{ columnId: "age", value: 30 }]);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(3);
-      expect(rows.map((r) => r.original.name)).toEqual(["Alice", "Charlie", "Eve"]);
+      expect(result).toHaveLength(3);
+      expect(result.map((r) => r.name)).toEqual(["Alice", "Charlie", "Eve"]);
     });
   });
 
+  describe("clearing filters", () => {
+    it("returns all rows when filters are empty", () => {
+      const result = filterRows(data, [], columns);
+      expect(result).toHaveLength(5);
+    });
+  });
+
+  describe("empty results", () => {
+    it("returns empty array when no rows match filter", () => {
+      const result = filterRows(data, [{ columnId: "name", value: "nonexistent" }], columns);
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe("does not mutate original data", () => {
+    it("original data array is unchanged after filtering", () => {
+      const originalData = [...data];
+      filterRows(data, [{ columnId: "name", value: "alice" }], columns);
+
+      expect(data).toEqual(originalData);
+      expect(data).toHaveLength(5);
+    });
+  });
+
+  describe("row indices after filtering", () => {
+    it("row indices are sequential in filtered results", () => {
+      const rows = buildRowModel(data, columns, [{ columnId: "active", value: true }], []);
+
+      expect(rows).toHaveLength(3);
+      expect(rows[0]?.index).toBe(0);
+      expect(rows[1]?.index).toBe(1);
+      expect(rows[2]?.index).toBe(2);
+    });
+  });
+
+  describe("filter ignores unknown columns", () => {
+    it("ignores filter for non-existent column", () => {
+      const result = filterRows(data, [{ columnId: "nonexistent", value: "test" }], columns);
+
+      expect(result).toHaveLength(5);
+    });
+  });
+});
+
+describe("column filtering (stateful, via createGrid)", () => {
   describe("clearing filters", () => {
     it("returns all rows when filters are cleared", () => {
       const grid = createGrid({ data, columns });
@@ -214,16 +253,6 @@ describe("column filtering", () => {
     });
   });
 
-  describe("empty results", () => {
-    it("returns empty array when no rows match filter", () => {
-      const grid = createGrid({ data, columns });
-
-      grid.setColumnFilter("name", "nonexistent");
-
-      expect(grid.getRows()).toHaveLength(0);
-    });
-  });
-
   describe("initial columnFilters option", () => {
     it("applies filters from initial options", () => {
       const filters: ColumnFiltersState = [{ columnId: "name", value: "alice" }];
@@ -263,42 +292,6 @@ describe("column filtering", () => {
       grid.setColumnFilters([{ columnId: "name", value: "alice" }]);
 
       expect(listener).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("does not mutate original data", () => {
-    it("original data array is unchanged after filtering", () => {
-      const originalData = [...data];
-      const grid = createGrid({ data, columns });
-
-      grid.setColumnFilter("name", "alice");
-
-      expect(data).toEqual(originalData);
-      expect(data).toHaveLength(5);
-    });
-  });
-
-  describe("row indices after filtering", () => {
-    it("row indices are sequential in filtered results", () => {
-      const grid = createGrid({ data, columns });
-
-      grid.setColumnFilter("active", true);
-
-      const rows = grid.getRows();
-      expect(rows).toHaveLength(3);
-      expect(rows[0]?.index).toBe(0);
-      expect(rows[1]?.index).toBe(1);
-      expect(rows[2]?.index).toBe(2);
-    });
-  });
-
-  describe("filter ignores unknown columns", () => {
-    it("ignores filter for non-existent column", () => {
-      const grid = createGrid({ data, columns });
-
-      grid.setColumnFilters([{ columnId: "nonexistent", value: "test" }]);
-
-      expect(grid.getRows()).toHaveLength(5);
     });
   });
 });

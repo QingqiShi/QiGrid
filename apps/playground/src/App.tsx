@@ -1,10 +1,14 @@
-import type { Column, ColumnDef, SortingState } from "@qigrid/react";
-import { useGrid } from "@qigrid/react";
-import { useMemo } from "react";
+import type { Column, SortingState, VirtualRange } from "@qigrid/react";
+import { VirtualGrid, useGrid } from "@qigrid/react";
+import type { ColumnDef } from "@qigrid/react";
+import { useCallback, useMemo, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
 
-const data = generateEmployees(100);
+const data = generateEmployees(10_000);
+
+const ROW_HEIGHT = 36;
+const CONTAINER_HEIGHT = 600;
 
 const columns: ColumnDef<Employee>[] = [
   { id: "id", accessorKey: "id", header: "ID" },
@@ -79,8 +83,52 @@ function CellValue({ col, value }: { col: Column<Employee>; value: unknown }) {
 export function App() {
   const options = useMemo(() => ({ data, columns }), []);
   const grid = useGrid(options);
-  const { rows, columns: cols, sorting, data: gridData, toggleSort, setColumnFilter } = grid;
+  const { rows, columns: cols, totalWidth, sorting, data: gridData, toggleSort, setColumnFilter } = grid;
   const totalRows = gridData.length;
+
+  const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
+
+  const renderCell = useCallback(
+    (row: (typeof rows)[number], column: (typeof cols)[number]) => {
+      const value =
+        column.accessorKey != null
+          ? row.original[column.accessorKey]
+          : column.accessorFn
+            ? column.accessorFn(row.original)
+            : "";
+      return <CellValue col={column} value={value} />;
+    },
+    [],
+  );
+
+  const renderHeaderCell = useCallback(
+    (column: (typeof cols)[number]) => (
+      <div className="sortable-header" onClick={() => toggleSort(column.id)}>
+        {column.header}
+        <span className="sort-indicator">{getSortIndicator(sorting, column.id)}</span>
+      </div>
+    ),
+    [sorting, toggleSort],
+  );
+
+  const renderFilterCell = useCallback(
+    (column: (typeof cols)[number]) => (
+      <input
+        type="text"
+        className="filter-input"
+        placeholder={`Filter ${column.header}...`}
+        aria-label={`Filter ${column.header}`}
+        data-column-id={column.id}
+        onChange={(e) => {
+          setColumnFilter(column.id, e.target.value);
+        }}
+      />
+    ),
+    [setColumnFilter],
+  );
+
+  const visibleStart = virtualRange ? virtualRange.startIndex + 1 : 0;
+  const visibleEnd = virtualRange ? virtualRange.endIndex : 0;
 
   return (
     <div className="playground">
@@ -93,56 +141,21 @@ export function App() {
       <div className="grid-container">
         <div className="grid-info">
           {cols.length} columns &middot; Showing {rows.length} of {totalRows} rows
+          {virtualRange && (
+            <> &middot; Visible rows {visibleStart}-{visibleEnd} of {rows.length}</>
+          )}
         </div>
-        <div className="grid-scroll">
-          <table className="grid-table">
-            <thead>
-              <tr>
-                {cols.map((col) => (
-                  <th key={col.id} className="sortable-header" onClick={() => toggleSort(col.id)}>
-                    {col.header}
-                    <span className="sort-indicator">{getSortIndicator(sorting, col.id)}</span>
-                  </th>
-                ))}
-              </tr>
-              <tr className="filter-row">
-                {cols.map((col) => (
-                  <th key={`filter-${col.id}`} className="filter-cell">
-                    <input
-                      type="text"
-                      className="filter-input"
-                      placeholder={`Filter ${col.header}...`}
-                      aria-label={`Filter ${col.header}`}
-                      data-column-id={col.id}
-                      onChange={(e) => {
-                        setColumnFilter(col.id, e.target.value);
-                      }}
-                    />
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.index}>
-                  {cols.map((col) => {
-                    const value =
-                      col.accessorKey != null
-                        ? row.original[col.accessorKey]
-                        : col.accessorFn
-                          ? col.accessorFn(row.original)
-                          : "";
-                    return (
-                      <td key={col.id}>
-                        <CellValue col={col} value={value} />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <VirtualGrid
+          rows={rows}
+          columns={cols}
+          totalWidth={totalWidth}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={renderCell}
+          renderHeaderCell={renderHeaderCell}
+          renderFilterCell={renderFilterCell}
+          onVirtualRangeChange={setVirtualRange}
+        />
       </div>
     </div>
   );

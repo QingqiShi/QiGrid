@@ -1,6 +1,6 @@
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
 
@@ -17,6 +17,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     renderFilterCell,
     onVirtualRangeChange,
     deferScrollUpdates,
+    onColumnResize,
   } = props;
 
   const [scrollTop, setScrollTop] = useState(0);
@@ -46,6 +47,41 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const headerRowHeight = rowHeight;
   const filterRowHeight = renderFilterCell ? rowHeight : 0;
   const stickyHeight = headerRowHeight + filterRowHeight;
+
+  const handleResizePointerDown = useCallback(
+    (columnId: string, startWidth: number, e: React.PointerEvent<HTMLDivElement>) => {
+      if (!onColumnResize) return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      const handle = e.currentTarget;
+      handle.setPointerCapture(e.pointerId);
+      const startX = e.clientX;
+
+      const prevCursor = document.body.style.cursor;
+      const prevUserSelect = document.body.style.userSelect;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      const onMove = (ev: PointerEvent) => {
+        const delta = ev.clientX - startX;
+        onColumnResize(columnId, startWidth + delta);
+      };
+
+      const cleanup = () => {
+        handle.removeEventListener("pointermove", onMove);
+        handle.removeEventListener("pointerup", cleanup);
+        handle.removeEventListener("lostpointercapture", cleanup);
+        document.body.style.cursor = prevCursor;
+        document.body.style.userSelect = prevUserSelect;
+      };
+
+      handle.addEventListener("pointermove", onMove);
+      handle.addEventListener("pointerup", cleanup);
+      handle.addEventListener("lostpointercapture", cleanup);
+    },
+    [onColumnResize],
+  );
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
@@ -86,9 +122,20 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 <div
                   key={col.id}
                   className="vgrid-header-cell"
-                  style={{ width: col.width, flexShrink: 0 }}
+                  style={{
+                    width: col.width,
+                    flexShrink: 0,
+                    ...(onColumnResize ? { position: "relative" as const } : undefined),
+                  }}
                 >
                   {renderHeaderCell(col)}
+                  {onColumnResize && (
+                    <div
+                      className="vgrid-resize-handle"
+                      data-testid={`resize-handle-${col.id}`}
+                      onPointerDown={(e) => handleResizePointerDown(col.id, col.width, e)}
+                    />
+                  )}
                 </div>
               ))}
             </div>

@@ -50,3 +50,60 @@ test("scroll to bottom renders last row", async ({ page }) => {
   // Row 9999 (0-indexed) should be rendered
   await expect(page.locator("[data-row-index='9999']")).toBeVisible({ timeout: 5000 });
 });
+
+test("drag resize handle right increases column width", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  const header = page.locator(".vgrid-header-cell").first();
+  const initialWidth = await header.evaluate((el) => el.getBoundingClientRect().width);
+
+  const handle = page.locator("[data-testid='resize-handle-id']");
+  const handleBox = await handle.boundingBox();
+  expect(handleBox).not.toBeNull();
+
+  // Drag 50px to the right
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2 + 50,
+    handleBox!.y + handleBox!.height / 2,
+  );
+  await page.mouse.up();
+
+  const newWidth = await header.evaluate((el) => el.getBoundingClientRect().width);
+  expect(newWidth).toBeGreaterThanOrEqual(initialWidth + 40); // ~50px, allow some tolerance
+});
+
+test("drag resize handle far left clamps to minWidth", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  const handle = page.locator("[data-testid='resize-handle-id']");
+  const handleBox = await handle.boundingBox();
+  expect(handleBox).not.toBeNull();
+
+  // Drag far left (e.g. -500px) to trigger minWidth clamping
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    handleBox!.x + handleBox!.width / 2 - 500,
+    handleBox!.y + handleBox!.height / 2,
+  );
+  await page.mouse.up();
+
+  const header = page.locator(".vgrid-header-cell").first();
+  const clampedWidth = await header.evaluate((el) => el.getBoundingClientRect().width);
+  // Default minWidth is 50
+  expect(clampedWidth).toBeGreaterThanOrEqual(50);
+  expect(clampedWidth).toBeLessThanOrEqual(55); // Should be at or near minWidth
+});
+
+test("resize handle shows col-resize cursor on hover", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  const handle = page.locator("[data-testid='resize-handle-id']");
+  const cursor = await handle.evaluate((el) => window.getComputedStyle(el).cursor);
+  expect(cursor).toBe("col-resize");
+});

@@ -227,4 +227,83 @@ describe("VirtualGrid", () => {
 
     expect(screen.getByTestId("virtual-grid")).toBeDefined();
   });
+
+  describe("column resizing", () => {
+    it("renders resize handles when onColumnResize is provided", () => {
+      const rows = makeRows(5);
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onColumnResize={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByTestId("resize-handle-name")).toBeDefined();
+      expect(screen.getByTestId("resize-handle-value")).toBeDefined();
+    });
+
+    it("does NOT render resize handles when onColumnResize is absent", () => {
+      const rows = makeRows(5);
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      expect(document.querySelector(".vgrid-resize-handle")).toBeNull();
+    });
+
+    it("calls onColumnResize with correct width during drag", () => {
+      const onResize = vi.fn();
+      const rows = makeRows(5);
+
+      // Mock setPointerCapture since jsdom lacks it
+      Element.prototype.setPointerCapture = vi.fn();
+      Element.prototype.releasePointerCapture = vi.fn();
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onColumnResize={onResize}
+        />,
+      );
+
+      const handle = screen.getByTestId("resize-handle-name");
+
+      // Simulate pointerdown at x=100
+      fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 });
+
+      // Simulate pointermove to x=150 (delta = +50)
+      handle.dispatchEvent(new PointerEvent("pointermove", { clientX: 150, bubbles: true }));
+
+      // "name" column starts at width 200, so expect 250
+      expect(onResize).toHaveBeenCalledWith("name", 250);
+
+      // Simulate pointerup to end drag
+      handle.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+
+      // Further moves should NOT trigger callback
+      onResize.mockClear();
+      handle.dispatchEvent(new PointerEvent("pointermove", { clientX: 200, bubbles: true }));
+      expect(onResize).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -90,6 +90,7 @@ export function App() {
     data: gridData,
     toggleSort,
     setColumnFilter,
+    setColumnWidth,
   } = grid;
   const totalRows = gridData.length;
 
@@ -162,6 +163,7 @@ export function App() {
           renderHeaderCell={renderHeaderCell}
           renderFilterCell={renderFilterCell}
           onVirtualRangeChange={setVirtualRange}
+          onColumnResize={setColumnWidth}
         />
       </div>
     </div>

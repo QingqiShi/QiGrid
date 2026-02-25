@@ -164,3 +164,19 @@ body {
   font-variant-numeric: tabular-nums;
   color: #64748b;
 }
+
+/* Resize handle */
+.vgrid-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent;
+}
+
+.vgrid-resize-handle:hover {
+  background: rgba(59, 130, 246, 0.3);
+}

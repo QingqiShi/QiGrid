@@ -14,6 +14,7 @@ Every session starts fresh with no prior context. Do this first:
 1. Move the task file to `ai/tasks/in-progress/`.
 2. Read the task file fully — it has acceptance criteria and edge cases.
 3. Read the existing code you'll be modifying before writing anything.
+   _Note_ You are WELCOME to challenge the task if you notice something inconsistent or you think it's not the right thing to work on. You should feel empowered to stop and voice your concerns.
 4. Implement, commit with descriptive messages explaining _what_ and _why_.
 5. Run the quality gate: `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test`
 6. If the task touches the playground: `cd apps/playground && npx playwright test`

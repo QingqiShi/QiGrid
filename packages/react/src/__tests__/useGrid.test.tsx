@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@qigrid/core";
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { useGrid } from "../useGrid";
 
 interface Person {
@@ -8,7 +8,7 @@ interface Person {
   age: number;
 }
 
-const columns = [
+const columns: ColumnDef<Person>[] = [
   { id: "name", accessorKey: "name" as const, header: "Name" },
   { id: "age", accessorKey: "age" as const, header: "Age" },
 ];
@@ -18,22 +18,22 @@ function makeData(...names: string[]): Person[] {
 }
 
 describe("useGrid", () => {
-  it("returns a grid instance from options", () => {
+  it("returns rows and columns from options", () => {
     const data = makeData("Alice", "Bob");
     const { result } = renderHook(() => useGrid({ data, columns }));
 
     expect(result.current.data).toBe(data);
-    expect(result.current.columns).toBe(columns);
-    expect(result.current.getRows()).toHaveLength(2);
+    expect(result.current.columnDefs).toBe(columns);
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.columns).toHaveLength(2);
   });
 
   it("returns rows that correspond to the initial data", () => {
     const data = makeData("Alice", "Bob");
     const { result } = renderHook(() => useGrid({ data, columns }));
-    const rows = result.current.getRows();
 
-    expect(rows[0]?.original).toEqual({ name: "Alice", age: 20 });
-    expect(rows[1]?.original).toEqual({ name: "Bob", age: 21 });
+    expect(result.current.rows[0]?.original).toEqual({ name: "Alice", age: 20 });
+    expect(result.current.rows[1]?.original).toEqual({ name: "Bob", age: 21 });
   });
 
   it("re-renders with new rows when data prop changes", () => {
@@ -44,12 +44,12 @@ describe("useGrid", () => {
       initialProps: { data: data1 },
     });
 
-    expect(result.current.getRows()).toHaveLength(1);
+    expect(result.current.rows).toHaveLength(1);
 
     rerender({ data: data2 });
 
-    expect(result.current.getRows()).toHaveLength(2);
-    expect(result.current.getRows()[0]?.original.name).toBe("Bob");
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.rows[0]?.original.name).toBe("Bob");
   });
 
   it("re-renders with new columns when columns prop changes", () => {
@@ -72,63 +72,109 @@ describe("useGrid", () => {
     expect(result.current.columns).toHaveLength(2);
   });
 
-  it("maintains a stable grid instance across re-renders", () => {
-    const data1 = makeData("Alice");
-    const data2 = makeData("Bob");
-
-    const { result, rerender } = renderHook(({ data }) => useGrid({ data, columns }), {
-      initialProps: { data: data1 },
-    });
-
-    const instanceBefore = result.current;
-
-    rerender({ data: data2 });
-
-    // The grid instance object should be the same reference
-    expect(result.current).toBe(instanceBefore);
-  });
-
-  it("re-renders when setData is called directly on the grid instance", () => {
-    const data = makeData("Alice");
-    const { result } = renderHook(() => useGrid({ data, columns }));
-
-    expect(result.current.getRows()).toHaveLength(1);
-
-    act(() => {
-      result.current.setData(makeData("Bob", "Carol", "Dave"));
-    });
-
-    expect(result.current.getRows()).toHaveLength(3);
-    expect(result.current.getRows()[0]?.original.name).toBe("Bob");
-  });
-
-  it("cleans up subscription on unmount", () => {
-    const data = makeData("Alice");
-    const { result, unmount } = renderHook(() => useGrid({ data, columns }));
-
-    const grid = result.current;
-    const subscribeSpy = vi.spyOn(grid, "subscribe");
-
-    // Re-render to capture the subscribe call
-    const { unmount: unmount2 } = renderHook(() => useGrid({ data, columns }));
-
-    // unmount should not throw — subscription cleanup runs
-    expect(() => unmount()).not.toThrow();
-    expect(() => unmount2()).not.toThrow();
-
-    subscribeSpy.mockRestore();
-  });
-
-  it("does not create a new grid instance when the same options are passed", () => {
+  it("returns a stable reference when re-rendered with same options", () => {
     const data = makeData("Alice");
     const options = { data, columns };
 
     const { result, rerender } = renderHook(() => useGrid(options));
 
-    const instance = result.current;
+    const first = result.current;
 
     rerender();
 
-    expect(result.current).toBe(instance);
+    expect(result.current).toBe(first);
+  });
+
+  it("provides stable updater function references across re-renders", () => {
+    const data = makeData("Alice");
+    const { result, rerender } = renderHook(() => useGrid({ data, columns }));
+
+    const { toggleSort, setSorting, setColumnFilter, setColumnFilters } = result.current;
+
+    rerender();
+
+    expect(result.current.toggleSort).toBe(toggleSort);
+    expect(result.current.setSorting).toBe(setSorting);
+    expect(result.current.setColumnFilter).toBe(setColumnFilter);
+    expect(result.current.setColumnFilters).toBe(setColumnFilters);
+  });
+
+  it("cycles toggleSort through asc → desc → removed", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    expect(result.current.sorting).toEqual([]);
+
+    act(() => result.current.toggleSort("name"));
+    expect(result.current.sorting).toEqual([{ columnId: "name", direction: "asc" }]);
+
+    act(() => result.current.toggleSort("name"));
+    expect(result.current.sorting).toEqual([{ columnId: "name", direction: "desc" }]);
+
+    act(() => result.current.toggleSort("name"));
+    expect(result.current.sorting).toEqual([]);
+  });
+
+  it("filters rows when setColumnFilter is called", () => {
+    const data = makeData("Alice", "Bob", "Carol");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    expect(result.current.rows).toHaveLength(3);
+
+    act(() => result.current.setColumnFilter("name", "ob"));
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0]?.original.name).toBe("Bob");
+
+    // Clear filter
+    act(() => result.current.setColumnFilter("name", ""));
+    expect(result.current.rows).toHaveLength(3);
+  });
+
+  it("preserves column model reference when only sorting changes", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    const columnsBefore = result.current.columns;
+
+    act(() => result.current.toggleSort("name"));
+
+    // Column model should be the same reference — it doesn't depend on sorting
+    expect(result.current.columns).toBe(columnsBefore);
+  });
+
+  it("preserves column model reference when only filters change", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    const columnsBefore = result.current.columns;
+
+    act(() => result.current.setColumnFilter("name", "Ali"));
+
+    // Column model should be the same reference — it doesn't depend on filters
+    expect(result.current.columns).toBe(columnsBefore);
+  });
+
+  it("produces correctly sorted rows", () => {
+    const data = makeData("Charlie", "Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    act(() => result.current.toggleSort("name"));
+
+    const names = result.current.rows.map((r) => r.original.name);
+    expect(names).toEqual(["Alice", "Bob", "Charlie"]);
+
+    act(() => result.current.toggleSort("name"));
+
+    const namesDesc = result.current.rows.map((r) => r.original.name);
+    expect(namesDesc).toEqual(["Charlie", "Bob", "Alice"]);
+  });
+
+  it("row getValue returns correct column values", () => {
+    const data = makeData("Alice");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    const row = result.current.rows[0];
+    expect(row?.getValue("name")).toBe("Alice");
+    expect(row?.getValue("age")).toBe(20);
   });
 });

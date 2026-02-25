@@ -4,12 +4,9 @@ export type {
   ColumnFilter,
   ColumnFiltersState,
   ColumnSort,
-  GridInstance,
   GridOptions,
-  GridState,
-  Listener,
   Row,
   SortingState,
-  Unsubscribe,
 } from "@qigrid/core";
+export type { UseGridReturn } from "./types";
 export { useGrid } from "./useGrid";

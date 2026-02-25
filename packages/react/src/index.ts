@@ -7,6 +7,9 @@ export type {
   GridOptions,
   Row,
   SortingState,
+  VirtualRange,
+  VirtualRangeParams,
 } from "@qigrid/core";
-export type { UseGridReturn } from "./types";
+export type { UseGridReturn, VirtualGridProps } from "./types";
 export { useGrid } from "./useGrid";
+export { VirtualGrid } from "./VirtualGrid";

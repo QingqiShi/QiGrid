@@ -1,4 +1,34 @@
-import type { Column, ColumnDef, ColumnFiltersState, Row, SortingState } from "@qigrid/core";
+import type {
+  Column,
+  ColumnDef,
+  ColumnFiltersState,
+  Row,
+  SortingState,
+  VirtualRange,
+} from "@qigrid/core";
+
+export interface VirtualGridProps<TData> {
+  /** Rows from useGrid (post-filter/sort pipeline). */
+  rows: Row<TData>[];
+  /** Resolved column model with effective widths. */
+  columns: Column<TData>[];
+  /** Total width of all columns. */
+  totalWidth: number;
+  /** Fixed height of each row in pixels. */
+  rowHeight: number;
+  /** Height of the scroll container in pixels. */
+  containerHeight: number;
+  /** Number of extra rows to render above/below the visible window. */
+  overscan?: number;
+  /** Render prop for data cells. */
+  renderCell: (row: Row<TData>, column: Column<TData>) => React.ReactNode;
+  /** Render prop for header cells. */
+  renderHeaderCell: (column: Column<TData>) => React.ReactNode;
+  /** Optional render prop for filter row cells. */
+  renderFilterCell?: (column: Column<TData>) => React.ReactNode;
+  /** Callback fired when the visible virtual range changes. */
+  onVirtualRangeChange?: (range: VirtualRange) => void;
+}
 
 export interface UseGridReturn<TData> {
   /** Final pipeline output — the rows to render. */

@@ -147,6 +147,26 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   }, [onSelectionMouseUp]);
 
   const gridRef = useRef<HTMLDivElement>(null);
+  const scrollBodyRef = useRef<HTMLDivElement>(null);
+
+  // Scroll-to-focus: when focusedCell changes, scroll so the focused row is visible
+  useEffect(() => {
+    if (!focusedCell || !scrollBodyRef.current) return;
+    const el = scrollBodyRef.current;
+    const focusedRowTop = focusedCell.rowIndex * rowHeight;
+    const focusedRowBottom = focusedRowTop + rowHeight;
+    // Visible data window starts after sticky header
+    const visibleTop = el.scrollTop;
+    const visibleBottom = visibleTop + rowAreaHeight;
+
+    if (focusedRowTop < visibleTop) {
+      // Focused cell is above the visible area — scroll up
+      el.scrollTop = focusedRowTop;
+    } else if (focusedRowBottom > visibleBottom) {
+      // Focused cell is below the visible area — scroll down
+      el.scrollTop = focusedRowBottom - rowAreaHeight;
+    }
+  }, [focusedCell, rowHeight, rowAreaHeight]);
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: headless grid uses divs intentionally
@@ -160,6 +180,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       style={{ outline: "none" }}
     >
       <div
+        ref={scrollBodyRef}
         className="vgrid-body"
         onScroll={handleScroll}
         style={{ height: containerHeight, overflow: "auto" }}

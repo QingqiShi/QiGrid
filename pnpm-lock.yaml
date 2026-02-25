@@ -88,12 +88,18 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
       jsdom:
         specifier: ^28.1.0
         version: 28.1.0
       react:
         specifier: ^19.0.0
         version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
       tsdown:
         specifier: ^0.20.0
         version: 0.20.3(typescript@5.8.3)

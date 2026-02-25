@@ -1,6 +1,7 @@
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
 
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
@@ -15,6 +16,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     renderHeaderCell,
     renderFilterCell,
     onVirtualRangeChange,
+    deferScrollUpdates,
   } = props;
 
   const [scrollTop, setScrollTop] = useState(0);
@@ -46,8 +48,15 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const stickyHeight = headerRowHeight + filterRowHeight;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const newScrollTop = e.currentTarget.scrollTop;
+    if (deferScrollUpdates) {
+      setScrollTop(newScrollTop);
+    } else {
+      flushSync(() => setScrollTop(newScrollTop));
+    }
   };
+
+  const rowAreaHeight = containerHeight - stickyHeight;
 
   return (
     <div className="vgrid" data-testid="virtual-grid">
@@ -61,7 +70,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
           style={{
             height: virtualRange.totalHeight + stickyHeight,
             width: totalWidth,
-            position: "relative",
           }}
         >
           <div
@@ -69,7 +77,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
             style={{
               position: "sticky",
               top: 0,
-              zIndex: 1,
+              zIndex: 2,
               width: totalWidth,
             }}
           >
@@ -99,33 +107,45 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
             )}
           </div>
 
-          {visibleRows.map((row, i) => (
-            <div
-              key={row.index}
-              className={`vgrid-row${row.index % 2 === 0 ? " vgrid-row-even" : ""}`}
-              data-row-index={row.index}
-              style={{
-                display: "flex",
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: totalWidth,
-                height: rowHeight,
-                transform: `translateY(${stickyHeight + virtualRange.offsetTop + i * rowHeight}px)`,
-                willChange: "transform",
-              }}
-            >
-              {columns.map((col) => (
-                <div
-                  key={col.id}
-                  className="vgrid-cell"
-                  style={{ width: col.width, flexShrink: 0 }}
-                >
-                  {renderCell(row, col)}
-                </div>
-              ))}
-            </div>
-          ))}
+          <div
+            className="vgrid-rows"
+            style={{
+              position: "sticky",
+              top: stickyHeight,
+              height: rowAreaHeight,
+              overflow: "hidden",
+              zIndex: 1,
+              width: totalWidth,
+            }}
+          >
+            {visibleRows.map((row, i) => (
+              <div
+                key={row.index}
+                className={`vgrid-row${row.index % 2 === 0 ? " vgrid-row-even" : ""}`}
+                data-row-index={row.index}
+                style={{
+                  display: "flex",
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: totalWidth,
+                  height: rowHeight,
+                  transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
+                  willChange: "transform",
+                }}
+              >
+                {columns.map((col) => (
+                  <div
+                    key={col.id}
+                    className="vgrid-cell"
+                    style={{ width: col.width, flexShrink: 0 }}
+                  >
+                    {renderCell(row, col)}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

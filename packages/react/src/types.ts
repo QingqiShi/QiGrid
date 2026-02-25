@@ -28,6 +28,10 @@ export interface VirtualGridProps<TData> {
   renderFilterCell?: (column: Column<TData>) => React.ReactNode;
   /** Callback fired when the visible virtual range changes. */
   onVirtualRangeChange?: (range: VirtualRange) => void;
+  /** Defer scroll state updates to React's async batching instead of using
+   *  synchronous rendering. Enable this if cell renderers are expensive and
+   *  you prefer batched updates over gap-free scrolling. */
+  deferScrollUpdates?: boolean;
 }
 
 export interface UseGridReturn<TData> {

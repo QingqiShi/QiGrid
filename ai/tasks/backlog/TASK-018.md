@@ -1,46 +1,52 @@
-# TASK-018: Keyboard navigation
+# TASK-018: Row expansion / detail views
 
 **Phase:** 3 — Core features
-**Blocked by:** TASK-015 (needs virtualization awareness for PageUp/PageDown)
+**Blocked by:** TASK-016 (needs virtualization for detail row rendering)
 
 ## Goal
 
-Implement cell-level keyboard navigation. Users can move focus between cells using arrow keys. Works with virtualization (focus moves can trigger scroll).
+Allow individual rows to be expanded to show a detail view. Expanded rows insert a detail row below the original. Works with virtualization (expanded rows affect virtual height).
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- Pure function to compute next focus position: takes current cell, direction, grid bounds, page size → returns new cell position
-- Directions: up, down, left, right
-- Home/End: first/last column in current row
-- PageUp/PageDown: move by page size (containerHeight / rowHeight rows)
-- Clamps at grid boundaries (doesn't wrap)
+- Pure function to insert detail rows: takes flat row list + expanded row IDs + optional getRowId → returns rows with detail rows inserted after expanded entries
+- Detail rows have `type: 'detail'` and reference their parent row
+- Leaf rows gain an `isExpanded` flag
 
 ### React (`@qigrid/react`)
 
-- Focused cell state managed by `useGrid` or a companion hook
-- Grid container is focusable (`tabIndex={0}`) and captures keyboard events
-- Arrow keys, Home, End, PageUp, PageDown handled via `onKeyDown`
-- When focus moves beyond the visible virtual range, scroll to bring the focused cell into view
-- Focused cell rendered with a visual indicator (e.g., outline/border)
-- Enter/Space on a focused cell fires an optional `onCellAction` callback
+- `useGrid` (or companion hook) manages expanded row IDs state
+- Exposes updaters to toggle row expansion and set expanded IDs
+- Optional `getRowId` for stable row identity (falls back to index)
+
+### Edge cases
+
+- Expand/collapse while scrolled mid-list (no scroll jump)
+- Expand all / collapse all
+- Expanded row removed by filter (expansion state preserved, detail row hidden)
+- Works with grouping (expand a leaf row within a group)
 
 ### Playground
 
-- Click a cell to focus it
-- Arrow keys move between cells
-- Focused cell has visible highlight
-- PageUp/PageDown scrolls and moves focus
+- Click a row to expand it, showing a detail panel below
+- Detail panel shows additional row data
+- Expand/collapse is visually indicated
 
 ### Tests
 
-- Arrow key movement in all 4 directions
-- Boundary clamping (can't move past edges)
-- Home/End within row
-- PageUp/PageDown moves by page size
-- Virtualized: focus beyond viewport scrolls to reveal cell
+- Toggle expand inserts detail row
+- Toggle collapse removes detail row
+- Expanded rows affect row count
+- Virtualization accounts for detail rows in totalHeight
+- Filter hides expanded row → detail row also hidden
+- Works alongside grouping
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `cd apps/playground && npx playwright test` — including new tests for:
+  - Click row to expand, detail panel appears
+  - Click again to collapse, detail panel disappears
+  - Scroll with expanded rows, no visual glitches

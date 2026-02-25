@@ -36,6 +36,13 @@ Refactor `@qigrid/core` from a stateful `createGrid()` factory to a library of p
 - Do not touch `@qigrid/react` or the playground — TASK-012 handles that
 - Do not add new features (grouping, virtualization, etc.) — just refactor what exists
 
+### Benchmark regression check
+
+- Re-run existing sort/filter benchmarks after refactor
+- Confirm no performance regression vs. the stateful `createGrid` implementation
+- If any benchmark regresses by > 20%, investigate before proceeding
+
 ## Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `pnpm turbo bench` shows no regressions

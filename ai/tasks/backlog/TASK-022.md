@@ -1,38 +1,50 @@
-# TASK-022: Bundle size CI gate + final validation
+# TASK-022: Full pipeline integration tests
 
-**Phase:** 4 — Polish
-**Blocked by:** TASK-021
+**Phase:** 3 — Core features (post-feature gate)
+**Blocked by:** TASK-017, TASK-018, TASK-019
+
+## Why
+
+The plan identifies "pipeline interaction complexity" as a top risk: each pipeline stage interacts with every other, and bugs hide in cross-cutting interactions. Individual tasks test their own stage in isolation. This task writes the tests that exercise all stages composed together.
 
 ## Goal
 
-Add automated bundle size enforcement. Validate the complete v1 feature set meets all acceptance criteria.
+Write integration tests that validate the full pipeline (`filter → sort → group → expand → flatten → virtualize`) works correctly when multiple features are active simultaneously.
 
 ## Acceptance criteria
 
-### Bundle size gate
+### Core integration tests
 
-- Script that measures the minified + gzipped size of `@qigrid/core` ESM output
-- Script fails (exit code 1) if size exceeds 30kb
-- Integrated into turbo pipeline (`pnpm turbo size` or part of build)
-- Size printed in output for visibility
+- filter + sort: filtered rows are sorted correctly
+- filter + group: groups reflect filtered data, empty groups are excluded
+- sort + group: rows within groups are sorted
+- filter + sort + group: all three composed
+- group + expand: expand a leaf row within a group, detail row appears in correct position
+- group + collapse: collapse a group, its children and any expanded detail rows disappear
+- Full pipeline: filter + sort + group + expand + flatten + virtualize — verify visible rows are correct
 
-### Final validation checklist
+### State transition tests
 
-- [ ] Sorting works (client-side, single and multi-column)
-- [ ] Filtering works (client-side, column filters with AND logic)
-- [ ] Row virtualization works (10k+ rows, smooth scroll)
-- [ ] Row grouping works (single and multi-level, expand/collapse)
-- [ ] Row expansion / detail views work
-- [ ] Column auto-sizing works (model + measurement hook)
-- [ ] Keyboard navigation works (arrow keys, Home/End, PageUp/PageDown)
-- [ ] Data export works (CSV/TSV/JSON) — if implemented (stretch)
-- [ ] Bundle size ≤ 30kb minified + gzipped
-- [ ] All performance benchmarks pass targets (TASK-021)
-- [ ] Playground demonstrates all features
-- [ ] All tests pass (unit, e2e, visual regression, benchmarks)
-- [ ] Zero third-party runtime dependencies
+- Add a filter while grouped → groups recompute, expanded groups stay expanded if still present
+- Collapse a group while filtered → collapse state preserved when filter is removed
+- Sort while a row is expanded → expanded row moves to new position, detail row follows
+- Change grouping columns while rows are expanded → expansion state resets (or remains, per design decision)
+- Scroll while grouped and expanded → correct rows rendered
 
-### Quality gate
+### Edge cases
+
+- All rows filtered out while grouped → empty state
+- Expand a row, then filter it away → detail row hidden, expansion state preserved
+- Group by column where all values are identical → single group
+- Multi-level group + expand + virtualize with overscan
+
+### Playwright e2e integration tests
+
+- Load playground with grouping + sorting + filtering all active
+- Expand a row within a group, scroll, collapse the group, verify no glitches
+- Keyboard-navigate through grouped/expanded rows
+
+## Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
-- Bundle size gate passes
+- `cd apps/playground && npx playwright test` passes

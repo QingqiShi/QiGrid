@@ -1,37 +1,52 @@
-# TASK-013: Column sizing model
+# TASK-013: Architecture review checkpoint
 
-**Phase:** 1 — Foundation
+**Phase:** 0 — Architecture refactor (post-refactor gate)
 **Blocked by:** TASK-012
+
+## Why
+
+TASK-011 and TASK-012 are a major structural rewrite — converting from a stateful engine to stateless pure functions + React-native state. Every subsequent task builds on this foundation. A quick review before Phase 1 prevents compounding design problems through 10 more tasks.
 
 ## Goal
 
-Add width management to the column model so every column has a computed width. This is foundational — virtualization, auto-sizing, and any future resize interaction all depend on it.
+Validate that the refactored architecture is ready for Phase 1+ features. This is a review task, not an implementation task.
 
-## Acceptance criteria
+## Checklist
 
-### Core (`@qigrid/core`)
+### Pipeline type composition
 
-- `ColumnDef<TData>` gains optional sizing props: `width?: number`, `minWidth?: number`, `maxWidth?: number`
-- `Column<TData>` exposes computed `width`, `minWidth`, `maxWidth`
-- Defaults: `width: 150`, `minWidth: 50`, `maxWidth: Infinity`
-- Pure function to resolve column widths: takes column defs + optional runtime overrides, returns columns with effective widths (clamped to min/max)
-- Pure function to compute total width from resolved columns
+- [ ] Verify the pipeline stages compose cleanly: can you type-check a chain of `filter → sort → group → expand → flatten → virtualize` with consistent input/output types?
+- [ ] Each transform takes rows in, returns rows out (or a structure that flattens to rows)
+- [ ] The type system supports future row type discriminators (`'leaf' | 'group' | 'detail'`) without breaking existing transforms
 
-### React (`@qigrid/react`)
+### Tree-shakeability
 
-- `useGrid` exposes column width state and an updater to change individual column widths
-- Width changes are clamped to min/max constraints
-- Column model returned from `useGrid` includes effective widths
+- [ ] Each transform function is independently importable from `@qigrid/core`
+- [ ] Unused transforms are eliminated by the bundler (verify with a minimal import + build)
 
-### Tests
+### `useGrid` API surface
 
-- Default widths (150px when unspecified)
-- Explicit widths from ColumnDef
-- min/max clamping (value below min → min, value above max → max)
-- Width updater clamps and triggers re-render
-- Total width sums correctly
-- Width overrides reset for removed columns when column defs change
+- [ ] The return shape of `useGrid` can accommodate all planned features without breaking changes:
+  - Sorting state + updaters (already exists)
+  - Filter state + updaters (already exists)
+  - Column width state + updaters (TASK-014)
+  - Grouping state + updaters (TASK-017)
+  - Expansion state + updaters (TASK-018)
+  - Keyboard focus state + updaters (TASK-019)
+- [ ] The hook accepts options for features not yet implemented without error (forward-compatible shape)
 
-### Quality gate
+### Memoization boundaries
+
+- [ ] Each `useMemo` stage has correct dependency arrays
+- [ ] Changing sort state does NOT recompute filtering
+- [ ] Changing filter state does NOT recompute sorting (but does recompute downstream)
+
+### Documentation sync
+
+- [ ] Update CLAUDE.md if the refactor changes any workflow instructions
+- [ ] Update MEMORY.md to reflect the new architecture (remove stale references to `createGrid`, `useSyncExternalStore`)
+
+## Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- All checklist items verified

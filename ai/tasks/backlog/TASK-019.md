@@ -1,40 +1,51 @@
-# TASK-019: Column auto-sizing model
+# TASK-019: Keyboard navigation
 
 **Phase:** 3 — Core features
-**Blocked by:** TASK-013 (needs column width model)
+**Blocked by:** TASK-016 (needs virtualization awareness for PageUp/PageDown)
 
 ## Goal
 
-Add auto-sizing support to the column model. Core provides a pure clamping function. Actual DOM measurement is done by the consumer or React layer.
+Implement cell-level keyboard navigation. Users can move focus between cells using arrow keys. Works with virtualization (focus moves can trigger scroll).
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- `ColumnDef<TData>` gains optional `enableAutoSize?: boolean` (default true)
-- Pure function to compute auto-sized width: takes measured width + min/max constraints → returns clamped width
-- Batch variant: takes a map of columnId → measured width, returns a map of columnId → clamped width
+- Pure function to compute next focus position: takes current cell, direction, grid bounds, page size → returns new cell position
+- Directions: up, down, left, right
+- Home/End: first/last column in current row
+- PageUp/PageDown: move by page size (containerHeight / rowHeight rows)
+- Clamps at grid boundaries (doesn't wrap)
 
 ### React (`@qigrid/react`)
 
-- Export a `useColumnAutoSize` hook that:
-  - Accepts the grid data/columns and a ref to the grid container
-  - Measures the rendered width of header text and a sample of cell content
-  - Returns auto-sized widths that can be fed into the column width state
-- The hook is opt-in — consumers call it explicitly (e.g., on a button click or on mount)
+- Focused cell state managed by `useGrid` or a companion hook
+- Grid container is focusable (`tabIndex={0}`) and captures keyboard events
+- Arrow keys, Home, End, PageUp, PageDown handled via `onKeyDown`
+- When focus moves beyond the visible virtual range, scroll to bring the focused cell into view
+- Focused cell rendered with a visual indicator (e.g., outline/border)
+- Enter/Space on a focused cell fires an optional `onCellAction` callback
 
 ### Playground
 
-- Add an "Auto-size columns" button that triggers auto-sizing
-- Columns resize to fit their content after clicking
+- Click a cell to focus it
+- Arrow keys move between cells
+- Focused cell has visible highlight
+- PageUp/PageDown scrolls and moves focus
 
 ### Tests
 
-- Clamping respects min/max
-- Batch auto-size handles multiple columns
-- Auto-size with `enableAutoSize: false` is a no-op for that column
-- React hook measures and applies widths
+- Arrow key movement in all 4 directions
+- Boundary clamping (can't move past edges)
+- Home/End within row
+- PageUp/PageDown moves by page size
+- Virtualized: focus beyond viewport scrolls to reveal cell
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `cd apps/playground && npx playwright test` — including new tests for:
+  - Arrow keys move focus between cells
+  - Focused cell has visible highlight
+  - PageDown scrolls and moves focus to correct cell
+  - Tab into grid, then arrow keys work

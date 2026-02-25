@@ -40,7 +40,7 @@ Rewrite `useGrid` to manage grid state internally using `useState`/`useReducer` 
 
 ### What NOT to do
 
-- Do not add `useTransition` or `useDeferredValue` yet — that's an optimization to add when we have expensive operations (100k rows). Just establish the React-native state foundation.
+- Do not add `useTransition` or `useDeferredValue` yet — TASK-021 handles that once we have expensive operations (100k rows). Just establish the React-native state foundation.
 - Do not add new features — just rewrite the existing sort/filter/column behavior
 
 ## Quality gate

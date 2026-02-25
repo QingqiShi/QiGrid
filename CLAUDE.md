@@ -14,7 +14,7 @@ Every session starts fresh with no prior context. Do this first:
 1. Move the task file to `ai/tasks/in-progress/`.
 2. Read the task file fully — it has acceptance criteria and edge cases.
 3. Read the existing code you'll be modifying before writing anything.
-4. Implement, commit with descriptive messages explaining *what* and *why*.
+4. Implement, commit with descriptive messages explaining _what_ and _why_.
 5. Run the quality gate: `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test`
 6. If the task touches the playground: `cd apps/playground && npx playwright test`
 7. Move the task file to `ai/tasks/done/`.
@@ -22,6 +22,7 @@ Every session starts fresh with no prior context. Do this first:
 ## When a session ends mid-task
 
 The user may stop you at any point. To make the next session's resume smooth:
+
 - **Commit early and often.** Uncommitted work is lost between sessions.
 - **Write descriptive commit messages.** After context is lost, `git log` is the only history.
 - If the task isn't finished, leave it in `ai/tasks/in-progress/`. The next session will pick it up via step 3 above.
@@ -34,6 +35,7 @@ This file is your persistent memory. **You are expected to update it.**
 - If you discover a non-obvious tooling quirk, environment issue, or workflow pitfall during implementation, add it too.
 - Keep entries concise and actionable. Write them as instructions to your future self, not as notes about what happened.
 - Remove entries that are no longer relevant (e.g., a workaround for a bug that's been fixed).
+- If you notice inconsistent instructions.
 
 ## Learned lessons
 

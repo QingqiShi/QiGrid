@@ -1,48 +1,65 @@
-# TASK-017: Row expansion / detail views
+# TASK-017: Row grouping
 
 **Phase:** 3 — Core features
-**Blocked by:** TASK-016 (shares expand/collapse mechanics and row type discriminator)
+**Blocked by:** TASK-016 (needs virtualization for grouped row rendering)
 
 ## Goal
 
-Allow individual rows to be expanded to show a detail view. Expanded rows insert a detail row below the original. Works with virtualization (expanded rows affect virtual height).
+Implement row grouping as pure functions in core. Users can group rows by one or more columns, producing a hierarchical row model with group header rows and leaf rows. Groups are collapsible.
 
 ## Acceptance criteria
 
 ### Core (`@qigrid/core`)
 
-- Pure function to insert detail rows: takes flat row list + expanded row IDs + optional getRowId → returns rows with detail rows inserted after expanded entries
-- Detail rows have `type: 'detail'` and reference their parent row
-- Leaf rows gain an `isExpanded` flag
+- Pure function to group rows: takes rows + column IDs to group by + column model → returns grouped structure
+- Pure function to flatten grouped rows: takes grouped structure + expanded group IDs → returns flat list interleaving group rows and leaf rows
+  - Group rows have a `type: 'group'` discriminator, `groupValue`, `depth`, `childCount`, `isExpanded`
+  - Leaf rows have `type: 'leaf'` (or equivalent discriminator)
+- Collapsed groups hide their children from the flattened output
+- Multi-level grouping: grouping by [A, B] creates nested groups
+- Pipeline: filter → group → sort (within groups) → flatten → virtualize
+- Group IDs are deterministic (e.g., `"department:Engineering"` or `"department:Engineering>role:Senior"`)
 
 ### React (`@qigrid/react`)
 
-- `useGrid` (or companion hook) manages expanded row IDs state
-- Exposes updaters to toggle row expansion and set expanded IDs
-- Optional `getRowId` for stable row identity (falls back to index)
+- `useGrid` (or a companion hook) manages grouping state and expanded group IDs
+- Exposes updaters to set grouping columns and toggle group expansion
 
 ### Edge cases
 
-- Expand/collapse while scrolled mid-list (no scroll jump)
-- Expand all / collapse all
-- Expanded row removed by filter (expansion state preserved, detail row hidden)
-- Works with grouping (expand a leaf row within a group)
+- Group by column with all identical values (single group)
+- Group by column with all unique values (N groups of 1)
+- Empty data
+- Filter applies before grouping (groups reflect filtered data)
+- Sort applies within groups (leaf rows sorted within their group)
 
 ### Playground
 
-- Click a row to expand it, showing a detail panel below
-- Detail panel shows additional row data
-- Expand/collapse is visually indicated
+- Add a "Group by" dropdown (e.g., group by department)
+- Group headers are visually distinct (indented, bold, show count)
+- Click group header to expand/collapse
+- Grouping works alongside sorting and filtering
 
 ### Tests
 
-- Toggle expand inserts detail row
-- Toggle collapse removes detail row
-- Expanded rows affect row count
-- Virtualization accounts for detail rows in totalHeight
-- Filter hides expanded row → detail row also hidden
-- Works alongside grouping
+- Single-level grouping produces correct group + leaf rows
+- Multi-level grouping produces nested structure
+- Expand/collapse toggles child visibility
+- Filter → group pipeline order
+- Sort within groups
+- Empty groups after filtering
+- Group IDs are stable
+
+### Performance
+
+- Benchmark: group by single column on 100k rows ≤ 60ms median (Vitest bench)
+- Benchmark: flatten grouped rows on 100k rows ≤ 20ms median (Vitest bench)
+- Add these as bench cases in this task — don't defer to TASK-024
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `cd apps/playground && npx playwright test` — including new tests for:
+  - Group expand/collapse toggles child visibility
+  - Group header renders with count and visual distinction
+  - Grouping works alongside sorting and filtering

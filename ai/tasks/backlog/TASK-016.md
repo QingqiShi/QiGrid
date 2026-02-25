@@ -1,55 +1,48 @@
-# TASK-016: Row grouping
+# TASK-016: Virtualized scroll container (React component + playground)
 
-**Phase:** 3 — Core features
-**Blocked by:** TASK-015 (needs virtualization for grouped row rendering)
+**Phase:** 2 — Virtualization
+**Blocked by:** TASK-014, TASK-015
 
 ## Goal
 
-Implement row grouping as pure functions in core. Users can group rows by one or more columns, producing a hierarchical row model with group header rows and leaf rows. Groups are collapsible.
+Build the React component that renders a virtualized grid using core's pure virtualization functions. Update the playground to demonstrate virtualization with 10k+ rows.
 
 ## Acceptance criteria
 
-### Core (`@qigrid/core`)
-
-- Pure function to group rows: takes rows + column IDs to group by + column model → returns grouped structure
-- Pure function to flatten grouped rows: takes grouped structure + expanded group IDs → returns flat list interleaving group rows and leaf rows
-  - Group rows have a `type: 'group'` discriminator, `groupValue`, `depth`, `childCount`, `isExpanded`
-  - Leaf rows have `type: 'leaf'` (or equivalent discriminator)
-- Collapsed groups hide their children from the flattened output
-- Multi-level grouping: grouping by [A, B] creates nested groups
-- Pipeline: filter → group → sort (within groups) → flatten → virtualize
-- Group IDs are deterministic (e.g., `"department:Engineering"` or `"department:Engineering>role:Senior"`)
-
 ### React (`@qigrid/react`)
 
-- `useGrid` (or a companion hook) manages grouping state and expanded group IDs
-- Exposes updaters to set grouping columns and toggle group expansion
-
-### Edge cases
-
-- Group by column with all identical values (single group)
-- Group by column with all unique values (N groups of 1)
-- Empty data
-- Filter applies before grouping (groups reflect filtered data)
-- Sort applies within groups (leaf rows sorted within their group)
+- Export a `<VirtualGrid>` component (or equivalent API — could be hooks + render helpers)
+- Outer container: scrollable div with configurable height
+- Inner spacer sized to `totalHeight x totalWidth` for native scrollbars
+- Visible rows absolutely positioned using CSS transforms for GPU compositing
+- On scroll, recomputes virtual range using core's pure function and re-renders
+- Only renders rows returned by the visible row slice
+- Column headers are sticky
+- Cells use column widths from TASK-014
+- Accepts data from `useGrid` — does not manage its own grid state
 
 ### Playground
 
-- Add a "Group by" dropdown (e.g., group by department)
-- Group headers are visually distinct (indented, bold, show count)
-- Click group header to expand/collapse
-- Grouping works alongside sorting and filtering
+- Switch from `<table>` to `<VirtualGrid>`
+- Increase dataset to 10,000 rows
+- Smooth scrolling with 10k rows
+- Info bar shows total rows + visible range
+- Sorting and filtering still work through the virtualized container
 
 ### Tests
 
-- Single-level grouping produces correct group + leaf rows
-- Multi-level grouping produces nested structure
-- Expand/collapse toggles child visibility
-- Filter → group pipeline order
-- Sort within groups
-- Empty groups after filtering
-- Group IDs are stable
+- Playwright e2e: scroll to middle, verify correct rows rendered
+- Playwright e2e: scroll to bottom, verify last rows rendered
+- Existing Playwright tests updated for new layout (or baselines updated)
+- React unit test: renders only visible rows, not full dataset
+
+### Bundle size checkpoint
+
+- After build, measure the minified + gzipped size of `@qigrid/core` ESM output
+- Record the number (informational, not a hard gate yet — TASK-025 adds the gate)
+- If already above 25kb, flag it — Phase 3 adds 4 more features that must fit in the remaining budget
 
 ### Quality gate
 
 - `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test` all pass
+- `cd apps/playground && npx playwright test` passes

@@ -28,6 +28,7 @@ Deliver a **headless, React-idiomatic data grid engine** that provides the data/
 - **Row grouping** — group by one or more columns, collapsible groups, nested hierarchy
 - **Row expansion / detail views** — expand individual rows to show detail content
 - **Column auto-sizing** — columns can be auto-sized to fit content
+- **Column resizing** — drag column border to resize, respects min/max constraints
 - **Keyboard navigation** — cell-level roving focus, arrow keys, Home/End, PageUp/PageDown, Enter/Space action
 
 ### Stretch
@@ -45,7 +46,7 @@ Design philosophy — these reflect intentional boundaries, not just deferral:
 
 Future work — may be added in later versions:
 
-- Column virtualization, pinning, resizing, reordering, visibility
+- Column virtualization, pinning, reordering, visibility
 - Row selection, pagination, clipboard, editing primitives
 - XLSX export (adapter pattern, not core)
 

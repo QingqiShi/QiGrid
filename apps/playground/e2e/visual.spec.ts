@@ -5,10 +5,9 @@ test.describe("visual regression", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto("/");
     // Wait for the virtual grid to render some rows
-    await expect(page.locator(".vgrid-row")).toHaveCount(
-      await page.locator(".vgrid-row").count(),
-      { timeout: 5000 },
-    );
+    await expect(page.locator(".vgrid-row")).toHaveCount(await page.locator(".vgrid-row").count(), {
+      timeout: 5000,
+    });
     // Ensure at least some rows are visible
     await expect(page.locator(".vgrid-row").first()).toBeVisible();
   });

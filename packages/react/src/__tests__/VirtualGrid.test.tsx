@@ -130,13 +130,14 @@ describe("VirtualGrid", () => {
     const scrollContainer = document.querySelector(".vgrid-body") as HTMLElement;
 
     // Scroll to row ~500
-    Object.defineProperty(scrollContainer, "scrollTop", { value: 500 * ROW_HEIGHT, writable: true });
+    Object.defineProperty(scrollContainer, "scrollTop", {
+      value: 500 * ROW_HEIGHT,
+      writable: true,
+    });
     fireEvent.scroll(scrollContainer);
 
     const renderedRows = document.querySelectorAll(".vgrid-row");
-    const indices = Array.from(renderedRows).map((el) =>
-      Number(el.getAttribute("data-row-index")),
-    );
+    const indices = Array.from(renderedRows).map((el) => Number(el.getAttribute("data-row-index")));
 
     // Should contain rows around index 500
     expect(indices.some((i) => i >= 495 && i <= 505)).toBe(true);

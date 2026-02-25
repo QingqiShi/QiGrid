@@ -1,6 +1,5 @@
-import type { Column, SortingState, VirtualRange } from "@qigrid/react";
-import { VirtualGrid, useGrid } from "@qigrid/react";
-import type { ColumnDef } from "@qigrid/react";
+import type { Column, ColumnDef, SortingState, VirtualRange } from "@qigrid/react";
+import { useGrid, VirtualGrid } from "@qigrid/react";
 import { useCallback, useMemo, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
@@ -83,30 +82,35 @@ function CellValue({ col, value }: { col: Column<Employee>; value: unknown }) {
 export function App() {
   const options = useMemo(() => ({ data, columns }), []);
   const grid = useGrid(options);
-  const { rows, columns: cols, totalWidth, sorting, data: gridData, toggleSort, setColumnFilter } = grid;
+  const {
+    rows,
+    columns: cols,
+    totalWidth,
+    sorting,
+    data: gridData,
+    toggleSort,
+    setColumnFilter,
+  } = grid;
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
 
-  const renderCell = useCallback(
-    (row: (typeof rows)[number], column: (typeof cols)[number]) => {
-      const value =
-        column.accessorKey != null
-          ? row.original[column.accessorKey]
-          : column.accessorFn
-            ? column.accessorFn(row.original)
-            : "";
-      return <CellValue col={column} value={value} />;
-    },
-    [],
-  );
+  const renderCell = useCallback((row: (typeof rows)[number], column: (typeof cols)[number]) => {
+    const value =
+      column.accessorKey != null
+        ? row.original[column.accessorKey]
+        : column.accessorFn
+          ? column.accessorFn(row.original)
+          : "";
+    return <CellValue col={column} value={value} />;
+  }, []);
 
   const renderHeaderCell = useCallback(
     (column: (typeof cols)[number]) => (
-      <div className="sortable-header" onClick={() => toggleSort(column.id)}>
+      <button type="button" className="sortable-header" onClick={() => toggleSort(column.id)}>
         {column.header}
         <span className="sort-indicator">{getSortIndicator(sorting, column.id)}</span>
-      </div>
+      </button>
     ),
     [sorting, toggleSort],
   );
@@ -142,7 +146,10 @@ export function App() {
         <div className="grid-info">
           {cols.length} columns &middot; Showing {rows.length} of {totalRows} rows
           {virtualRange && (
-            <> &middot; Visible rows {visibleStart}-{visibleEnd} of {rows.length}</>
+            <>
+              {" "}
+              &middot; Visible rows {visibleStart}-{visibleEnd} of {rows.length}
+            </>
           )}
         </div>
         <VirtualGrid

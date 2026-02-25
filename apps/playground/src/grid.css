@@ -76,7 +76,15 @@ body {
 }
 
 .sortable-header {
+  all: unset;
+  display: block;
+  width: 100%;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
 }
 
 .sortable-header:hover {

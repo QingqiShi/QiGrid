@@ -1,4 +1,4 @@
-import { DEFAULT_OVERSCAN, computeVirtualRange, sliceVisibleRows } from "@qigrid/core";
+import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { VirtualGridProps } from "./types";

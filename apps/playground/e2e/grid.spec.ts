@@ -21,10 +21,9 @@ test("renders the QiGrid playground", async ({ page }) => {
 
 test("scroll to middle renders correct rows", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".vgrid-row")).toHaveCount(
-    await page.locator(".vgrid-row").count(),
-    { timeout: 5000 },
-  );
+  await expect(page.locator(".vgrid-row")).toHaveCount(await page.locator(".vgrid-row").count(), {
+    timeout: 5000,
+  });
 
   const scrollContainer = page.locator(".vgrid-body");
 

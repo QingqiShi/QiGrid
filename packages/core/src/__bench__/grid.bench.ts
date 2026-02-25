@@ -1,5 +1,9 @@
 import { bench, describe } from "vitest";
+import { buildColumnModel } from "../columns";
 import { createGrid } from "../createGrid";
+import { filterRows } from "../filtering";
+import { buildRowModel } from "../rowModel";
+import { sortRows } from "../sorting";
 import type { ColumnDef } from "../types";
 
 interface Employee {
@@ -72,39 +76,53 @@ describe("getRows materialization", () => {
   });
 });
 
-describe("sorting 100k rows", () => {
-  // Sort benchmarks operate on getRows() output to measure data transformation cost.
-  // Once core sorting is implemented, these should be replaced with grid.sort() calls.
-  const grid = createGrid({ data: data100k, columns });
-
-  bench("sort by string column (name)", () => {
-    const rows = grid.getRows();
-    rows.sort((a, b) => a.original.name.localeCompare(b.original.name));
-  });
-
-  bench("sort by numeric column (salary)", () => {
-    const rows = grid.getRows();
-    rows.sort((a, b) => a.original.salary - b.original.salary);
+describe("buildColumnModel", () => {
+  bench("buildColumnModel with 5 columns", () => {
+    buildColumnModel(columns);
   });
 });
 
-describe("filtering 100k rows", () => {
-  // Filter benchmarks operate on getRows() output to measure data transformation cost.
-  // Once core filtering is implemented, these should be replaced with grid.filter() calls.
-  const grid = createGrid({ data: data100k, columns });
+describe("sorting 100k rows (pure)", () => {
+  const rows100k = buildRowModel(data100k, columns, [], []);
 
-  bench("filter by string equality (department)", () => {
-    const rows = grid.getRows();
-    rows.filter((r) => r.original.department === "Engineering");
+  bench("sortRows by string column (name)", () => {
+    sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
   });
 
-  bench("filter by numeric range (salary > 80000)", () => {
-    const rows = grid.getRows();
-    rows.filter((r) => r.original.salary > 80000);
+  bench("sortRows by numeric column (salary)", () => {
+    sortRows(rows100k, [{ columnId: "salary", direction: "asc" }], columns);
+  });
+});
+
+describe("filtering 100k rows (pure)", () => {
+  bench("filterRows by string includes (name contains 'Alice')", () => {
+    filterRows(data100k, [{ columnId: "name", value: "Alice" }], columns);
   });
 
-  bench("filter by string includes (name contains 'Alice')", () => {
-    const rows = grid.getRows();
-    rows.filter((r) => r.original.name.includes("Alice"));
+  bench("filterRows by string equality (department)", () => {
+    filterRows(data100k, [{ columnId: "department", value: "Engineering" }], columns);
+  });
+
+  bench("filterRows by numeric range (salary >= 80000)", () => {
+    const customColumns: ColumnDef<Employee>[] = [
+      {
+        id: "salary",
+        accessorKey: "salary",
+        header: "Salary",
+        filterFn: (value, filterValue) => (value as number) >= (filterValue as number),
+      },
+    ];
+    filterRows(data100k, [{ columnId: "salary", value: 80000 }], customColumns);
+  });
+});
+
+describe("full pipeline 100k rows (pure)", () => {
+  bench("buildRowModel with filter + sort", () => {
+    buildRowModel(
+      data100k,
+      columns,
+      [{ columnId: "department", value: "Engineering" }],
+      [{ columnId: "name", direction: "asc" }],
+    );
   });
 });

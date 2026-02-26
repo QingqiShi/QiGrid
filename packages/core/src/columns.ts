@@ -1,4 +1,4 @@
-import type { Column, ColumnDef } from "./types";
+import type { Column, ColumnDef, GroupDisplayType } from "./types";
 
 const DEFAULT_WIDTH = 150;
 const DEFAULT_MIN_WIDTH = 50;
@@ -51,4 +51,57 @@ export function computeTotalWidth<TData>(columns: Column<TData>[]): number {
     total += col.width;
   }
   return total;
+}
+
+const GROUP_COL_WIDTH = 200;
+const GROUP_COL_MIN_WIDTH = 100;
+const GROUP_COL_MAX_WIDTH = 600;
+
+const EMPTY_GROUP_COLUMNS: Column<never>[] = [];
+
+export function buildGroupColumns<TData>(
+  grouping: string[],
+  displayType: GroupDisplayType,
+  columns: Column<TData>[],
+): Column<TData>[] {
+  if (displayType === "groupRows" || grouping.length === 0) {
+    return EMPTY_GROUP_COLUMNS as Column<TData>[];
+  }
+
+  if (displayType === "singleColumn") {
+    return [
+      {
+        id: "qigrid:group",
+        accessorKey: undefined,
+        accessorFn: undefined,
+        header: "Group",
+        getValue: () => undefined,
+        filterFn: undefined,
+        sortingFn: undefined,
+        width: GROUP_COL_WIDTH,
+        minWidth: GROUP_COL_MIN_WIDTH,
+        maxWidth: GROUP_COL_MAX_WIDTH,
+        groupFor: "*",
+      },
+    ];
+  }
+
+  // multipleColumns
+  const colMap = new Map(columns.map((c) => [c.id, c]));
+  return grouping.map((columnId) => {
+    const source = colMap.get(columnId);
+    return {
+      id: `qigrid:group:${columnId}`,
+      accessorKey: undefined,
+      accessorFn: undefined,
+      header: source?.header ?? columnId,
+      getValue: () => undefined,
+      filterFn: undefined,
+      sortingFn: undefined,
+      width: GROUP_COL_WIDTH,
+      minWidth: GROUP_COL_MIN_WIDTH,
+      maxWidth: GROUP_COL_MAX_WIDTH,
+      groupFor: columnId,
+    };
+  });
 }

@@ -1,4 +1,4 @@
-export { buildColumnModel, computeTotalWidth } from "./columns";
+export { buildColumnModel, buildGroupColumns, computeTotalWidth } from "./columns";
 export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { flattenGroupedRows, groupRows } from "./grouping";
 export type { CellCoord, CellRange } from "./selection";
@@ -19,6 +19,7 @@ export type {
   ColumnFilter,
   ColumnFiltersState,
   ColumnSort,
+  GroupDisplayType,
   GridOptions,
   GridRow,
   GroupedRows,

@@ -24,6 +24,8 @@ export interface ColumnFilter {
 
 export type ColumnFiltersState = ColumnFilter[];
 
+export type GroupDisplayType = "groupRows" | "singleColumn" | "multipleColumns";
+
 export interface Column<TData> {
   id: string;
   accessorKey: (keyof TData & string) | undefined;
@@ -35,6 +37,7 @@ export interface Column<TData> {
   width: number;
   minWidth: number;
   maxWidth: number;
+  groupFor?: string;
 }
 
 export interface GridOptions<TData> {

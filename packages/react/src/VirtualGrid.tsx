@@ -1,4 +1,4 @@
-import type { CellRange } from "@qigrid/core";
+import type { CellRange, GridRow } from "@qigrid/core";
 import {
   computeVirtualRange,
   DEFAULT_OVERSCAN,
@@ -26,6 +26,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     renderCell,
     renderHeaderCell,
     renderFilterCell,
+    renderGroupRow,
+    onToggleGroupExpansion,
     onVirtualRangeChange,
     deferScrollUpdates,
     onColumnResize,
@@ -218,62 +220,92 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               width: totalWidth,
             }}
           >
-            {visibleRows.map((row, i) => (
-              <div
-                key={row.index}
-                className={`vgrid-row${row.index % 2 === 0 ? " vgrid-row-even" : ""}`}
-                data-row-index={row.index}
-                style={{
-                  display: "flex",
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: totalWidth,
-                  height: rowHeight,
-                  transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
-                  willChange: "transform",
-                }}
-              >
-                {columns.map((col, colIndex) => {
-                  const isFocused =
-                    focusedCell != null &&
-                    focusedCell.rowIndex === row.index &&
-                    focusedCell.columnIndex === colIndex;
-                  const isSelected =
-                    hasSelection &&
-                    isCellInRanges({ rowIndex: row.index, columnIndex: colIndex }, ranges);
-                  const isAnchor =
-                    selectionAnchor != null &&
-                    selectionAnchor.rowIndex === row.index &&
-                    selectionAnchor.columnIndex === colIndex &&
-                    isSelected;
-                  const selStyle = getCellSelectionStyle(row.index, colIndex);
-                  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
-
-                  return (
-                    <div
-                      key={col.id}
-                      className={className}
-                      style={{ width: col.width, flexShrink: 0, ...selStyle }}
-                      onPointerDown={(e) => {
-                        if (!onCellMouseDown) return;
-                        isDraggingRef.current = true;
-                        onCellMouseDown(
-                          { rowIndex: row.index, columnIndex: colIndex },
-                          { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey },
-                        );
-                      }}
-                      onPointerEnter={() => {
-                        if (!onCellMouseEnter || !isDraggingRef.current) return;
-                        onCellMouseEnter({ rowIndex: row.index, columnIndex: colIndex });
-                      }}
-                    >
-                      {renderCell(row, col)}
+            {visibleRows.map((row, i) => {
+              if (row.type === "group") {
+                return (
+                  <div
+                    key={row.groupId}
+                    className="vgrid-row vgrid-group-row"
+                    data-row-index={row.index}
+                    data-group-id={row.groupId}
+                    style={{
+                      display: "flex",
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: totalWidth,
+                      height: rowHeight,
+                      transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
+                      willChange: "transform",
+                    }}
+                  >
+                    <div className="vgrid-group-cell" style={{ width: totalWidth, flexShrink: 0 }}>
+                      {renderGroupRow
+                        ? renderGroupRow(row, () => onToggleGroupExpansion?.(row.groupId))
+                        : `${row.groupValue} (${row.leafCount})`}
                     </div>
-                  );
-                })}
-              </div>
-            ))}
+                  </div>
+                );
+              }
+
+              // Leaf row
+              return (
+                <div
+                  key={`leaf-${row.index}`}
+                  className={`vgrid-row${row.index % 2 === 0 ? " vgrid-row-even" : ""}`}
+                  data-row-index={row.index}
+                  style={{
+                    display: "flex",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: totalWidth,
+                    height: rowHeight,
+                    transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
+                    willChange: "transform",
+                  }}
+                >
+                  {columns.map((col, colIndex) => {
+                    const isFocused =
+                      focusedCell != null &&
+                      focusedCell.rowIndex === row.index &&
+                      focusedCell.columnIndex === colIndex;
+                    const isSelected =
+                      hasSelection &&
+                      isCellInRanges({ rowIndex: row.index, columnIndex: colIndex }, ranges);
+                    const isAnchor =
+                      selectionAnchor != null &&
+                      selectionAnchor.rowIndex === row.index &&
+                      selectionAnchor.columnIndex === colIndex &&
+                      isSelected;
+                    const selStyle = getCellSelectionStyle(row.index, colIndex);
+                    const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
+
+                    return (
+                      <div
+                        key={col.id}
+                        className={className}
+                        style={{ width: col.width, flexShrink: 0, ...selStyle }}
+                        onPointerDown={(e) => {
+                          if (!onCellMouseDown) return;
+                          isDraggingRef.current = true;
+                          onCellMouseDown(
+                            { rowIndex: row.index, columnIndex: colIndex },
+                            { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey },
+                          );
+                        }}
+                        onPointerEnter={() => {
+                          if (!onCellMouseEnter || !isDraggingRef.current) return;
+                          onCellMouseEnter({ rowIndex: row.index, columnIndex: colIndex });
+                        }}
+                      >
+                        {renderCell(row, col)}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

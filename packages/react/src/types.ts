@@ -4,14 +4,17 @@ import type {
   Column,
   ColumnDef,
   ColumnFiltersState,
-  Row,
+  GridRow,
+  GroupRow,
+  GroupingState,
+  LeafRow,
   SortingState,
   VirtualRange,
 } from "@qigrid/core";
 
 export interface VirtualGridProps<TData> {
-  /** Rows from useGrid (post-filter/sort pipeline). */
-  rows: Row<TData>[];
+  /** Rows from useGrid (post-filter/sort/group pipeline). */
+  rows: GridRow<TData>[];
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];
   /** Total width of all columns. */
@@ -22,12 +25,16 @@ export interface VirtualGridProps<TData> {
   containerHeight: number;
   /** Number of extra rows to render above/below the visible window. */
   overscan?: number;
-  /** Render prop for data cells. */
-  renderCell: (row: Row<TData>, column: Column<TData>) => React.ReactNode;
+  /** Render prop for data cells (leaf rows only). */
+  renderCell: (row: LeafRow<TData>, column: Column<TData>) => React.ReactNode;
   /** Render prop for header cells. */
   renderHeaderCell: (column: Column<TData>) => React.ReactNode;
   /** Optional render prop for filter row cells. */
   renderFilterCell?: (column: Column<TData>) => React.ReactNode;
+  /** Render prop for group row headers. */
+  renderGroupRow?: (row: GroupRow, toggleExpansion: () => void) => React.ReactNode;
+  /** Callback fired when a group expansion is toggled. */
+  onToggleGroupExpansion?: (groupId: string) => void;
   /** Callback fired when the visible virtual range changes. */
   onVirtualRangeChange?: (range: VirtualRange) => void;
   /** Defer scroll state updates to React's async batching instead of using
@@ -60,8 +67,8 @@ export interface VirtualGridProps<TData> {
 }
 
 export interface UseGridReturn<TData> {
-  /** Final pipeline output — the rows to render. */
-  rows: Row<TData>[];
+  /** Final pipeline output — the rows to render (leaf + group rows). */
+  rows: GridRow<TData>[];
 
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];
@@ -74,6 +81,9 @@ export interface UseGridReturn<TData> {
 
   /** Current column filter state. */
   columnFilters: ColumnFiltersState;
+
+  /** Current grouping state (column IDs to group by). */
+  grouping: GroupingState;
 
   /** Original data reference (useful for "showing X of Y"). */
   data: TData[];
@@ -95,6 +105,18 @@ export interface UseGridReturn<TData> {
 
   /** Set the width of a single column (clamped to min/max). */
   setColumnWidth: (columnId: string, width: number) => void;
+
+  /** Replace the grouping state (column IDs to group by). */
+  setGrouping: (grouping: GroupingState) => void;
+
+  /** Toggle expansion of a specific group. */
+  toggleGroupExpansion: (groupId: string) => void;
+
+  /** Expand all groups. */
+  expandAllGroups: () => void;
+
+  /** Collapse all groups. */
+  collapseAllGroups: () => void;
 
   // --- Selection ---
 

@@ -2,22 +2,42 @@ import type {
   CellCoord,
   CellRange,
   ColumnFiltersState,
-  GridOptions,
+  GridRow,
+  GroupingState,
+  GroupRow,
+  LeafRow,
   Row,
   SortingState,
 } from "@qigrid/core";
-import { buildColumnModel, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
+import {
+  buildColumnModel,
+  computeTotalWidth,
+  filterRows,
+  flattenGroupedRows,
+  groupRows,
+  sortRows,
+} from "@qigrid/core";
 import { useCallback, useMemo, useReducer } from "react";
 import { EMPTY_SELECTION, gridReducer } from "./gridReducer";
 import type { UseGridReturn } from "./types";
 
-export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData> {
+export interface UseGridOptions<TData> {
+  data: TData[];
+  columns: import("@qigrid/core").ColumnDef<TData>[];
+  columnFilters?: ColumnFiltersState;
+  sorting?: SortingState;
+  grouping?: GroupingState;
+}
+
+export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TData> {
   const { data, columns: columnDefs } = options;
 
   const [state, dispatch] = useReducer(gridReducer, {
     sorting: options.sorting ?? [],
     columnFilters: options.columnFilters ?? [],
     columnWidths: {},
+    grouping: options.grouping ?? [],
+    collapsedGroupIds: new Set<string>(),
     ...EMPTY_SELECTION,
   });
 
@@ -70,10 +90,25 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
   }, [filteredData, baseColumnModel]);
 
   // Stage 4: Sort
-  const rows = useMemo(
+  const sortedRows = useMemo(
     () => sortRows(rowsBeforeSort, state.sorting, baseColumnModel),
     [rowsBeforeSort, state.sorting, baseColumnModel],
   );
+
+  // Stage 5: Group + Flatten (or pass through as-is when no grouping)
+  const rows: GridRow<TData>[] = useMemo(() => {
+    if (state.grouping.length === 0) {
+      // No grouping — wrap sorted rows as LeafRow for uniform GridRow type
+      return sortedRows.map<LeafRow<TData>>((row, i) => ({
+        type: "leaf",
+        index: i,
+        original: row.original,
+        getValue: row.getValue,
+      }));
+    }
+    const grouped = groupRows(sortedRows, state.grouping, baseColumnModel);
+    return flattenGroupedRows(grouped, state.collapsedGroupIds);
+  }, [sortedRows, state.grouping, state.collapsedGroupIds, baseColumnModel]);
 
   // Stable updater functions — dispatch is stable per React guarantees
   const toggleSort = useCallback(
@@ -100,6 +135,26 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
     (columnId: string, width: number) => dispatch({ type: "SET_COLUMN_WIDTH", columnId, width }),
     [],
   );
+
+  // --- Grouping callbacks ---
+  const setGrouping = useCallback(
+    (grouping: GroupingState) => dispatch({ type: "SET_GROUPING", grouping }),
+    [],
+  );
+
+  const toggleGroupExpansion = useCallback(
+    (groupId: string) => dispatch({ type: "TOGGLE_GROUP_EXPANSION", groupId }),
+    [],
+  );
+
+  const expandAllGroups = useCallback(() => dispatch({ type: "EXPAND_ALL_GROUPS" }), []);
+
+  const collapseAllGroups = useCallback(() => {
+    const allGroupIds = rows
+      .filter((r): r is GroupRow => r.type === "group")
+      .map((r) => r.groupId);
+    dispatch({ type: "COLLAPSE_ALL_GROUPS", allGroupIds });
+  }, [rows]);
 
   // --- Selection callbacks ---
   const selectCell = useCallback(
@@ -141,6 +196,7 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       totalWidth,
       sorting: state.sorting,
       columnFilters: state.columnFilters,
+      grouping: state.grouping,
       data,
       columnDefs,
       toggleSort,
@@ -148,6 +204,10 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setColumnFilter,
       setColumnFilters,
       setColumnWidth,
+      setGrouping,
+      toggleGroupExpansion,
+      expandAllGroups,
+      collapseAllGroups,
       focusedCell: state.focusedCell,
       selectionAnchor: state.selectionAnchor,
       selectedRanges: state.selectionRanges,
@@ -164,6 +224,7 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       totalWidth,
       state.sorting,
       state.columnFilters,
+      state.grouping,
       data,
       columnDefs,
       toggleSort,
@@ -171,6 +232,10 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
       setColumnFilter,
       setColumnFilters,
       setColumnWidth,
+      setGrouping,
+      toggleGroupExpansion,
+      expandAllGroups,
+      collapseAllGroups,
       state.focusedCell,
       state.selectionAnchor,
       state.selectionRanges,

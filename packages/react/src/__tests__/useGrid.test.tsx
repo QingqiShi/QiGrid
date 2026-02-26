@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@qigrid/core";
+import type { ColumnDef, GridRow, GroupRow, LeafRow } from "@qigrid/core";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { useGrid } from "../useGrid";
@@ -6,6 +6,7 @@ import { useGrid } from "../useGrid";
 interface Person {
   name: string;
   age: number;
+  department?: string;
 }
 
 const columns: ColumnDef<Person>[] = [
@@ -15,6 +16,11 @@ const columns: ColumnDef<Person>[] = [
 
 function makeData(...names: string[]): Person[] {
   return names.map((name, i) => ({ name, age: 20 + i }));
+}
+
+/** Type-safe helper to get leaf rows from useGrid result. */
+function leafRows<T>(rows: GridRow<T>[]): LeafRow<T>[] {
+  return rows.filter((r): r is LeafRow<T> => r.type === "leaf");
 }
 
 describe("useGrid", () => {
@@ -32,8 +38,9 @@ describe("useGrid", () => {
     const data = makeData("Alice", "Bob");
     const { result } = renderHook(() => useGrid({ data, columns }));
 
-    expect(result.current.rows[0]?.original).toEqual({ name: "Alice", age: 20 });
-    expect(result.current.rows[1]?.original).toEqual({ name: "Bob", age: 21 });
+    const leaves = leafRows(result.current.rows);
+    expect(leaves[0]?.original).toEqual({ name: "Alice", age: 20 });
+    expect(leaves[1]?.original).toEqual({ name: "Bob", age: 21 });
   });
 
   it("re-renders with new rows when data prop changes", () => {
@@ -49,7 +56,7 @@ describe("useGrid", () => {
     rerender({ data: data2 });
 
     expect(result.current.rows).toHaveLength(2);
-    expect(result.current.rows[0]?.original.name).toBe("Bob");
+    expect(leafRows(result.current.rows)[0]?.original.name).toBe("Bob");
   });
 
   it("re-renders with new columns when columns prop changes", () => {
@@ -123,7 +130,7 @@ describe("useGrid", () => {
 
     act(() => result.current.setColumnFilter("name", "ob"));
     expect(result.current.rows).toHaveLength(1);
-    expect(result.current.rows[0]?.original.name).toBe("Bob");
+    expect(leafRows(result.current.rows)[0]?.original.name).toBe("Bob");
 
     // Clear filter
     act(() => result.current.setColumnFilter("name", ""));
@@ -160,12 +167,12 @@ describe("useGrid", () => {
 
     act(() => result.current.toggleSort("name"));
 
-    const names = result.current.rows.map((r) => r.original.name);
+    const names = leafRows(result.current.rows).map((r) => r.original.name);
     expect(names).toEqual(["Alice", "Bob", "Charlie"]);
 
     act(() => result.current.toggleSort("name"));
 
-    const namesDesc = result.current.rows.map((r) => r.original.name);
+    const namesDesc = leafRows(result.current.rows).map((r) => r.original.name);
     expect(namesDesc).toEqual(["Charlie", "Bob", "Alice"]);
   });
 
@@ -173,9 +180,18 @@ describe("useGrid", () => {
     const data = makeData("Alice");
     const { result } = renderHook(() => useGrid({ data, columns }));
 
-    const row = result.current.rows[0];
+    const row = leafRows(result.current.rows)[0];
     expect(row?.getValue("name")).toBe("Alice");
     expect(row?.getValue("age")).toBe(20);
+  });
+
+  it("all rows have type='leaf' when no grouping", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    for (const row of result.current.rows) {
+      expect(row.type).toBe("leaf");
+    }
   });
 
   describe("column sizing", () => {
@@ -283,6 +299,131 @@ describe("useGrid", () => {
       expect(result.current.columns).toHaveLength(1);
       expect(result.current.columns[0]?.id).toBe("name");
       expect(result.current.columns[0]?.width).toBe(200);
+    });
+  });
+
+  describe("grouping", () => {
+    const deptColumns: ColumnDef<Person>[] = [
+      { id: "name", accessorKey: "name", header: "Name" },
+      { id: "age", accessorKey: "age", header: "Age" },
+      { id: "department", accessorKey: "department", header: "Department" },
+    ];
+
+    const deptData: Person[] = [
+      { name: "Alice", age: 30, department: "Engineering" },
+      { name: "Bob", age: 25, department: "Sales" },
+      { name: "Carol", age: 28, department: "Engineering" },
+      { name: "Dave", age: 35, department: "Sales" },
+    ];
+
+    it("produces GroupRow + LeafRow types when grouping is set", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+
+      const groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      const leaves = leafRows(result.current.rows);
+
+      expect(groups).toHaveLength(2);
+      expect(leaves).toHaveLength(4);
+      expect(groups[0]?.groupValue).toBe("Engineering");
+      expect(groups[1]?.groupValue).toBe("Sales");
+    });
+
+    it("toggleGroupExpansion collapses and expands groups", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+      // 2 groups + 4 leaves = 6
+      expect(result.current.rows).toHaveLength(6);
+
+      // Collapse Engineering
+      const engGroup = result.current.rows.find(
+        (r): r is GroupRow => r.type === "group" && r.groupValue === "Engineering",
+      );
+      act(() => result.current.toggleGroupExpansion(engGroup!.groupId));
+
+      // Engineering collapsed: 2 groups + 2 Sales leaves = 4
+      expect(result.current.rows).toHaveLength(4);
+
+      // Expand again
+      act(() => result.current.toggleGroupExpansion(engGroup!.groupId));
+      expect(result.current.rows).toHaveLength(6);
+    });
+
+    it("setGrouping clears selection", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      // Select a cell
+      act(() => result.current.selectCell({ rowIndex: 0, columnIndex: 0 }));
+      expect(result.current.focusedCell).not.toBeNull();
+
+      // Set grouping should clear selection
+      act(() => result.current.setGrouping(["department"]));
+      expect(result.current.focusedCell).toBeNull();
+      expect(result.current.selectedRanges).toEqual([]);
+    });
+
+    it("grouping + sorting works together", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      // Sort by name ascending first
+      act(() => result.current.toggleSort("name"));
+      // Then group by department
+      act(() => result.current.setGrouping(["department"]));
+
+      const leaves = leafRows(result.current.rows);
+      // Within Engineering group: Alice, Carol (sorted)
+      const engLeaves = leaves.filter((r) => r.original.department === "Engineering");
+      expect(engLeaves.map((r) => r.original.name)).toEqual(["Alice", "Carol"]);
+
+      // Within Sales group: Bob, Dave (sorted)
+      const salesLeaves = leaves.filter((r) => r.original.department === "Sales");
+      expect(salesLeaves.map((r) => r.original.name)).toEqual(["Bob", "Dave"]);
+    });
+
+    it("grouping + filtering works together", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+      // Filter to only name containing "ob" (Bob)
+      act(() => result.current.setColumnFilter("name", "ob"));
+
+      const groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      const leaves = leafRows(result.current.rows);
+
+      // Only Sales group should remain (Bob)
+      expect(groups).toHaveLength(1);
+      expect(groups[0]?.groupValue).toBe("Sales");
+      expect(leaves).toHaveLength(1);
+      expect(leaves[0]?.original.name).toBe("Bob");
+    });
+
+    it("clearing grouping returns to flat leaf rows", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+      expect(result.current.rows.some((r) => r.type === "group")).toBe(true);
+
+      act(() => result.current.setGrouping([]));
+      expect(result.current.rows.every((r) => r.type === "leaf")).toBe(true);
+      expect(result.current.rows).toHaveLength(4);
+    });
+
+    it("expandAllGroups and collapseAllGroups work", () => {
+      const { result } = renderHook(() => useGrid({ data: deptData, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+
+      // Collapse all
+      act(() => result.current.collapseAllGroups());
+      // Only 2 group headers
+      expect(result.current.rows).toHaveLength(2);
+      expect(result.current.rows.every((r) => r.type === "group")).toBe(true);
+
+      // Expand all
+      act(() => result.current.expandAllGroups());
+      expect(result.current.rows).toHaveLength(6);
     });
   });
 

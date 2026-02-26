@@ -1,10 +1,18 @@
-import type { CellCoord, CellRange, ColumnFiltersState, SortingState } from "@qigrid/core";
+import type {
+  CellCoord,
+  CellRange,
+  ColumnFiltersState,
+  GroupingState,
+  SortingState,
+} from "@qigrid/core";
 import { cellCoordsEqual, clampCell, cycleSort, updateColumnFilter } from "@qigrid/core";
 
 export interface GridInternalState {
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
   columnWidths: Record<string, number>;
+  grouping: GroupingState;
+  collapsedGroupIds: Set<string>;
   focusedCell: CellCoord | null;
   selectionRanges: CellRange[];
   /** Internal: the anchor cell from which shift-extend builds a range. */
@@ -17,6 +25,10 @@ export type GridAction =
   | { type: "SET_COLUMN_FILTERS"; filters: ColumnFiltersState }
   | { type: "SET_COLUMN_FILTER"; columnId: string; value: unknown }
   | { type: "SET_COLUMN_WIDTH"; columnId: string; width: number }
+  | { type: "SET_GROUPING"; grouping: GroupingState }
+  | { type: "TOGGLE_GROUP_EXPANSION"; groupId: string }
+  | { type: "EXPAND_ALL_GROUPS" }
+  | { type: "COLLAPSE_ALL_GROUPS"; allGroupIds: string[] }
   | { type: "SELECT_CELL"; coord: CellCoord }
   | { type: "EXTEND_SELECTION"; coord: CellCoord }
   | { type: "ADD_RANGE"; range: CellRange }
@@ -62,6 +74,26 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
         ...state,
         columnWidths: { ...state.columnWidths, [action.columnId]: action.width },
       };
+
+    // --- Grouping actions (clear selection on change) ---
+    case "SET_GROUPING":
+      return { ...state, grouping: action.grouping, collapsedGroupIds: new Set(), ...EMPTY_SELECTION };
+
+    case "TOGGLE_GROUP_EXPANSION": {
+      const next = new Set(state.collapsedGroupIds);
+      if (next.has(action.groupId)) {
+        next.delete(action.groupId);
+      } else {
+        next.add(action.groupId);
+      }
+      return { ...state, collapsedGroupIds: next, ...EMPTY_SELECTION };
+    }
+
+    case "EXPAND_ALL_GROUPS":
+      return { ...state, collapsedGroupIds: new Set(), ...EMPTY_SELECTION };
+
+    case "COLLAPSE_ALL_GROUPS":
+      return { ...state, collapsedGroupIds: new Set(action.allGroupIds), ...EMPTY_SELECTION };
 
     // --- Selection actions ---
     case "SELECT_CELL": {

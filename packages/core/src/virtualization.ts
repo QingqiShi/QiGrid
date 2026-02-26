@@ -1,4 +1,4 @@
-import type { Row, VirtualRange, VirtualRangeParams } from "./types";
+import type { VirtualRange, VirtualRangeParams } from "./types";
 
 export const DEFAULT_OVERSCAN = 5;
 
@@ -40,6 +40,6 @@ export function computeVirtualRange(params: VirtualRangeParams): VirtualRange {
   };
 }
 
-export function sliceVisibleRows<TData>(rows: Row<TData>[], range: VirtualRange): Row<TData>[] {
+export function sliceVisibleRows<T>(rows: T[], range: VirtualRange): T[] {
   return rows.slice(range.startIndex, range.endIndex);
 }

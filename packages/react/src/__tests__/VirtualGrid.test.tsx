@@ -1,4 +1,4 @@
-import type { Column, Row } from "@qigrid/core";
+import type { Column, GridRow, GroupRow, LeafRow } from "@qigrid/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { VirtualGrid } from "../VirtualGrid";
@@ -37,8 +37,9 @@ const columns: Column<Item>[] = [
   },
 ];
 
-function makeRows(count: number): Row<Item>[] {
+function makeLeafRows(count: number): LeafRow<Item>[] {
   return Array.from({ length: count }, (_, i) => ({
+    type: "leaf" as const,
     index: i,
     original: { name: `Item ${i}`, value: i * 10 },
     getValue(columnId: string) {
@@ -54,7 +55,7 @@ const TOTAL_WIDTH = 300;
 
 describe("VirtualGrid", () => {
   it("renders only visible rows, not the full dataset", () => {
-    const rows = makeRows(1000);
+    const rows = makeLeafRows(1000);
     render(
       <VirtualGrid
         rows={rows}
@@ -74,7 +75,7 @@ describe("VirtualGrid", () => {
   });
 
   it("renders header cells for all columns", () => {
-    const rows = makeRows(10);
+    const rows = makeLeafRows(10);
     render(
       <VirtualGrid
         rows={rows}
@@ -94,7 +95,7 @@ describe("VirtualGrid", () => {
   });
 
   it("applies column widths to header and data cells", () => {
-    const rows = makeRows(5);
+    const rows = makeLeafRows(5);
     render(
       <VirtualGrid
         rows={rows}
@@ -118,7 +119,7 @@ describe("VirtualGrid", () => {
   });
 
   it("updates visible rows on scroll", () => {
-    const rows = makeRows(1000);
+    const rows = makeLeafRows(1000);
     render(
       <VirtualGrid
         rows={rows}
@@ -150,7 +151,7 @@ describe("VirtualGrid", () => {
   });
 
   it("calls onVirtualRangeChange with correct range", () => {
-    const rows = makeRows(100);
+    const rows = makeLeafRows(100);
     const onRangeChange = vi.fn();
 
     render(
@@ -177,7 +178,7 @@ describe("VirtualGrid", () => {
   });
 
   it("renders filter row when renderFilterCell is provided", () => {
-    const rows = makeRows(10);
+    const rows = makeLeafRows(10);
     render(
       <VirtualGrid
         rows={rows}
@@ -198,7 +199,7 @@ describe("VirtualGrid", () => {
   });
 
   it("does not render filter row when renderFilterCell is not provided", () => {
-    const rows = makeRows(10);
+    const rows = makeLeafRows(10);
     render(
       <VirtualGrid
         rows={rows}
@@ -216,7 +217,7 @@ describe("VirtualGrid", () => {
   });
 
   it("has data-testid attribute for E2E selectors", () => {
-    const rows = makeRows(5);
+    const rows = makeLeafRows(5);
     render(
       <VirtualGrid
         rows={rows}
@@ -234,7 +235,7 @@ describe("VirtualGrid", () => {
 
   describe("column resizing", () => {
     it("renders resize handles when onColumnResize is provided", () => {
-      const rows = makeRows(5);
+      const rows = makeLeafRows(5);
       render(
         <VirtualGrid
           rows={rows}
@@ -253,7 +254,7 @@ describe("VirtualGrid", () => {
     });
 
     it("does NOT render resize handles when onColumnResize is absent", () => {
-      const rows = makeRows(5);
+      const rows = makeLeafRows(5);
       render(
         <VirtualGrid
           rows={rows}
@@ -271,7 +272,7 @@ describe("VirtualGrid", () => {
 
     it("calls onColumnResize with correct width during drag", () => {
       const onResize = vi.fn();
-      const rows = makeRows(5);
+      const rows = makeLeafRows(5);
 
       // Mock setPointerCapture since jsdom lacks it
       Element.prototype.setPointerCapture = vi.fn();
@@ -308,6 +309,122 @@ describe("VirtualGrid", () => {
       onResize.mockClear();
       handle.dispatchEvent(new PointerEvent("pointermove", { clientX: 200, bubbles: true }));
       expect(onResize).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("group row rendering", () => {
+    function makeGroupedRows(): GridRow<Item>[] {
+      return [
+        {
+          type: "group",
+          index: 0,
+          groupId: "name:A",
+          columnId: "name",
+          groupValue: "A",
+          depth: 0,
+          leafCount: 2,
+          isExpanded: true,
+        } satisfies GroupRow,
+        {
+          type: "leaf",
+          index: 1,
+          original: { name: "A1", value: 10 },
+          getValue: (colId: string) => (colId === "name" ? "A1" : 10),
+        } satisfies LeafRow<Item>,
+        {
+          type: "leaf",
+          index: 2,
+          original: { name: "A2", value: 20 },
+          getValue: (colId: string) => (colId === "name" ? "A2" : 20),
+        } satisfies LeafRow<Item>,
+      ];
+    }
+
+    it("renders group rows with .vgrid-group-row class", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRows = document.querySelectorAll(".vgrid-group-row");
+      expect(groupRows).toHaveLength(1);
+      expect(groupRows[0]?.getAttribute("data-group-id")).toBe("name:A");
+    });
+
+    it("invokes renderGroupRow callback for group rows", () => {
+      const rows = makeGroupedRows();
+      const renderGroupRow = vi.fn(
+        (row: GroupRow) => `Group: ${row.groupValue} (${row.leafCount})`,
+      );
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          renderGroupRow={renderGroupRow}
+        />,
+      );
+
+      expect(renderGroupRow).toHaveBeenCalledTimes(1);
+      expect(renderGroupRow).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "group", groupValue: "A", leafCount: 2 }),
+        expect.any(Function),
+      );
+    });
+
+    it("leaf rows render normally with cells alongside group rows", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      // 1 group row + 2 leaf rows = 3 total rows
+      const allRows = document.querySelectorAll(".vgrid-row");
+      expect(allRows).toHaveLength(3);
+
+      // Leaf rows should have cells
+      const cells = document.querySelectorAll(".vgrid-cell");
+      // 2 leaf rows × 2 columns = 4 cells
+      expect(cells).toHaveLength(4);
+    });
+
+    it("falls back to default group row content when renderGroupRow is not provided", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupCell = document.querySelector(".vgrid-group-cell");
+      expect(groupCell?.textContent).toBe("A (2)");
     });
   });
 });

@@ -1,6 +1,7 @@
 import { bench, describe } from "vitest";
 import { buildColumnModel } from "../columns";
 import { filterRows } from "../filtering";
+import { flattenGroupedRows, groupRows } from "../grouping";
 import { sortRows } from "../sorting";
 import type { ColumnDef, Row } from "../types";
 import { computeVirtualRange, sliceVisibleRows } from "../virtualization";
@@ -151,5 +152,23 @@ describe("sliceVisibleRows 1M rows", () => {
 
   bench("slice from middle", () => {
     sliceVisibleRows(rows1M, range);
+  });
+});
+
+describe("groupRows 100k rows", () => {
+  const rows100k = makeRows(data100k);
+
+  bench("group by single column (department)", () => {
+    groupRows(rows100k, ["department"], columns);
+  });
+});
+
+describe("flattenGroupedRows 100k rows", () => {
+  const rows100k = makeRows(data100k);
+  const grouped = groupRows(rows100k, ["department"], columns);
+  const noCollapsed = new Set<string>();
+
+  bench("flatten all expanded", () => {
+    flattenGroupedRows(grouped, noCollapsed);
   });
 });

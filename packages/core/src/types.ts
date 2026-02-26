@@ -42,6 +42,7 @@ export interface GridOptions<TData> {
   columns: ColumnDef<TData>[];
   columnFilters?: ColumnFiltersState;
   sorting?: SortingState;
+  grouping?: GroupingState;
 }
 
 export interface Row<TData> {
@@ -49,6 +50,38 @@ export interface Row<TData> {
   original: TData;
   getValue: (columnId: string) => unknown;
 }
+
+export interface LeafRow<TData> {
+  type: "leaf";
+  index: number;
+  original: TData;
+  getValue: (columnId: string) => unknown;
+}
+
+export interface GroupRow {
+  type: "group";
+  index: number;
+  groupId: string;
+  columnId: string;
+  groupValue: unknown;
+  depth: number;
+  leafCount: number;
+  isExpanded: boolean;
+}
+
+export type GridRow<TData> = LeafRow<TData> | GroupRow;
+
+export interface GroupNode<TData> {
+  columnId: string;
+  groupValue: unknown;
+  groupId: string;
+  rows: Row<TData>[];
+  children: GroupNode<TData>[];
+}
+
+export type GroupedRows<TData> = GroupNode<TData>[];
+
+export type GroupingState = string[];
 
 export interface VirtualRange {
   startIndex: number;

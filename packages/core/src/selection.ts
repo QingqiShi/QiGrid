@@ -117,7 +117,7 @@ export function getCellRangeEdges(
  * Compatible with Excel/Google Sheets paste.
  */
 export function serializeRangeToTSV(
-  rows: { getValue: (columnId: string) => unknown }[],
+  rows: { getValue?: (columnId: string) => unknown }[],
   columnIds: string[],
   range: CellRange,
 ): string {
@@ -126,7 +126,7 @@ export function serializeRangeToTSV(
 
   for (let r = n.start.rowIndex; r <= n.end.rowIndex; r++) {
     const row = rows[r];
-    if (!row) continue;
+    if (!row?.getValue) continue;
     const cells: string[] = [];
     for (let c = n.start.columnIndex; c <= n.end.columnIndex; c++) {
       const colId = columnIds[c];

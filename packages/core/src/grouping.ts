@@ -112,12 +112,21 @@ function flattenLevel<TData>(
 
     const aggregatedValues: Record<string, unknown> = {};
     if (aggColumns && aggColumns.length > 0) {
-      for (const col of aggColumns) {
-        const values: unknown[] = [];
-        for (const row of node.rows) {
-          values.push(col.getValue(row.original));
+      const numAgg = aggColumns.length;
+      const valueArrays: unknown[][] = new Array(numAgg);
+      for (let c = 0; c < numAgg; c++) {
+        valueArrays[c] = new Array(node.rows.length);
+      }
+      // Single pass over rows — collect all agg column values at once
+      for (let r = 0; r < node.rows.length; r++) {
+        const original = node.rows[r]!.original;
+        for (let c = 0; c < numAgg; c++) {
+          valueArrays[c]![r] = aggColumns[c]!.getValue(original);
         }
-        aggregatedValues[col.id] = col.aggFunc?.(values);
+      }
+      for (let c = 0; c < numAgg; c++) {
+        const col = aggColumns[c]!;
+        aggregatedValues[col.id] = col.aggFunc?.(valueArrays[c]!);
       }
     }
 

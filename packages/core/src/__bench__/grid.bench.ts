@@ -171,4 +171,26 @@ describe("flattenGroupedRows 100k rows", () => {
   bench("flatten all expanded", () => {
     flattenGroupedRows(grouped, noCollapsed);
   });
+
+  bench("flatten without aggregation (columns provided, no aggFunc)", () => {
+    flattenGroupedRows(grouped, noCollapsed, columns);
+  });
+});
+
+describe("aggregation 100k rows", () => {
+  const aggColumnDefs: ColumnDef<Employee>[] = [
+    { id: "id", accessorKey: "id", header: "ID", aggFunc: "count" },
+    { id: "name", accessorKey: "name", header: "Name", aggFunc: "first" },
+    { id: "department", accessorKey: "department", header: "Department" },
+    { id: "salary", accessorKey: "salary", header: "Salary", aggFunc: "sum" },
+    { id: "startDate", accessorKey: "startDate", header: "Start Date", aggFunc: "min" },
+  ];
+  const aggColumns = buildColumnModel(aggColumnDefs);
+  const rows100k = makeRows(data100k);
+  const grouped = groupRows(rows100k, ["department"], columns);
+  const noCollapsed = new Set<string>();
+
+  bench("aggregate 5 columns across 100k rows (single-level)", () => {
+    flattenGroupedRows(grouped, noCollapsed, aggColumns);
+  });
 });

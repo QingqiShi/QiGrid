@@ -77,7 +77,12 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
 
     // --- Grouping actions (clear selection on change) ---
     case "SET_GROUPING":
-      return { ...state, grouping: action.grouping, collapsedGroupIds: new Set(), ...EMPTY_SELECTION };
+      return {
+        ...state,
+        grouping: action.grouping,
+        collapsedGroupIds: new Set(),
+        ...EMPTY_SELECTION,
+      };
 
     case "TOGGLE_GROUP_EXPANSION": {
       const next = new Set(state.collapsedGroupIds);

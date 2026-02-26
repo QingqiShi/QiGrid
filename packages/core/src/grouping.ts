@@ -1,4 +1,4 @@
-import type { Column, GroupNode, GroupRow, GroupedRows, GridRow, LeafRow, Row } from "./types";
+import type { Column, GridRow, GroupedRows, GroupNode, GroupRow, LeafRow, Row } from "./types";
 
 function serializeGroupValue(value: unknown): string {
   if (value == null) return "__null__";

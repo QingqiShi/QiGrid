@@ -1,4 +1,4 @@
-import type { CellRange, GridRow } from "@qigrid/core";
+import type { CellRange } from "@qigrid/core";
 import {
   computeVirtualRange,
   DEFAULT_OVERSCAN,

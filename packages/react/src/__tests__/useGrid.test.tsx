@@ -341,13 +341,15 @@ describe("useGrid", () => {
       const engGroup = result.current.rows.find(
         (r): r is GroupRow => r.type === "group" && r.groupValue === "Engineering",
       );
-      act(() => result.current.toggleGroupExpansion(engGroup!.groupId));
+      expect(engGroup).toBeDefined();
+      const engGroupId = engGroup?.groupId ?? "";
+      act(() => result.current.toggleGroupExpansion(engGroupId));
 
       // Engineering collapsed: 2 groups + 2 Sales leaves = 4
       expect(result.current.rows).toHaveLength(4);
 
       // Expand again
-      act(() => result.current.toggleGroupExpansion(engGroup!.groupId));
+      act(() => result.current.toggleGroupExpansion(engGroupId));
       expect(result.current.rows).toHaveLength(6);
     });
 

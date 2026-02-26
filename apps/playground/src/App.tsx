@@ -1,5 +1,13 @@
 import { serializeRangeToTSV } from "@qigrid/core";
-import type { CellCoord, Column, ColumnDef, SortingState, VirtualRange } from "@qigrid/react";
+import type {
+  CellCoord,
+  Column,
+  ColumnDef,
+  GroupRow,
+  LeafRow,
+  SortingState,
+  VirtualRange,
+} from "@qigrid/react";
 import { useGrid, VirtualGrid } from "@qigrid/react";
 import { useCallback, useMemo, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
@@ -80,6 +88,12 @@ function CellValue({ col, value }: { col: Column<Employee>; value: unknown }) {
   }
 }
 
+const GROUP_BY_OPTIONS = [
+  { label: "None", value: "" },
+  { label: "Department", value: "department" },
+  { label: "Location", value: "location" },
+];
+
 export function App() {
   const options = useMemo(() => ({ data, columns }), []);
   const grid = useGrid(options);
@@ -92,6 +106,8 @@ export function App() {
     toggleSort,
     setColumnFilter,
     setColumnWidth,
+    setGrouping,
+    toggleGroupExpansion,
     focusedCell,
     selectionAnchor,
     selectedRanges,
@@ -105,6 +121,15 @@ export function App() {
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
+
+  // --- Group-by handler ---
+  const handleGroupByChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = e.target.value;
+      setGrouping(value ? [value] : []);
+    },
+    [setGrouping],
+  );
 
   // --- Selection event handlers ---
   const handleCellMouseDown = useCallback(
@@ -175,8 +200,13 @@ export function App() {
           if (isMultiSelect && selectedRanges.length > 0) {
             event.preventDefault();
             const columnIds = cols.map((c) => c.id);
+            // serializeRangeToTSV skips rows without getValue (group rows)
             const parts = selectedRanges.map((range) =>
-              serializeRangeToTSV(rows, columnIds, range),
+              serializeRangeToTSV(
+                rows as { getValue?: (id: string) => unknown }[],
+                columnIds,
+                range,
+              ),
             );
             navigator.clipboard.writeText(parts.join("\n")).catch(() => {
               // Clipboard write failed (insecure context, etc.) — silently ignore
@@ -188,7 +218,7 @@ export function App() {
     [moveFocus, selectAll, clearSelection, selectedRanges, cols, rows],
   );
 
-  const renderCell = useCallback((row: (typeof rows)[number], column: (typeof cols)[number]) => {
+  const renderCell = useCallback((row: LeafRow<Employee>, column: Column<Employee>) => {
     return <CellValue col={column} value={row.getValue(column.id)} />;
   }, []);
 
@@ -218,6 +248,23 @@ export function App() {
     [setColumnFilter],
   );
 
+  const renderGroupRow = useCallback(
+    (row: GroupRow, toggleExpansion: () => void) => (
+      <button
+        type="button"
+        className="group-header"
+        style={{ paddingLeft: `${16 + row.depth * 20}px` }}
+        onClick={toggleExpansion}
+        data-group-id={row.groupId}
+      >
+        <span className="group-toggle">{row.isExpanded ? "\u25BE" : "\u25B8"}</span>
+        <span className="group-value">{String(row.groupValue)}</span>
+        <span className="group-count">({row.leafCount})</span>
+      </button>
+    ),
+    [],
+  );
+
   const visibleStart = virtualRange ? virtualRange.startIndex + 1 : 0;
   const visibleEnd = virtualRange ? virtualRange.endIndex : 0;
 
@@ -228,6 +275,19 @@ export function App() {
         Showing {rows.length} of {totalRows} rows via <code>@qigrid/react</code> &rarr;{" "}
         <code>@qigrid/core</code>
       </p>
+
+      <div className="grid-controls">
+        <label htmlFor="group-by-select">
+          Group by:{" "}
+          <select id="group-by-select" onChange={handleGroupByChange} defaultValue="">
+            {GROUP_BY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="grid-container">
         <div className="grid-info">
@@ -248,6 +308,8 @@ export function App() {
           renderCell={renderCell}
           renderHeaderCell={renderHeaderCell}
           renderFilterCell={renderFilterCell}
+          renderGroupRow={renderGroupRow}
+          onToggleGroupExpansion={toggleGroupExpansion}
           onVirtualRangeChange={setVirtualRange}
           onColumnResize={setColumnWidth}
           focusedCell={focusedCell}

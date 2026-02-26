@@ -150,9 +150,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   const expandAllGroups = useCallback(() => dispatch({ type: "EXPAND_ALL_GROUPS" }), []);
 
   const collapseAllGroups = useCallback(() => {
-    const allGroupIds = rows
-      .filter((r): r is GroupRow => r.type === "group")
-      .map((r) => r.groupId);
+    const allGroupIds = rows.filter((r): r is GroupRow => r.type === "group").map((r) => r.groupId);
     dispatch({ type: "COLLAPSE_ALL_GROUPS", allGroupIds });
   }, [rows]);
 

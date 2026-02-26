@@ -93,6 +93,7 @@ const GROUP_BY_OPTIONS = [
   { label: "None", value: "" },
   { label: "Department", value: "department" },
   { label: "Location", value: "location" },
+  { label: "Dept + Location", value: "department,location" },
 ];
 
 const DISPLAY_TYPE_OPTIONS: { label: string; value: GroupDisplayType }[] = [
@@ -134,7 +135,7 @@ export function App() {
   const handleGroupByChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const value = e.target.value;
-      setGrouping(value ? [value] : []);
+      setGrouping(value ? value.split(",") : []);
     },
     [setGrouping],
   );

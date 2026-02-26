@@ -426,6 +426,31 @@ test("grouped data columns are hidden in multipleColumns mode", async ({ page })
   expect(deptOccurrences).toBe(1); // Only the group column header, not the data column
 });
 
+test("multipleColumns with multi-level grouping shows two group columns", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by Dept + Location (two levels)
+  await page.selectOption("#group-by-select", "department,location");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Switch to multipleColumns display type
+  await page.selectOption("#display-type-select", "multipleColumns");
+
+  // Should have two group column headers: "Department" and "Location"
+  const headers = page.locator(".vgrid-header-cell");
+  await expect(headers.nth(0)).toContainText("Department", { timeout: 5000 });
+  await expect(headers.nth(1)).toContainText("Location");
+
+  // Original 9 - 2 hidden (department, location) + 2 group columns = 9
+  await expect(headers).toHaveCount(9);
+
+  // Group rows should have cells per column with toggle
+  const firstGroupRow = page.locator(".vgrid-group-row").first();
+  const toggleButton = firstGroupRow.locator(".vgrid-group-toggle").first();
+  await expect(toggleButton).toBeVisible();
+});
+
 test("no group columns when display type is singleColumn but grouping is empty", async ({
   page,
 }) => {

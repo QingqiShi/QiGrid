@@ -42,6 +42,8 @@ export interface VirtualGridProps<TData> {
 
   /** Currently focused cell coordinate (from useGrid). */
   focusedCell?: CellCoord | null;
+  /** The anchor cell of the current selection (drag origin). */
+  selectionAnchor?: CellCoord | null;
   /** Currently selected ranges (from useGrid). */
   selectedRanges?: CellRange[];
   /** Called when a cell is clicked for selection. */
@@ -98,6 +100,8 @@ export interface UseGridReturn<TData> {
 
   /** Currently focused cell (rowIndex + columnIndex into rows/columns arrays). */
   focusedCell: CellCoord | null;
+  /** The anchor cell of the current selection (drag origin). */
+  selectionAnchor: CellCoord | null;
   /** Active selection ranges. */
   selectedRanges: CellRange[];
   /** Focus a cell and select it (clears previous selection). */

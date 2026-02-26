@@ -104,3 +104,48 @@ test("resize handle shows col-resize cursor on hover", async ({ page }) => {
   const cursor = await handle.evaluate((el) => window.getComputedStyle(el).cursor);
   expect(cursor).toBe("col-resize");
 });
+
+test("arrow key after drag selection navigates from anchor cell", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  const grid = page.locator("[data-testid='virtual-grid']");
+
+  // Click cell at row 2, col 1 (anchor)
+  const anchorCell = page.locator("[data-row-index='2'] .vgrid-cell").nth(1);
+  await anchorCell.click();
+
+  // Shift+click cell at row 4, col 1 to create a multi-cell selection
+  const endCell = page.locator("[data-row-index='4'] .vgrid-cell").nth(1);
+  await endCell.click({ modifiers: ["Shift"] });
+
+  // Press ArrowDown — should navigate from anchor (row 2), landing at row 3
+  await grid.press("ArrowDown");
+
+  // The focused cell should be at row 3 (anchor row 2 + 1)
+  const focusedCell = page.locator(".vgrid-cell--focused");
+  await expect(focusedCell).toBeVisible();
+  const focusedRow = await focusedCell.locator("..").getAttribute("data-row-index");
+  expect(focusedRow).toBe("3");
+});
+
+test("anchor cell has vgrid-cell--anchor class within a selection", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 1, col 0 (anchor)
+  const anchorCell = page.locator("[data-row-index='1'] .vgrid-cell").nth(0);
+  await anchorCell.click();
+
+  // Shift+click cell at row 3, col 0 to create a range
+  const endCell = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
+  await endCell.click({ modifiers: ["Shift"] });
+
+  // The anchor cell (row 1, col 0) should have the anchor class
+  const anchorCellAfter = page.locator("[data-row-index='1'] .vgrid-cell").nth(0);
+  await expect(anchorCellAfter).toHaveClass(/vgrid-cell--anchor/);
+
+  // The end cell (row 3, col 0) should NOT have the anchor class
+  const endCellAfter = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
+  await expect(endCellAfter).not.toHaveClass(/vgrid-cell--anchor/);
+});

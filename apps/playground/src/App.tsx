@@ -93,6 +93,7 @@ export function App() {
     setColumnFilter,
     setColumnWidth,
     focusedCell,
+    selectionAnchor,
     selectedRanges,
     selectCell,
     extendSelection,
@@ -250,6 +251,7 @@ export function App() {
           onVirtualRangeChange={setVirtualRange}
           onColumnResize={setColumnWidth}
           focusedCell={focusedCell}
+          selectionAnchor={selectionAnchor}
           selectedRanges={selectedRanges}
           onCellMouseDown={handleCellMouseDown}
           onCellMouseEnter={handleCellMouseEnter}

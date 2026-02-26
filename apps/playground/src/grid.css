@@ -179,6 +179,15 @@ body {
   background: rgba(14, 101, 235, 0.12);
 }
 
+.vgrid-cell--anchor {
+  background: #fff;
+}
+
+.vgrid-row-even .vgrid-cell--anchor,
+.vgrid-row:hover .vgrid-cell--anchor {
+  background: #fff;
+}
+
 /* Prevent text selection during drag */
 .vgrid {
   user-select: none;

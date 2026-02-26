@@ -285,4 +285,67 @@ describe("useGrid", () => {
       expect(result.current.columns[0]?.width).toBe(200);
     });
   });
+
+  describe("selection and anchor navigation", () => {
+    it("exposes selectionAnchor reflecting state", () => {
+      const data = makeData("Alice", "Bob", "Carol");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      expect(result.current.selectionAnchor).toBeNull();
+
+      act(() => result.current.selectCell({ rowIndex: 1, columnIndex: 1 }));
+      expect(result.current.selectionAnchor).toEqual({ rowIndex: 1, columnIndex: 1 });
+    });
+
+    it("arrow key after drag selection navigates from anchor", () => {
+      const data = makeData("Alice", "Bob", "Carol");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      // Select cell (1,1) as anchor
+      act(() => result.current.selectCell({ rowIndex: 1, columnIndex: 1 }));
+      // Drag-extend to (2,1)
+      act(() => result.current.extendSelection({ rowIndex: 2, columnIndex: 1 }));
+
+      expect(result.current.selectionAnchor).toEqual({ rowIndex: 1, columnIndex: 1 });
+      expect(result.current.focusedCell).toEqual({ rowIndex: 2, columnIndex: 1 });
+
+      // Press ArrowDown (non-shift) — should navigate from anchor (1,1), landing at (2,1)
+      act(() => result.current.moveFocus(1, 0));
+      expect(result.current.focusedCell).toEqual({ rowIndex: 2, columnIndex: 1 });
+      // Selection collapses to the new cell
+      expect(result.current.selectedRanges).toEqual([
+        { start: { rowIndex: 2, columnIndex: 1 }, end: { rowIndex: 2, columnIndex: 1 } },
+      ]);
+    });
+
+    it("arrow key after larger drag navigates from anchor column too", () => {
+      const data = makeData("Alice", "Bob", "Carol");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      // Select cell (0,0) as anchor
+      act(() => result.current.selectCell({ rowIndex: 0, columnIndex: 0 }));
+      // Drag-extend to (2,1)
+      act(() => result.current.extendSelection({ rowIndex: 2, columnIndex: 1 }));
+
+      // Press ArrowRight (non-shift) — from anchor (0,0) → (0,1)
+      act(() => result.current.moveFocus(0, 1));
+      expect(result.current.focusedCell).toEqual({ rowIndex: 0, columnIndex: 1 });
+    });
+
+    it("shift+arrow still extends from anchor correctly", () => {
+      const data = makeData("Alice", "Bob", "Carol");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      // Select cell (1,0) as anchor
+      act(() => result.current.selectCell({ rowIndex: 1, columnIndex: 0 }));
+      // Shift+ArrowDown — extend from anchor to (2,0)
+      act(() => result.current.moveFocus(1, 0, true));
+
+      expect(result.current.selectionAnchor).toEqual({ rowIndex: 1, columnIndex: 0 });
+      expect(result.current.focusedCell).toEqual({ rowIndex: 2, columnIndex: 0 });
+      expect(result.current.selectedRanges).toEqual([
+        { start: { rowIndex: 1, columnIndex: 0 }, end: { rowIndex: 2, columnIndex: 0 } },
+      ]);
+    });
+  });
 });

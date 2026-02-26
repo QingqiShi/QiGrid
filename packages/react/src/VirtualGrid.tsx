@@ -30,6 +30,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     deferScrollUpdates,
     onColumnResize,
     focusedCell,
+    selectionAnchor,
     selectedRanges,
     onCellMouseDown,
     onCellMouseEnter,
@@ -241,8 +242,13 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                   const isSelected =
                     hasSelection &&
                     isCellInRanges({ rowIndex: row.index, columnIndex: colIndex }, ranges);
+                  const isAnchor =
+                    selectionAnchor != null &&
+                    selectionAnchor.rowIndex === row.index &&
+                    selectionAnchor.columnIndex === colIndex &&
+                    isSelected;
                   const selStyle = getCellSelectionStyle(row.index, colIndex);
-                  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}`;
+                  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
 
                   return (
                     <div

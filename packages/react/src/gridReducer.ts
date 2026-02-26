@@ -1,5 +1,5 @@
 import type { CellCoord, CellRange, ColumnFiltersState, SortingState } from "@qigrid/core";
-import { clampCell, cycleSort, updateColumnFilter } from "@qigrid/core";
+import { cellCoordsEqual, clampCell, cycleSort, updateColumnFilter } from "@qigrid/core";
 
 export interface GridInternalState {
   sorting: SortingState;
@@ -116,9 +116,21 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
 
     case "MOVE_FOCUS": {
       const { deltaRow, deltaCol, extend, rowCount, colCount } = action;
-      const current = state.focusedCell ?? { rowIndex: 0, columnIndex: 0 };
+
+      const hasMultiCellSelection =
+        state.selectionAnchor != null &&
+        state.focusedCell != null &&
+        !cellCoordsEqual(state.selectionAnchor, state.focusedCell);
+
+      // When collapsing a multi-cell selection, navigate from anchor (Excel behavior).
+      // hasMultiCellSelection guarantees selectionAnchor is non-null.
+      const origin =
+        !extend && hasMultiCellSelection
+          ? (state.selectionAnchor as CellCoord)
+          : (state.focusedCell ?? { rowIndex: 0, columnIndex: 0 });
+
       const next = clampCell(
-        { rowIndex: current.rowIndex + deltaRow, columnIndex: current.columnIndex + deltaCol },
+        { rowIndex: origin.rowIndex + deltaRow, columnIndex: origin.columnIndex + deltaCol },
         rowCount,
         colCount,
       );

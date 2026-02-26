@@ -1,6 +1,6 @@
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
 import { useColumnResize } from "./useColumnResize";
@@ -103,6 +103,18 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef);
 
+  // --- Keyboard: skip events from interactive elements (e.g. filter inputs) ---
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+      onGridKeyDown?.(e);
+    },
+    [onGridKeyDown],
+  );
+
   // --- Render ---
 
   return (
@@ -113,7 +125,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       ref={gridRef}
       role="grid"
       tabIndex={0}
-      onKeyDown={onGridKeyDown}
+      onKeyDown={handleKeyDown}
       style={{ outline: "none" }}
     >
       <div

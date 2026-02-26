@@ -429,6 +429,70 @@ describe("useGrid", () => {
     });
   });
 
+  describe("aggregation", () => {
+    const aggColumns: ColumnDef<Person>[] = [
+      { id: "name", accessorKey: "name", header: "Name" },
+      { id: "age", accessorKey: "age", header: "Age", aggFunc: "sum" },
+      { id: "department", accessorKey: "department", header: "Department" },
+    ];
+
+    const aggData: Person[] = [
+      { name: "Alice", age: 30, department: "Engineering" },
+      { name: "Bob", age: 25, department: "Sales" },
+      { name: "Carol", age: 28, department: "Engineering" },
+      { name: "Dave", age: 35, department: "Sales" },
+    ];
+
+    it("group rows have aggregatedValues when columns have aggFunc", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: aggData, columns: aggColumns, grouping: ["department"] }),
+      );
+
+      const groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      expect(groups).toHaveLength(2);
+
+      const eng = groups.find((g) => g.groupValue === "Engineering");
+      expect(eng?.aggregatedValues.age).toBe(58); // 30 + 28
+
+      const sales = groups.find((g) => g.groupValue === "Sales");
+      expect(sales?.aggregatedValues.age).toBe(60); // 25 + 35
+    });
+
+    it("filter changes recalculate aggregated values", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: aggData, columns: aggColumns, grouping: ["department"] }),
+      );
+
+      // Before filter: Engineering = 58
+      let groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      let eng = groups.find((g) => g.groupValue === "Engineering");
+      expect(eng?.aggregatedValues.age).toBe(58);
+
+      // Filter to only Alice
+      act(() => result.current.setColumnFilter("name", "Alice"));
+      groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      eng = groups.find((g) => g.groupValue === "Engineering");
+      expect(eng?.aggregatedValues.age).toBe(30);
+    });
+
+    it("no aggregation when no columns have aggFunc", () => {
+      const noAggColumns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name" },
+        { id: "age", accessorKey: "age", header: "Age" },
+        { id: "department", accessorKey: "department", header: "Department" },
+      ];
+
+      const { result } = renderHook(() =>
+        useGrid({ data: aggData, columns: noAggColumns, grouping: ["department"] }),
+      );
+
+      const groups = result.current.rows.filter((r): r is GroupRow => r.type === "group");
+      for (const g of groups) {
+        expect(g.aggregatedValues).toEqual({});
+      }
+    });
+  });
+
   describe("group display types", () => {
     const deptColumns: ColumnDef<Person>[] = [
       { id: "name", accessorKey: "name", header: "Name" },

@@ -110,14 +110,14 @@ function flattenLevel<TData>(
     const isExpanded = !collapsedGroupIds.has(node.groupId);
     const leafCount = countLeaves(node);
 
-    let aggregatedValues: Record<string, unknown> = {};
+    const aggregatedValues: Record<string, unknown> = {};
     if (aggColumns && aggColumns.length > 0) {
       for (const col of aggColumns) {
         const values: unknown[] = [];
         for (const row of node.rows) {
           values.push(col.getValue(row.original));
         }
-        aggregatedValues[col.id] = col.aggFunc!(values);
+        aggregatedValues[col.id] = col.aggFunc?.(values);
       }
     }
 

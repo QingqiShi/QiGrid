@@ -171,6 +171,32 @@ describe("column model", () => {
     });
   });
 
+  describe("aggFunc resolution", () => {
+    it("resolves string aggFunc to a function on Column", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "age", accessorKey: "age", header: "Age", aggFunc: "sum" },
+      ];
+      const cols = buildColumnModel(columns);
+      expect(typeof cols[0]?.aggFunc).toBe("function");
+      expect(cols[0]?.aggFunc?.([1, 2, 3])).toBe(6);
+    });
+
+    it("passes custom aggFunc through", () => {
+      const custom = (values: unknown[]) => values.length;
+      const columns: ColumnDef<Person>[] = [
+        { id: "age", accessorKey: "age", header: "Age", aggFunc: custom },
+      ];
+      const cols = buildColumnModel(columns);
+      expect(cols[0]?.aggFunc).toBe(custom);
+    });
+
+    it("sets aggFunc to undefined when not specified", () => {
+      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
+      const cols = buildColumnModel(columns);
+      expect(cols[0]?.aggFunc).toBeUndefined();
+    });
+  });
+
   describe("computeTotalWidth", () => {
     it("sums column widths", () => {
       const columns: ColumnDef<Person>[] = [

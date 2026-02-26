@@ -259,3 +259,141 @@ describe("flattenGroupedRows", () => {
     expect(leaves[0]?.getValue("department")).toBe("Engineering");
   });
 });
+
+describe("flattenGroupedRows with aggregation", () => {
+  const aggColumnDefs: ColumnDef<Person>[] = [
+    { id: "name", accessorKey: "name", header: "Name" },
+    { id: "department", accessorKey: "department", header: "Department" },
+    { id: "location", accessorKey: "location", header: "Location" },
+    { id: "age", accessorKey: "age", header: "Age", aggFunc: "sum" },
+  ];
+
+  const aggColumns = buildColumnModel(aggColumnDefs);
+
+  it("computes aggregated values for single-level grouping", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, aggColumns);
+
+    const groups = flat.filter((r): r is GroupRow => r.type === "group");
+    // Engineering: Alice(30) + Bob(25) + Eve(22) = 77
+    expect(groups[0]?.aggregatedValues.age).toBe(77);
+    // Sales: Carol(28) + Dave(35) = 63
+    expect(groups[1]?.aggregatedValues.age).toBe(63);
+  });
+
+  it("parent group aggregates ALL descendant leaves in multi-level grouping", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department", "location"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, aggColumns);
+
+    const groups = flat.filter((r): r is GroupRow => r.type === "group");
+    // Engineering parent: 30 + 25 + 22 = 77
+    const engParent = groups.find((g) => g.groupId === "department:Engineering");
+    expect(engParent?.aggregatedValues.age).toBe(77);
+
+    // Engineering>NYC: Alice(30) + Eve(22) = 52
+    const engNyc = groups.find((g) => g.groupId === "department:Engineering>location:NYC");
+    expect(engNyc?.aggregatedValues.age).toBe(52);
+
+    // Engineering>SF: Bob(25)
+    const engSf = groups.find((g) => g.groupId === "department:Engineering>location:SF");
+    expect(engSf?.aggregatedValues.age).toBe(25);
+  });
+
+  it("collapsed groups still have correct aggregated values", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const collapsed = new Set(["department:Engineering"]);
+    const flat = flattenGroupedRows(grouped, collapsed, aggColumns);
+
+    const engGroup = flat.find(
+      (r): r is GroupRow => r.type === "group" && r.groupId === "department:Engineering",
+    );
+    expect(engGroup?.aggregatedValues.age).toBe(77);
+    expect(engGroup?.isExpanded).toBe(false);
+  });
+
+  it("returns empty aggregatedValues when no columns have aggFunc", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    // columns has no aggFunc
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, columns);
+
+    const groups = flat.filter((r): r is GroupRow => r.type === "group");
+    for (const g of groups) {
+      expect(g.aggregatedValues).toEqual({});
+    }
+  });
+
+  it("returns empty aggregatedValues when columns param is omitted", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED);
+
+    const groups = flat.filter((r): r is GroupRow => r.type === "group");
+    for (const g of groups) {
+      expect(g.aggregatedValues).toEqual({});
+    }
+  });
+
+  it("only columns with aggFunc appear in aggregatedValues keys", () => {
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, aggColumns);
+
+    const groups = flat.filter((r): r is GroupRow => r.type === "group");
+    for (const g of groups) {
+      expect(Object.keys(g.aggregatedValues)).toEqual(["age"]);
+    }
+  });
+
+  it("supports multiple aggFunc columns", () => {
+    const multiAggDefs: ColumnDef<Person>[] = [
+      { id: "name", accessorKey: "name", header: "Name", aggFunc: "count" },
+      { id: "department", accessorKey: "department", header: "Department" },
+      { id: "location", accessorKey: "location", header: "Location" },
+      { id: "age", accessorKey: "age", header: "Age", aggFunc: "avg" },
+    ];
+    const multiAggColumns = buildColumnModel(multiAggDefs);
+
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, multiAggColumns);
+
+    const engGroup = flat.find(
+      (r): r is GroupRow => r.type === "group" && r.groupId === "department:Engineering",
+    );
+    expect(engGroup?.aggregatedValues.name).toBe(3); // count of non-null names
+    // avg of 30, 25, 22
+    expect(engGroup?.aggregatedValues.age).toBeCloseTo(25.666, 2);
+  });
+
+  it("supports custom aggFunc", () => {
+    const customDefs: ColumnDef<Person>[] = [
+      { id: "name", accessorKey: "name", header: "Name" },
+      { id: "department", accessorKey: "department", header: "Department" },
+      { id: "location", accessorKey: "location", header: "Location" },
+      {
+        id: "age",
+        accessorKey: "age",
+        header: "Age",
+        aggFunc: (values: unknown[]) => {
+          const nums = values.filter((v): v is number => typeof v === "number");
+          return nums.length > 0 ? Math.max(...nums) - Math.min(...nums) : 0;
+        },
+      },
+    ];
+    const customColumns = buildColumnModel(customDefs);
+
+    const rows = makeRows(people);
+    const grouped = groupRows(rows, ["department"], columns);
+    const flat = flattenGroupedRows(grouped, NO_COLLAPSED, customColumns);
+
+    const engGroup = flat.find(
+      (r): r is GroupRow => r.type === "group" && r.groupId === "department:Engineering",
+    );
+    // range: 30 - 22 = 8
+    expect(engGroup?.aggregatedValues.age).toBe(8);
+  });
+});

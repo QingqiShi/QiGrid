@@ -264,6 +264,24 @@ body {
   font-size: 12px;
 }
 
+/* Group toggle in cell mode (singleColumn / multipleColumns) */
+.vgrid-group-toggle {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  color: #334155;
+}
+
+.vgrid-group-toggle:hover {
+  background: #e2e8f0;
+}
+
 /* Resize handle */
 .vgrid-resize-handle {
   position: absolute;

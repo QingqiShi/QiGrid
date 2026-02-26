@@ -3,6 +3,7 @@ import type {
   CellCoord,
   Column,
   ColumnDef,
+  GroupDisplayType,
   GroupRow,
   LeafRow,
   SortingState,
@@ -94,8 +95,15 @@ const GROUP_BY_OPTIONS = [
   { label: "Location", value: "location" },
 ];
 
+const DISPLAY_TYPE_OPTIONS: { label: string; value: GroupDisplayType }[] = [
+  { label: "Group Rows", value: "groupRows" },
+  { label: "Single Column", value: "singleColumn" },
+  { label: "Multiple Columns", value: "multipleColumns" },
+];
+
 export function App() {
-  const options = useMemo(() => ({ data, columns }), []);
+  const [groupDisplayType, setGroupDisplayType] = useState<GroupDisplayType>("groupRows");
+  const options = useMemo(() => ({ data, columns, groupDisplayType }), [groupDisplayType]);
   const grid = useGrid(options);
   const {
     rows,
@@ -130,6 +138,10 @@ export function App() {
     },
     [setGrouping],
   );
+
+  const handleDisplayTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setGroupDisplayType(e.target.value as GroupDisplayType);
+  }, []);
 
   // --- Selection event handlers ---
   const handleCellMouseDown = useCallback(
@@ -287,6 +299,20 @@ export function App() {
             ))}
           </select>
         </label>
+        <label htmlFor="display-type-select">
+          Display:{" "}
+          <select
+            id="display-type-select"
+            value={groupDisplayType}
+            onChange={handleDisplayTypeChange}
+          >
+            {DISPLAY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="grid-container">
@@ -305,6 +331,7 @@ export function App() {
           totalWidth={totalWidth}
           rowHeight={ROW_HEIGHT}
           containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType={groupDisplayType}
           renderCell={renderCell}
           renderHeaderCell={renderHeaderCell}
           renderFilterCell={renderFilterCell}

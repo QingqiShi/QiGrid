@@ -26,7 +26,6 @@ Deliver a **headless, React-idiomatic data grid engine** that provides the data/
 - **Filtering** — client-side, column filters with AND logic, custom filter functions
 - **Row virtualization** — smooth scrolling at 100k+ rows, required capability (packaging flexible for size budget)
 - **Row grouping** — group by one or more columns, collapsible groups, nested hierarchy
-- **Row expansion / detail views** — expand individual rows to show detail content
 - **Column auto-sizing** — columns can be auto-sized to fit content
 - **Column resizing** — drag column border to resize, respects min/max constraints
 - **Keyboard navigation** — cell-level roving focus, arrow keys, Home/End, PageUp/PageDown, Enter/Space action
@@ -86,8 +85,6 @@ Each benchmark measures a pure function call. The full pipeline benchmark valida
 
 - DOM node count stays constant regardless of dataset size (visible rows + overscan only)
 - Scrolling 100k rows produces no long tasks (>50ms) in a Playwright trace
-- Row expansion while scrolled mid-list does not cause disruptive scroll jumps
-
 ### Memory
 
 Row model should not duplicate source data. The grid holds references to the original `data` array entries, not copies. No hard gate, but watch for unexpected allocations at scale.
@@ -118,7 +115,7 @@ qigrid/
 
 ### Package boundaries
 
-- **`@qigrid/core`** — zero React dependency. Pure TypeScript. Exports **stateless transform functions** (sort, filter, group, expand, virtualize, export) and type definitions. No state management, no subscriptions — just data in, data out.
+- **`@qigrid/core`** — zero React dependency. Pure TypeScript. Exports **stateless transform functions** (sort, filter, group, virtualize, export) and type definitions. No state management, no subscriptions — just data in, data out.
 - **`@qigrid/react`** — depends on `@qigrid/core`. **Owns all state.** The `useGrid` hook manages grid state via React primitives (`useState`/`useReducer`) and derives the row model through a `useMemo` pipeline that calls core transform functions. This lets React control scheduling — expensive operations like sorting 100k rows can use `useTransition` for non-blocking updates. Exports optional components (e.g., `<VirtualGrid>`) and hooks (e.g., `useColumnAutoSize`).
 
 ### API design principles
@@ -133,7 +130,7 @@ qigrid/
 Models are computed in stages via chained `useMemo` calls. Each stage only recomputes when its specific inputs change:
 
 ```
-data → filter → sort → group → expand → flatten → virtualize → visible rows
+data → filter → sort → group → flatten → virtualize → visible rows
 ```
 
 Each arrow is a pure function from core. React memoizes each stage independently.
@@ -192,12 +189,12 @@ Building a correct, performant row virtualizer from scratch is the highest-risk 
 
 ### 30kb size budget
 
-Zero deps means every feature adds bytes with no library to share the load. Row grouping, expansion, export, and keyboard nav must all fit. Monitor bundle size continuously. If the budget is tight, virtualization can be packaged as a separate tree-shakeable entry point.
+Zero deps means every feature adds bytes with no library to share the load. Row grouping, export, and keyboard nav must all fit. Monitor bundle size continuously. If the budget is tight, virtualization can be packaged as a separate tree-shakeable entry point.
 
 ### Pipeline interaction complexity
 
-Each pipeline stage (filter, sort, group, expand, virtualize) interacts with every other. Adding a stage doesn't add complexity linearly — it multiplies the integration test surface. Sorting within groups, filtering before grouping, expanding inside a virtualized window, collapsing groups that change virtual height — these cross-cutting interactions are where bugs hide. Mitigated by integration tests that exercise multi-stage combinations, not just individual stages in isolation.
+Each pipeline stage (filter, sort, group, virtualize) interacts with every other. Adding a stage doesn't add complexity linearly — it multiplies the integration test surface. Sorting within groups, filtering before grouping, collapsing groups that change virtual height — these cross-cutting interactions are where bugs hide. Mitigated by integration tests that exercise multi-stage combinations, not just individual stages in isolation.
 
 ### Row grouping complexity
 
-Grouping introduces a hierarchical row model (group rows vs leaf rows), interacts with sorting (within-group), filtering (pre-group), expansion (group collapse), and virtualization (variable-height-like behavior with collapsed groups). Needs careful integration testing across all pipeline stages.
+Grouping introduces a hierarchical row model (group rows vs leaf rows), interacts with sorting (within-group), filtering (pre-group), and virtualization (variable-height-like behavior with collapsed groups). Needs careful integration testing across all pipeline stages.

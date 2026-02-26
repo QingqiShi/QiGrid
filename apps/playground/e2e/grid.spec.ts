@@ -129,6 +129,90 @@ test("arrow key after drag selection navigates from anchor cell", async ({ page 
   expect(focusedRow).toBe("3");
 });
 
+// --- Grouping tests ---
+
+test("group by department shows group headers with counts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Select "Department" in the group-by dropdown
+  await page.selectOption("#group-by-select", "department");
+
+  // Group headers should appear
+  const groupRows = page.locator(".vgrid-group-row");
+  await expect(groupRows.first()).toBeVisible({ timeout: 5000 });
+
+  // Check that the first group header has a count
+  const firstGroupHeader = page.locator(".group-header").first();
+  await expect(firstGroupHeader).toBeVisible();
+  const headerText = await firstGroupHeader.textContent();
+  // Should contain a number in parentheses e.g. "(1234)"
+  expect(headerText).toMatch(/\(\d+\)/);
+});
+
+test("click group header collapses and expands children", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // First group toggle should show the expanded indicator (▾)
+  const firstToggle = page.locator(".group-toggle").first();
+  await expect(firstToggle).toHaveText("▾");
+
+  // Click the first group header to collapse it
+  await page.locator(".group-header").first().click();
+
+  // The toggle should now show collapsed indicator (▸)
+  await expect(firstToggle).toHaveText("▸", { timeout: 5000 });
+
+  // Click again to expand
+  await page.locator(".group-header").first().click();
+  await expect(firstToggle).toHaveText("▾", { timeout: 5000 });
+});
+
+test("grouping works alongside sorting", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Sort by First Name first
+  await page.locator(".sortable-header").nth(1).click();
+  await expect(page.locator(".sort-indicator").nth(1)).toContainText("↑");
+
+  // Then group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Group headers should still be visible alongside sort indicator
+  const groupRows = page.locator(".vgrid-group-row");
+  const count = await groupRows.count();
+  expect(count).toBeGreaterThan(0);
+});
+
+test("grouping works alongside filtering", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Filter to only "Engineering" department
+  const deptFilter = page.locator("[data-column-id='department']");
+  await deptFilter.fill("Engineering");
+
+  // Wait for filtering to apply — should see an "Engineering" group
+  await expect(page.locator(".group-value").first()).toHaveText("Engineering", { timeout: 5000 });
+
+  // The "Showing X of Y" text should show a reduced count
+  const gridInfo = page.locator(".grid-info");
+  const infoText = await gridInfo.textContent();
+  // Total dataset is 10000, filtered should be less
+  expect(infoText).toContain("of 10000");
+});
+
 test("anchor cell has vgrid-cell--anchor class within a selection", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();

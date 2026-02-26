@@ -1,6 +1,6 @@
 export { buildColumnModel, computeTotalWidth } from "./columns";
 export { createGrid } from "./createGrid";
-export { defaultFilterFn, filterRows } from "./filtering";
+export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { buildRowModel } from "./rowModel";
 export type { CellCoord, CellRange } from "./selection";
 export {
@@ -13,7 +13,7 @@ export {
   rangesEqual,
   serializeRangeToTSV,
 } from "./selection";
-export { defaultComparator, sortRows } from "./sorting";
+export { cycleSort, defaultComparator, sortRows } from "./sorting";
 export type {
   Column,
   ColumnDef,

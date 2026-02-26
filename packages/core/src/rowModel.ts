@@ -12,7 +12,7 @@ export function buildRowModel<TData>(
   const columns = buildColumnModel(columnDefs);
   const columnMap = new Map(columns.map((c) => [c.id, c]));
 
-  const filtered = filterRows(data, filters, columnDefs);
+  const filtered = filterRows(data, filters, columns);
   const rows: Row<TData>[] = filtered.map((original, index) => ({
     index,
     original,
@@ -20,5 +20,5 @@ export function buildRowModel<TData>(
       return columnMap.get(columnId)?.getValue(original);
     },
   }));
-  return sortRows(rows, sorting, columnDefs);
+  return sortRows(rows, sorting, columns);
 }

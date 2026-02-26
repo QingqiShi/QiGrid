@@ -113,33 +113,3 @@ export interface UseGridReturn<TData> {
   /** Move focus by a delta, optionally extending selection. */
   moveFocus: (deltaRow: number, deltaCol: number, extend?: boolean) => void;
 }
-
-export interface GridInternalState {
-  sorting: SortingState;
-  columnFilters: ColumnFiltersState;
-  columnWidths: Record<string, number>;
-  focusedCell: CellCoord | null;
-  selectionRanges: CellRange[];
-  /** Internal: the anchor cell from which shift-extend builds a range. */
-  selectionAnchor: CellCoord | null;
-}
-
-export type GridAction =
-  | { type: "SET_SORTING"; sorting: SortingState }
-  | { type: "TOGGLE_SORT"; columnId: string }
-  | { type: "SET_COLUMN_FILTERS"; filters: ColumnFiltersState }
-  | { type: "SET_COLUMN_FILTER"; columnId: string; value: unknown }
-  | { type: "SET_COLUMN_WIDTH"; columnId: string; width: number }
-  | { type: "SELECT_CELL"; coord: CellCoord }
-  | { type: "EXTEND_SELECTION"; coord: CellCoord }
-  | { type: "ADD_RANGE"; range: CellRange }
-  | { type: "SELECT_ALL"; rowCount: number; colCount: number }
-  | { type: "CLEAR_SELECTION" }
-  | {
-      type: "MOVE_FOCUS";
-      deltaRow: number;
-      deltaCol: number;
-      extend: boolean;
-      rowCount: number;
-      colCount: number;
-    };

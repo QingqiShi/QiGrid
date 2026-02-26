@@ -25,7 +25,20 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
     return undefined;
   }
 
-  return { id, accessorKey, accessorFn, header, getValue, width, minWidth, maxWidth };
+  const { filterFn, sortingFn } = def;
+
+  return {
+    id,
+    accessorKey,
+    accessorFn,
+    header,
+    getValue,
+    filterFn,
+    sortingFn,
+    width,
+    minWidth,
+    maxWidth,
+  };
 }
 
 export function buildColumnModel<TData>(defs: ColumnDef<TData>[]): Column<TData>[] {

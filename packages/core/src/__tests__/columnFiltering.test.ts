@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { buildColumnModel } from "../columns";
 import { createGrid } from "../createGrid";
 import { filterRows } from "../filtering";
 import { buildRowModel } from "../rowModel";
@@ -10,11 +11,13 @@ interface Person {
   active: boolean;
 }
 
-const columns: ColumnDef<Person>[] = [
+const columnDefs: ColumnDef<Person>[] = [
   { id: "name", accessorKey: "name" as const, header: "Name" },
   { id: "age", accessorKey: "age" as const, header: "Age" },
   { id: "active", accessorKey: "active" as const, header: "Active" },
 ];
+
+const columns = buildColumnModel(columnDefs);
 
 const data: Person[] = [
   { name: "Alice", age: 30, active: true },
@@ -82,7 +85,7 @@ describe("column filtering (pure functions)", () => {
 
   describe("custom filterFn", () => {
     it("uses custom filterFn when provided on column def", () => {
-      const customColumns: ColumnDef<Person>[] = [
+      const customDefs: ColumnDef<Person>[] = [
         {
           id: "age",
           accessorKey: "age" as const,
@@ -91,6 +94,7 @@ describe("column filtering (pure functions)", () => {
         },
         { id: "name", accessorKey: "name" as const, header: "Name" },
       ];
+      const customColumns = buildColumnModel(customDefs);
 
       const result = filterRows(data, [{ columnId: "age", value: 30 }], customColumns);
 
@@ -126,7 +130,7 @@ describe("column filtering (pure functions)", () => {
 
   describe("row indices after filtering", () => {
     it("row indices are sequential in filtered results", () => {
-      const rows = buildRowModel(data, columns, [{ columnId: "active", value: true }], []);
+      const rows = buildRowModel(data, columnDefs, [{ columnId: "active", value: true }], []);
 
       expect(rows).toHaveLength(3);
       expect(rows[0]?.index).toBe(0);
@@ -147,7 +151,7 @@ describe("column filtering (pure functions)", () => {
 describe("column filtering (stateful, via createGrid)", () => {
   describe("clearing filters", () => {
     it("returns all rows when filters are cleared", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilters([{ columnId: "name", value: "Alice" }]);
       expect(grid.getRows()).toHaveLength(1);
@@ -157,7 +161,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("setColumnFilter removes filter when value is empty string", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "Alice");
       expect(grid.getRows()).toHaveLength(1);
@@ -167,7 +171,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("setColumnFilter removes filter when value is undefined", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "Alice");
       expect(grid.getRows()).toHaveLength(1);
@@ -177,7 +181,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("setColumnFilter removes filter when value is null", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "Alice");
       expect(grid.getRows()).toHaveLength(1);
@@ -189,7 +193,7 @@ describe("column filtering (stateful, via createGrid)", () => {
 
   describe("setColumnFilter convenience method", () => {
     it("adds a filter for a single column", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "bob");
 
@@ -199,7 +203,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("replaces existing filter for same column", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "Alice");
       expect(grid.getRows()).toHaveLength(1);
@@ -211,7 +215,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("preserves filters on other columns", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("active", true);
       grid.setColumnFilter("name", "ali");
@@ -224,7 +228,7 @@ describe("column filtering (stateful, via createGrid)", () => {
 
   describe("filter + data update", () => {
     it("reapplies filters when data changes via setData", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("name", "ali");
       expect(grid.getRows()).toHaveLength(1);
@@ -239,7 +243,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("reapplies filters when data changes via setState", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       grid.setColumnFilter("age", 30);
       expect(grid.getRows()).toHaveLength(2);
@@ -256,7 +260,7 @@ describe("column filtering (stateful, via createGrid)", () => {
   describe("initial columnFilters option", () => {
     it("applies filters from initial options", () => {
       const filters: ColumnFiltersState = [{ columnId: "name", value: "alice" }];
-      const grid = createGrid({ data, columns, columnFilters: filters });
+      const grid = createGrid({ data, columns: columnDefs, columnFilters: filters });
 
       const rows = grid.getRows();
       expect(rows).toHaveLength(1);
@@ -266,7 +270,7 @@ describe("column filtering (stateful, via createGrid)", () => {
 
   describe("state integration", () => {
     it("columnFilters is part of GridState", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
 
       expect(grid.getState().columnFilters).toEqual([]);
 
@@ -275,7 +279,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("notifies subscribers on filter change", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
       const listener = vi.fn();
       grid.subscribe(listener);
 
@@ -285,7 +289,7 @@ describe("column filtering (stateful, via createGrid)", () => {
     });
 
     it("notifies subscribers on setColumnFilters", () => {
-      const grid = createGrid({ data, columns });
+      const grid = createGrid({ data, columns: columnDefs });
       const listener = vi.fn();
       grid.subscribe(listener);
 

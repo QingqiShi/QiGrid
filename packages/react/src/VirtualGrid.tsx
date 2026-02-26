@@ -10,8 +10,10 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
+import { useColumnResize } from "./useColumnResize";
 
 const EMPTY_RANGES: CellRange[] = [];
+const SELECTION_BORDER_COLOR = "rgba(14, 101, 235, 0.8)";
 
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
@@ -63,40 +65,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const filterRowHeight = renderFilterCell ? rowHeight : 0;
   const stickyHeight = headerRowHeight + filterRowHeight;
 
-  const handleResizePointerDown = useCallback(
-    (columnId: string, startWidth: number, e: React.PointerEvent<HTMLDivElement>) => {
-      if (!onColumnResize) return;
-      e.stopPropagation();
-      e.preventDefault();
-
-      const handle = e.currentTarget;
-      handle.setPointerCapture(e.pointerId);
-      const startX = e.clientX;
-
-      const prevCursor = document.body.style.cursor;
-      const prevUserSelect = document.body.style.userSelect;
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-
-      const onMove = (ev: PointerEvent) => {
-        const delta = ev.clientX - startX;
-        onColumnResize(columnId, startWidth + delta);
-      };
-
-      const cleanup = () => {
-        handle.removeEventListener("pointermove", onMove);
-        handle.removeEventListener("pointerup", cleanup);
-        handle.removeEventListener("lostpointercapture", cleanup);
-        document.body.style.cursor = prevCursor;
-        document.body.style.userSelect = prevUserSelect;
-      };
-
-      handle.addEventListener("pointermove", onMove);
-      handle.addEventListener("pointerup", cleanup);
-      handle.addEventListener("lostpointercapture", cleanup);
-    },
-    [onColumnResize],
-  );
+  const handleResizePointerDown = useColumnResize(onColumnResize);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const newScrollTop = e.currentTarget.scrollTop;
@@ -119,12 +88,11 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       if (!isCellInRanges({ rowIndex, columnIndex: colIndex }, ranges)) return undefined;
 
       const edges = getCellRangeEdges({ rowIndex, columnIndex: colIndex }, ranges);
-      const borderColor = "rgba(14, 101, 235, 0.8)";
       return {
-        borderTop: edges.top ? `2px solid ${borderColor}` : undefined,
-        borderBottom: edges.bottom ? `2px solid ${borderColor}` : undefined,
-        borderLeft: edges.left ? `2px solid ${borderColor}` : undefined,
-        borderRight: edges.right ? `2px solid ${borderColor}` : undefined,
+        borderTop: edges.top ? `2px solid ${SELECTION_BORDER_COLOR}` : undefined,
+        borderBottom: edges.bottom ? `2px solid ${SELECTION_BORDER_COLOR}` : undefined,
+        borderLeft: edges.left ? `2px solid ${SELECTION_BORDER_COLOR}` : undefined,
+        borderRight: edges.right ? `2px solid ${SELECTION_BORDER_COLOR}` : undefined,
       };
     },
     [hasSelection, ranges],

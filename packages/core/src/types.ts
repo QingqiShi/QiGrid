@@ -30,6 +30,8 @@ export interface Column<TData> {
   accessorFn: ((row: TData) => unknown) | undefined;
   header: string;
   getValue: (row: TData) => unknown;
+  filterFn: ((value: unknown, filterValue: unknown) => boolean) | undefined;
+  sortingFn: ((a: unknown, b: unknown) => number) | undefined;
   width: number;
   minWidth: number;
   maxWidth: number;

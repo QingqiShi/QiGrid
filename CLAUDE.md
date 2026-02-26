@@ -38,6 +38,24 @@ This file is your persistent memory. **You are expected to update it.**
 - Remove entries that are no longer relevant (e.g., a workaround for a bug that's been fixed).
 - If you notice inconsistent instructions.
 
+## Architecture
+
+- **Core** exports stateless pure functions: `filterRows`, `sortRows`, `buildColumnModel`, `buildRowModel`, plus state helpers `cycleSort`, `updateColumnFilter`
+- `filterRows` and `sortRows` accept `Column<TData>[]` (resolved model), not `ColumnDef<TData>[]` — callers pass pre-built columns
+- `Column<TData>` carries `filterFn` and `sortingFn` from the def — no need for separate def lookups
+- **React** `useGrid` hook owns all state via `useReducer` (extracted to `gridReducer.ts`), chains `useMemo` stages: columnModel → filter → row-wrap → sort
+- `createGrid` (stateful engine) still exported from core but unused by React package — kept for non-React consumers, tree-shakeable
+- Pipeline types: `filterRows` operates on `TData[]` (pre-wrapping optimization), all other stages on `Row<TData>[]`
+- Row type discriminator (`'leaf' | 'group' | 'detail'`) not yet added — needed by TASK-017/018, easy to add additively
+
+### React package structure
+
+- `gridReducer.ts` — reducer + internal types (GridInternalState, GridAction)
+- `useGrid.ts` — the hook that uses the reducer
+- `useColumnResize.ts` — pointer-capture based column resize hook
+- `VirtualGrid.tsx` — virtualized grid component
+- `types.ts` — public types only (VirtualGridProps, UseGridReturn)
+
 ## Learned lessons
 
 This section is updated as we discover things that affect how work should be done.
@@ -50,3 +68,4 @@ This section is updated as we discover things that affect how work should be don
 - **Visual regression baselines** — if the playground UI changes, Playwright screenshot tests will fail. Update baselines with `pnpm --filter @qigrid/playground e2e --update-snapshots` and commit the new baselines.
 - **Biome auto-fix** — run `pnpm --filter @qigrid/core lint --write` (and same for other packages you touched) before the quality gate to auto-fix formatting and import ordering.
 - **pnpm script args** — pass extra args directly (no `--` separator): `pnpm --filter @pkg script --flag`. A `--` becomes a literal arg to the script, which breaks tools like Playwright that interpret it as a test filter.
+- **Never assume lint warnings are "pre-existing"** — fix all warnings, no exceptions.

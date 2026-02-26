@@ -1,6 +1,6 @@
+import { serializeRangeToTSV } from "@qigrid/core";
 import type { CellCoord, Column, ColumnDef, SortingState, VirtualRange } from "@qigrid/react";
 import { useGrid, VirtualGrid } from "@qigrid/react";
-import { serializeRangeToTSV } from "@qigrid/core";
 import { useCallback, useMemo, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
@@ -188,13 +188,7 @@ export function App() {
   );
 
   const renderCell = useCallback((row: (typeof rows)[number], column: (typeof cols)[number]) => {
-    const value =
-      column.accessorKey != null
-        ? row.original[column.accessorKey]
-        : column.accessorFn
-          ? column.accessorFn(row.original)
-          : "";
-    return <CellValue col={column} value={value} />;
+    return <CellValue col={column} value={row.getValue(column.id)} />;
   }, []);
 
   const renderHeaderCell = useCallback(

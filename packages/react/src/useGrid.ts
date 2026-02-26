@@ -6,143 +6,10 @@ import type {
   Row,
   SortingState,
 } from "@qigrid/core";
-import { buildColumnModel, clampCell, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
+import { buildColumnModel, computeTotalWidth, filterRows, sortRows } from "@qigrid/core";
 import { useCallback, useMemo, useReducer } from "react";
-import type { GridAction, GridInternalState, UseGridReturn } from "./types";
-
-/** Clear selection fields — used when data pipeline changes invalidate indices. */
-const EMPTY_SELECTION = {
-  focusedCell: null,
-  selectionRanges: [] as CellRange[],
-  selectionAnchor: null,
-} as const;
-
-function gridReducer(state: GridInternalState, action: GridAction): GridInternalState {
-  switch (action.type) {
-    // --- Data pipeline actions (clear selection on change) ---
-    case "SET_SORTING":
-      return { ...state, sorting: action.sorting, ...EMPTY_SELECTION };
-
-    case "TOGGLE_SORT": {
-      const { columnId } = action;
-      const current = state.sorting;
-      const existing = current.find((s) => s.columnId === columnId);
-
-      let next: SortingState;
-      if (existing === undefined) {
-        next = [...current, { columnId, direction: "asc" }];
-      } else if (existing.direction === "asc") {
-        next = current.map((s) =>
-          s.columnId === columnId ? { ...s, direction: "desc" as const } : s,
-        );
-      } else {
-        next = current.filter((s) => s.columnId !== columnId);
-      }
-      return { ...state, sorting: next, ...EMPTY_SELECTION };
-    }
-
-    case "SET_COLUMN_FILTERS":
-      return { ...state, columnFilters: action.filters, ...EMPTY_SELECTION };
-
-    case "SET_COLUMN_FILTER": {
-      const { columnId, value } = action;
-      const existing = state.columnFilters.filter((f) => f.columnId !== columnId);
-      const newFilters: ColumnFiltersState =
-        value === "" || value === undefined || value === null
-          ? existing
-          : [...existing, { columnId, value }];
-      return { ...state, columnFilters: newFilters, ...EMPTY_SELECTION };
-    }
-
-    case "SET_COLUMN_WIDTH":
-      return {
-        ...state,
-        columnWidths: { ...state.columnWidths, [action.columnId]: action.width },
-      };
-
-    // --- Selection actions ---
-    case "SELECT_CELL": {
-      const { coord } = action;
-      return {
-        ...state,
-        focusedCell: coord,
-        selectionAnchor: coord,
-        selectionRanges: [{ start: coord, end: coord }],
-      };
-    }
-
-    case "EXTEND_SELECTION": {
-      const anchor = state.selectionAnchor;
-      if (!anchor) return state;
-      // Replace the last range with anchor→coord
-      const newRange: CellRange = { start: anchor, end: action.coord };
-      const prevRanges = state.selectionRanges.length > 1 ? state.selectionRanges.slice(0, -1) : [];
-      return {
-        ...state,
-        focusedCell: action.coord,
-        selectionRanges: [...prevRanges, newRange],
-      };
-    }
-
-    case "ADD_RANGE":
-      return {
-        ...state,
-        focusedCell: action.range.end,
-        selectionAnchor: action.range.start,
-        selectionRanges: [...state.selectionRanges, action.range],
-      };
-
-    case "SELECT_ALL":
-      return {
-        ...state,
-        selectionRanges: [
-          {
-            start: { rowIndex: 0, columnIndex: 0 },
-            end: { rowIndex: action.rowCount - 1, columnIndex: action.colCount - 1 },
-          },
-        ],
-        selectionAnchor: { rowIndex: 0, columnIndex: 0 },
-      };
-
-    case "CLEAR_SELECTION":
-      return {
-        ...state,
-        selectionRanges: EMPTY_SELECTION.selectionRanges,
-        selectionAnchor: state.focusedCell,
-      };
-
-    case "MOVE_FOCUS": {
-      const { deltaRow, deltaCol, extend, rowCount, colCount } = action;
-      const current = state.focusedCell ?? { rowIndex: 0, columnIndex: 0 };
-      const next = clampCell(
-        { rowIndex: current.rowIndex + deltaRow, columnIndex: current.columnIndex + deltaCol },
-        rowCount,
-        colCount,
-      );
-
-      if (extend) {
-        // Shift+Arrow: extend selection from anchor
-        const anchor = state.selectionAnchor ?? next;
-        const newRange: CellRange = { start: anchor, end: next };
-        const prevRanges =
-          state.selectionRanges.length > 1 ? state.selectionRanges.slice(0, -1) : [];
-        return {
-          ...state,
-          focusedCell: next,
-          selectionRanges: [...prevRanges, newRange],
-        };
-      }
-
-      // Simple move: clear selection, set focus
-      return {
-        ...state,
-        focusedCell: next,
-        selectionAnchor: next,
-        selectionRanges: [{ start: next, end: next }],
-      };
-    }
-  }
-}
+import { EMPTY_SELECTION, gridReducer } from "./gridReducer";
+import type { UseGridReturn } from "./types";
 
 export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData> {
   const { data, columns: columnDefs } = options;
@@ -184,28 +51,28 @@ export function useGrid<TData>(options: GridOptions<TData>): UseGridReturn<TData
   // Stage 1c: Total width
   const totalWidth = useMemo(() => computeTotalWidth(columnModel), [columnModel]);
 
-  // Stage 2: Filtered data
+  // Stage 2: Filtered data (uses baseColumnModel to avoid re-filtering on width changes)
   const filteredData = useMemo(
-    () => filterRows(data, state.columnFilters, columnDefs),
-    [data, state.columnFilters, columnDefs],
+    () => filterRows(data, state.columnFilters, baseColumnModel),
+    [data, state.columnFilters, baseColumnModel],
   );
 
   // Stage 3: Wrap TData[] into Row<TData>[] with getValue closures
   const rowsBeforeSort = useMemo(() => {
-    const columnMap = new Map(columnModel.map((c) => [c.id, c]));
+    const colMap = new Map(baseColumnModel.map((c) => [c.id, c]));
     return filteredData.map<Row<TData>>((original, index) => ({
       index,
       original,
       getValue(columnId: string): unknown {
-        return columnMap.get(columnId)?.getValue(original);
+        return colMap.get(columnId)?.getValue(original);
       },
     }));
-  }, [filteredData, columnModel]);
+  }, [filteredData, baseColumnModel]);
 
   // Stage 4: Sort
   const rows = useMemo(
-    () => sortRows(rowsBeforeSort, state.sorting, columnDefs),
-    [rowsBeforeSort, state.sorting, columnDefs],
+    () => sortRows(rowsBeforeSort, state.sorting, baseColumnModel),
+    [rowsBeforeSort, state.sorting, baseColumnModel],
   );
 
   // Stable updater functions — dispatch is stable per React guarantees

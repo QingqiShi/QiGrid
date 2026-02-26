@@ -60,15 +60,12 @@ test("drag resize handle right increases column width", async ({ page }) => {
 
   const handle = page.locator("[data-testid='resize-handle-id']");
   const handleBox = await handle.boundingBox();
-  expect(handleBox).not.toBeNull();
+  if (!handleBox) throw new Error("resize handle not visible");
 
   // Drag 50px to the right
-  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(
-    handleBox!.x + handleBox!.width / 2 + 50,
-    handleBox!.y + handleBox!.height / 2,
-  );
+  await page.mouse.move(handleBox.x + handleBox.width / 2 + 50, handleBox.y + handleBox.height / 2);
   await page.mouse.up();
 
   const newWidth = await header.evaluate((el) => el.getBoundingClientRect().width);
@@ -81,14 +78,14 @@ test("drag resize handle far left clamps to minWidth", async ({ page }) => {
 
   const handle = page.locator("[data-testid='resize-handle-id']");
   const handleBox = await handle.boundingBox();
-  expect(handleBox).not.toBeNull();
+  if (!handleBox) throw new Error("resize handle not visible");
 
   // Drag far left (e.g. -500px) to trigger minWidth clamping
-  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
   await page.mouse.move(
-    handleBox!.x + handleBox!.width / 2 - 500,
-    handleBox!.y + handleBox!.height / 2,
+    handleBox.x + handleBox.width / 2 - 500,
+    handleBox.y + handleBox.height / 2,
   );
   await page.mouse.up();
 

@@ -1,5 +1,21 @@
-import type { ColumnDef, Row, SortingState } from "./types";
+import type { Column, Row, SortingState } from "./types";
 import { isNullish } from "./utils";
+
+/**
+ * Cycle a column's sort through: none → asc → desc → none.
+ * Returns the new SortingState (does not mutate the input).
+ */
+export function cycleSort(current: SortingState, columnId: string): SortingState {
+  const existing = current.find((s) => s.columnId === columnId);
+
+  if (existing === undefined) {
+    return [...current, { columnId, direction: "asc" }];
+  }
+  if (existing.direction === "asc") {
+    return current.map((s) => (s.columnId === columnId ? { ...s, direction: "desc" as const } : s));
+  }
+  return current.filter((s) => s.columnId !== columnId);
+}
 
 export function defaultComparator(a: unknown, b: unknown): number {
   const aNullish = isNullish(a);
@@ -22,11 +38,11 @@ export function defaultComparator(a: unknown, b: unknown): number {
 export function sortRows<TData>(
   rows: Row<TData>[],
   sorting: SortingState,
-  columnDefs: ColumnDef<TData>[],
+  columns: Column<TData>[],
 ): Row<TData>[] {
   if (sorting.length === 0) return rows;
 
-  const defMap = new Map(columnDefs.map((d) => [d.id, d]));
+  const columnMap = new Map(columns.map((c) => [c.id, c]));
   const sorted = rows.slice();
 
   sorted.sort((rowA, rowB) => {
@@ -40,8 +56,8 @@ export function sortRows<TData>(
       if (aN) return 1;
       if (bN) return -1;
 
-      const def = defMap.get(columnId);
-      const comparator = def?.sortingFn ?? defaultComparator;
+      const col = columnMap.get(columnId);
+      const comparator = col?.sortingFn ?? defaultComparator;
       const result = comparator(a, b);
       if (result !== 0) {
         return direction === "desc" ? -result : result;

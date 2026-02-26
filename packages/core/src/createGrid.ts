@@ -1,6 +1,6 @@
 import { buildColumnModel } from "./columns";
-import { filterRows } from "./filtering";
-import { sortRows } from "./sorting";
+import { filterRows, updateColumnFilter } from "./filtering";
+import { cycleSort, sortRows } from "./sorting";
 import type {
   Column,
   ColumnDef,
@@ -19,7 +19,6 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
 
   let columnModel = buildColumnModel(options.columns);
   let columnMap = new Map<string, Column<TData>>();
-  let columnDefMap = new Map<string, ColumnDef<TData>>();
 
   function rebuildColumnMap(): void {
     columnMap = new Map<string, Column<TData>>();
@@ -28,24 +27,15 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     }
   }
 
-  function rebuildColumnDefMap(defs: ColumnDef<TData>[]): void {
-    columnDefMap = new Map<string, ColumnDef<TData>>();
-    for (const def of defs) {
-      columnDefMap.set(def.id, def);
-    }
-  }
-
   // Initial build — state is not yet initialized
   rebuildColumnMap();
-  rebuildColumnDefMap(options.columns);
 
   function buildRowModelInternal(
     data: TData[],
-    columnDefs: ColumnDef<TData>[],
     filters: ColumnFiltersState,
     sorting: SortingState,
   ): Row<TData>[] {
-    const filtered = filterRows(data, filters, columnDefs);
+    const filtered = filterRows(data, filters, columnModel);
     const rows: Row<TData>[] = filtered.map((original, index) => ({
       index,
       original,
@@ -57,7 +47,7 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
         return col.getValue(original);
       },
     }));
-    return sortRows(rows, sorting, columnDefs);
+    return sortRows(rows, sorting, columnModel);
   }
 
   const initialFilters = options.columnFilters ?? [];
@@ -68,7 +58,7 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     columns: options.columns,
     columnFilters: initialFilters,
     sorting: initialSorting,
-    rowModel: buildRowModelInternal(options.data, options.columns, initialFilters, initialSorting),
+    rowModel: buildRowModelInternal(options.data, initialFilters, initialSorting),
   };
 
   function notify(): void {
@@ -84,12 +74,7 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
   function recomputeRowModel(): void {
     state = {
       ...state,
-      rowModel: buildRowModelInternal(
-        state.data,
-        state.columns,
-        state.columnFilters,
-        state.sorting,
-      ),
+      rowModel: buildRowModelInternal(state.data, state.columnFilters, state.sorting),
     };
   }
 
@@ -104,9 +89,8 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     if (columnsChanged) {
       columnModel = buildColumnModel(state.columns);
       rebuildColumnMap();
-      rebuildColumnDefMap(state.columns);
     }
-    if (dataChanged || filtersChanged || sortingChanged) {
+    if (dataChanged || columnsChanged || filtersChanged || sortingChanged) {
       recomputeRowModel();
     }
     notify();
@@ -116,7 +100,7 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     state = {
       ...state,
       data,
-      rowModel: buildRowModelInternal(data, state.columns, state.columnFilters, state.sorting),
+      rowModel: buildRowModelInternal(data, state.columnFilters, state.sorting),
     };
     notify();
   }
@@ -125,7 +109,6 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     columnModel = buildColumnModel(columns);
     state = { ...state, columns };
     rebuildColumnMap();
-    rebuildColumnDefMap(columns);
     if (state.columnFilters.length > 0 || state.sorting.length > 0) {
       recomputeRowModel();
     }
@@ -136,45 +119,26 @@ export function createGrid<TData>(options: GridOptions<TData>): GridInstance<TDa
     state = {
       ...state,
       columnFilters: filters,
-      rowModel: buildRowModelInternal(state.data, state.columns, filters, state.sorting),
+      rowModel: buildRowModelInternal(state.data, filters, state.sorting),
     };
     notify();
   }
 
   function setColumnFilter(columnId: string, value: unknown): void {
-    const existing = state.columnFilters.filter((f) => f.columnId !== columnId);
-    const newFilters =
-      value === "" || value === undefined || value === null
-        ? existing
-        : [...existing, { columnId, value }];
-    setColumnFilters(newFilters);
+    setColumnFilters(updateColumnFilter(state.columnFilters, columnId, value));
   }
 
   function setSorting(sorting: SortingState): void {
     state = {
       ...state,
       sorting,
-      rowModel: buildRowModelInternal(state.data, state.columns, state.columnFilters, sorting),
+      rowModel: buildRowModelInternal(state.data, state.columnFilters, sorting),
     };
     notify();
   }
 
   function toggleSort(columnId: string): void {
-    const current = state.sorting;
-    const existing = current.find((s) => s.columnId === columnId);
-
-    let next: SortingState;
-    if (existing === undefined) {
-      next = [...current, { columnId, direction: "asc" }];
-    } else if (existing.direction === "asc") {
-      next = current.map((s) =>
-        s.columnId === columnId ? { ...s, direction: "desc" as const } : s,
-      );
-    } else {
-      next = current.filter((s) => s.columnId !== columnId);
-    }
-
-    setSorting(next);
+    setSorting(cycleSort(state.sorting, columnId));
   }
 
   function getColumns(): Column<TData>[] {

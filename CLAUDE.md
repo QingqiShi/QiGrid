@@ -40,19 +40,21 @@ This file is your persistent memory. **You are expected to update it.**
 
 ## Architecture
 
-- **Core** exports stateless pure functions: `filterRows`, `sortRows`, `buildColumnModel`, plus state helpers `cycleSort`, `updateColumnFilter`
+- **Core** exports stateless pure functions: `filterRows`, `sortRows`, `groupRows`, `flattenGroupedRows`, `buildColumnModel`, plus state helpers `cycleSort`, `updateColumnFilter`
 - `filterRows` and `sortRows` accept `Column<TData>[]` (resolved model), not `ColumnDef<TData>[]` — callers pass pre-built columns
 - `Column<TData>` carries `filterFn` and `sortingFn` from the def — no need for separate def lookups
-- **React** `useGrid` hook owns all state via `useReducer` (extracted to `gridReducer.ts`), chains `useMemo` stages: columnModel → filter → row-wrap → sort
-- Pipeline types: `filterRows` operates on `TData[]` (pre-wrapping optimization), all other stages on `Row<TData>[]`
-- Row type discriminator (`'leaf' | 'group' | 'detail'`) not yet added — needed by TASK-017/018, easy to add additively
+- **Row type discriminator**: `GridRow<TData> = LeafRow<TData> | GroupRow` (discriminated union with `type: "leaf" | "group"`)
+- **React** `useGrid` hook owns all state via `useReducer` (extracted to `gridReducer.ts`), chains `useMemo` stages: columnModel → filter → row-wrap → sort → group+flatten
+- Pipeline: `data → filter → wrap Row[] → sort → group → flatten → virtualize`. When `grouping: []`, group/flatten skipped (rows wrapped as `LeafRow`)
+- Collapsed state: `collapsedGroupIds: Set<string>` (all groups expanded by default)
+- Group IDs: deterministic `"columnId:value"` joined by `>` for nesting
 
 ### React package structure
 
-- `gridReducer.ts` — reducer + internal types (GridInternalState, GridAction)
-- `useGrid.ts` — the hook that uses the reducer
+- `gridReducer.ts` — reducer + internal types (GridInternalState, GridAction), includes grouping/collapsed state + actions
+- `useGrid.ts` — the hook that uses the reducer, `rows` returns `GridRow<TData>[]`
 - `useColumnResize.ts` — pointer-capture based column resize hook
-- `VirtualGrid.tsx` — virtualized grid component
+- `VirtualGrid.tsx` — virtualized grid component with group row rendering branch
 - `types.ts` — public types only (VirtualGridProps, UseGridReturn)
 
 ## Learned lessons

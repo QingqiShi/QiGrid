@@ -428,6 +428,136 @@ describe("VirtualGrid", () => {
     });
   });
 
+  describe("group row selection in groupRows mode", () => {
+    function makeGroupedRows(): GridRow<Item>[] {
+      return [
+        {
+          type: "group",
+          index: 0,
+          groupId: "name:A",
+          columnId: "name",
+          groupValue: "A",
+          depth: 0,
+          leafCount: 2,
+          isExpanded: true,
+        } satisfies GroupRow,
+        {
+          type: "leaf",
+          index: 1,
+          original: { name: "A1", value: 10 },
+          getValue: (colId: string) => (colId === "name" ? "A1" : 10),
+        } satisfies LeafRow<Item>,
+      ];
+    }
+
+    it("applies vgrid-group-row--focused when focusedCell targets the group row", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          focusedCell={{ rowIndex: 0, columnIndex: 0 }}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      expect(groupRow?.classList.contains("vgrid-group-row--focused")).toBe(true);
+    });
+
+    it("does not apply vgrid-group-row--focused when focusedCell targets a different row", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          focusedCell={{ rowIndex: 1, columnIndex: 0 }}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      expect(groupRow?.classList.contains("vgrid-group-row--focused")).toBe(false);
+    });
+
+    it("applies vgrid-group-row--selected when group row is in selectedRanges", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          selectedRanges={[
+            { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      expect(groupRow?.classList.contains("vgrid-group-row--selected")).toBe(true);
+    });
+
+    it("does not apply vgrid-group-row--selected when group row is not in selectedRanges", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          selectedRanges={[
+            { start: { rowIndex: 1, columnIndex: 0 }, end: { rowIndex: 1, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      expect(groupRow?.classList.contains("vgrid-group-row--selected")).toBe(false);
+    });
+
+    it("applies selection border styles when group row is selected", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          selectedRanges={[
+            { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row") as HTMLElement;
+      expect(groupRow.style.borderLeft).toContain("solid");
+      expect(groupRow.style.borderRight).toContain("solid");
+    });
+  });
+
   describe("group display types", () => {
     const groupColumn: Column<Item> = {
       id: "qigrid:group",

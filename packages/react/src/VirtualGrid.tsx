@@ -15,6 +15,15 @@ import { useColumnResize } from "./useColumnResize";
 const EMPTY_RANGES: CellRange[] = [];
 const SELECTION_BORDER_COLOR = "rgba(14, 101, 235, 0.8)";
 
+function isRowInRanges(rowIndex: number, ranges: CellRange[]): boolean {
+  for (const range of ranges) {
+    const minRow = Math.min(range.start.rowIndex, range.end.rowIndex);
+    const maxRow = Math.max(range.start.rowIndex, range.end.rowIndex);
+    if (rowIndex >= minRow && rowIndex <= maxRow) return true;
+  }
+  return false;
+}
+
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
     rows,
@@ -230,10 +239,31 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               if (row.type === "group") {
                 // --- Group row in groupRows mode: full-width spanning cell ---
                 if (isGroupRowsMode) {
+                  const isFocused = focusedCell != null && focusedCell.rowIndex === row.index;
+                  const isSelected = hasSelection && isRowInRanges(row.index, ranges);
+                  const groupRowClass = `vgrid-row vgrid-group-row vgrid-group-row--banner${isFocused ? " vgrid-group-row--focused" : ""}${isSelected ? " vgrid-group-row--selected" : ""}`;
+
+                  // Compute selection border styles for the full-width group row
+                  let groupSelStyle: React.CSSProperties | undefined;
+                  if (isSelected) {
+                    const prevInSelection = isRowInRanges(row.index - 1, ranges);
+                    const nextInSelection = isRowInRanges(row.index + 1, ranges);
+                    groupSelStyle = {
+                      borderTop: !prevInSelection
+                        ? `2px solid ${SELECTION_BORDER_COLOR}`
+                        : undefined,
+                      borderBottom: !nextInSelection
+                        ? `2px solid ${SELECTION_BORDER_COLOR}`
+                        : undefined,
+                      borderLeft: `2px solid ${SELECTION_BORDER_COLOR}`,
+                      borderRight: `2px solid ${SELECTION_BORDER_COLOR}`,
+                    };
+                  }
+
                   return (
                     <div
                       key={row.groupId}
-                      className="vgrid-row vgrid-group-row"
+                      className={groupRowClass}
                       data-row-index={row.index}
                       data-group-id={row.groupId}
                       style={{
@@ -245,6 +275,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                         height: rowHeight,
                         transform: rowTransform,
                         willChange: "transform",
+                        ...groupSelStyle,
                       }}
                     >
                       <div
@@ -263,7 +294,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 return (
                   <div
                     key={row.groupId}
-                    className="vgrid-row vgrid-group-row"
+                    className={`vgrid-row vgrid-group-row${row.index % 2 === 0 ? " vgrid-row-even" : ""}`}
                     data-row-index={row.index}
                     data-group-id={row.groupId}
                     style={{

@@ -1,8 +1,6 @@
 import { bench, describe } from "vitest";
 import { buildColumnModel } from "../columns";
-import { createGrid } from "../createGrid";
 import { filterRows } from "../filtering";
-import { buildRowModel } from "../rowModel";
 import { sortRows } from "../sorting";
 import type { ColumnDef, Row } from "../types";
 import { computeVirtualRange, sliceVisibleRows } from "../virtualization";
@@ -44,39 +42,16 @@ const columnDefs: ColumnDef<Employee>[] = [
 const columns = buildColumnModel(columnDefs);
 const data100k = generateEmployees(100_000);
 
-describe("grid instance creation", () => {
-  bench("createGrid with 100 rows", () => {
-    const data = data100k.slice(0, 100);
-    createGrid({ data, columns: columnDefs });
-  });
-
-  bench("createGrid with 10,000 rows", () => {
-    const data = data100k.slice(0, 10_000);
-    createGrid({ data, columns: columnDefs });
-  });
-
-  bench("createGrid with 100,000 rows", () => {
-    createGrid({ data: data100k, columns: columnDefs });
-  });
-});
-
-describe("getRows materialization", () => {
-  const grid100 = createGrid({ data: data100k.slice(0, 100), columns: columnDefs });
-  const grid10k = createGrid({ data: data100k.slice(0, 10_000), columns: columnDefs });
-  const grid100k = createGrid({ data: data100k, columns: columnDefs });
-
-  bench("getRows with 100 rows", () => {
-    grid100.getRows();
-  });
-
-  bench("getRows with 10,000 rows", () => {
-    grid10k.getRows();
-  });
-
-  bench("getRows with 100,000 rows", () => {
-    grid100k.getRows();
-  });
-});
+function makeRows(data: Employee[]): Row<Employee>[] {
+  const colMap = new Map(columns.map((c) => [c.id, c]));
+  return data.map((original, index) => ({
+    index,
+    original,
+    getValue(columnId: string) {
+      return colMap.get(columnId)?.getValue(original);
+    },
+  }));
+}
 
 describe("buildColumnModel", () => {
   bench("buildColumnModel with 5 columns", () => {
@@ -85,7 +60,7 @@ describe("buildColumnModel", () => {
 });
 
 describe("sorting 100k rows (pure)", () => {
-  const rows100k = buildRowModel(data100k, columnDefs, [], []);
+  const rows100k = makeRows(data100k);
 
   bench("sortRows by string column (name)", () => {
     sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
@@ -119,13 +94,14 @@ describe("filtering 100k rows (pure)", () => {
 });
 
 describe("full pipeline 100k rows (pure)", () => {
-  bench("buildRowModel with filter + sort", () => {
-    buildRowModel(
+  bench("filter + wrap + sort", () => {
+    const filtered = filterRows(
       data100k,
-      columnDefs,
       [{ columnId: "department", value: "Engineering" }],
-      [{ columnId: "name", direction: "asc" }],
+      columns,
     );
+    const rows = makeRows(filtered);
+    sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
   });
 });
 

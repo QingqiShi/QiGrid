@@ -40,11 +40,10 @@ This file is your persistent memory. **You are expected to update it.**
 
 ## Architecture
 
-- **Core** exports stateless pure functions: `filterRows`, `sortRows`, `buildColumnModel`, `buildRowModel`, plus state helpers `cycleSort`, `updateColumnFilter`
+- **Core** exports stateless pure functions: `filterRows`, `sortRows`, `buildColumnModel`, plus state helpers `cycleSort`, `updateColumnFilter`
 - `filterRows` and `sortRows` accept `Column<TData>[]` (resolved model), not `ColumnDef<TData>[]` — callers pass pre-built columns
 - `Column<TData>` carries `filterFn` and `sortingFn` from the def — no need for separate def lookups
 - **React** `useGrid` hook owns all state via `useReducer` (extracted to `gridReducer.ts`), chains `useMemo` stages: columnModel → filter → row-wrap → sort
-- `createGrid` (stateful engine) still exported from core but unused by React package — kept for non-React consumers, tree-shakeable
 - Pipeline types: `filterRows` operates on `TData[]` (pre-wrapping optimization), all other stages on `Row<TData>[]`
 - Row type discriminator (`'leaf' | 'group' | 'detail'`) not yet added — needed by TASK-017/018, easy to add additively
 

@@ -50,14 +50,6 @@ export interface Row<TData> {
   getValue: (columnId: string) => unknown;
 }
 
-export interface GridState<TData> {
-  data: TData[];
-  columns: ColumnDef<TData>[];
-  columnFilters: ColumnFiltersState;
-  sorting: SortingState;
-  rowModel: Row<TData>[];
-}
-
 export interface VirtualRange {
   startIndex: number;
   endIndex: number;
@@ -71,23 +63,4 @@ export interface VirtualRangeParams {
   containerHeight: number;
   rowHeight: number;
   overscan?: number;
-}
-
-export type Listener = () => void;
-export type Unsubscribe = () => void;
-
-export interface GridInstance<TData> {
-  data: TData[];
-  columns: ColumnDef<TData>[];
-  getColumns: () => Column<TData>[];
-  getRows: () => Row<TData>[];
-  getState: () => GridState<TData>;
-  setState: (updater: (prev: GridState<TData>) => Partial<GridState<TData>>) => void;
-  setData: (data: TData[]) => void;
-  setColumns: (columns: ColumnDef<TData>[]) => void;
-  setColumnFilters: (filters: ColumnFiltersState) => void;
-  setColumnFilter: (columnId: string, value: unknown) => void;
-  setSorting: (sorting: SortingState) => void;
-  toggleSort: (columnId: string) => void;
-  subscribe: (listener: Listener) => Unsubscribe;
 }

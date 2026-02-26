@@ -1,7 +1,5 @@
 export { buildColumnModel, computeTotalWidth } from "./columns";
-export { createGrid } from "./createGrid";
 export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
-export { buildRowModel } from "./rowModel";
 export type { CellCoord, CellRange } from "./selection";
 export {
   cellCoordsEqual,
@@ -20,13 +18,9 @@ export type {
   ColumnFilter,
   ColumnFiltersState,
   ColumnSort,
-  GridInstance,
   GridOptions,
-  GridState,
-  Listener,
   Row,
   SortingState,
-  Unsubscribe,
   VirtualRange,
   VirtualRangeParams,
 } from "./types";

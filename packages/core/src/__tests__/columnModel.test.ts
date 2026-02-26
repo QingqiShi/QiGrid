@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { buildColumnModel, computeTotalWidth } from "../columns";
-import { createGrid } from "../createGrid";
 import type { ColumnDef } from "../types";
 
 interface Person {
@@ -11,7 +10,6 @@ interface Person {
 
 const alice: Person = { name: "Alice", age: 30, email: "alice@example.com" };
 const bob: Person = { name: "Bob", age: 25, email: "bob@example.com" };
-const data: Person[] = [alice, bob];
 
 describe("column model", () => {
   describe("buildColumnModel", () => {
@@ -103,61 +101,6 @@ describe("column model", () => {
       const col = cols[0];
 
       expect(col?.getValue(alice)).toBe("Alice");
-    });
-  });
-
-  describe("Row.getValue (stateful, via createGrid)", () => {
-    it("delegates to the column's getValue", () => {
-      const columns: ColumnDef<Person>[] = [
-        { id: "name", accessorKey: "name", header: "Name" },
-        { id: "age", accessorKey: "age", header: "Age" },
-      ];
-      const grid = createGrid({ data, columns });
-      const rows = grid.getRows();
-
-      expect(rows[0]?.getValue("name")).toBe("Alice");
-      expect(rows[0]?.getValue("age")).toBe(30);
-      expect(rows[1]?.getValue("name")).toBe("Bob");
-      expect(rows[1]?.getValue("age")).toBe(25);
-    });
-
-    it("works with accessorFn columns", () => {
-      const columns: ColumnDef<Person>[] = [
-        {
-          id: "display",
-          accessorFn: (row) => `${row.name} (${row.email})`,
-          header: "Display",
-        },
-      ];
-      const grid = createGrid({ data, columns });
-      const row = grid.getRows()[0];
-
-      expect(row?.getValue("display")).toBe("Alice (alice@example.com)");
-    });
-
-    it("returns undefined for unknown column id", () => {
-      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
-      const grid = createGrid({ data, columns });
-      const row = grid.getRows()[0];
-
-      expect(row?.getValue("nonexistent")).toBeUndefined();
-    });
-
-    it("reflects column changes after setColumns", () => {
-      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
-      const grid = createGrid({ data, columns });
-      const row = grid.getRows()[0];
-
-      expect(row?.getValue("name")).toBe("Alice");
-      expect(row?.getValue("age")).toBeUndefined();
-
-      grid.setColumns([
-        { id: "name", accessorKey: "name", header: "Name" },
-        { id: "age", accessorKey: "age", header: "Age" },
-      ]);
-
-      // Same row object now resolves the new column
-      expect(row?.getValue("age")).toBe(30);
     });
   });
 

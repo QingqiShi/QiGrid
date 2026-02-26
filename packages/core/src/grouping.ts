@@ -112,21 +112,20 @@ function flattenLevel<TData>(
 
     const aggregatedValues: Record<string, unknown> = {};
     if (aggColumns && aggColumns.length > 0) {
-      const numAgg = aggColumns.length;
-      const valueArrays: unknown[][] = new Array(numAgg);
-      for (let c = 0; c < numAgg; c++) {
-        valueArrays[c] = new Array(node.rows.length);
-      }
       // Single pass over rows — collect all agg column values at once
+      const valueArrays: unknown[][] = aggColumns.map(() => new Array(node.rows.length));
       for (let r = 0; r < node.rows.length; r++) {
-        const original = node.rows[r]!.original;
-        for (let c = 0; c < numAgg; c++) {
-          valueArrays[c]![r] = aggColumns[c]!.getValue(original);
+        const original = node.rows[r]?.original;
+        for (let c = 0; c < aggColumns.length; c++) {
+          const arr = valueArrays[c];
+          const col = aggColumns[c];
+          if (arr && col && original) arr[r] = col.getValue(original);
         }
       }
-      for (let c = 0; c < numAgg; c++) {
-        const col = aggColumns[c]!;
-        aggregatedValues[col.id] = col.aggFunc?.(valueArrays[c]!);
+      for (let c = 0; c < aggColumns.length; c++) {
+        const col = aggColumns[c];
+        const values = valueArrays[c];
+        if (col && values) aggregatedValues[col.id] = col.aggFunc?.(values);
       }
     }
 

@@ -451,6 +451,46 @@ test("multipleColumns with multi-level grouping shows two group columns", async 
   await expect(toggleButton).toBeVisible();
 });
 
+// --- Aggregation tests ---
+
+test("group rows display aggregated salary totals in groupRows mode", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // First group header should contain "Total: $" (salary aggregation)
+  const firstGroupHeader = page.locator(".group-header").first();
+  await expect(firstGroupHeader).toBeVisible();
+  const headerText = await firstGroupHeader.textContent();
+  expect(headerText).toMatch(/Total: \$/);
+});
+
+test("aggregated values display in singleColumn mode group rows", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department and switch to singleColumn
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // Wait for singleColumn rendering
+  await expect(page.locator(".vgrid-group-toggle").first()).toBeVisible({ timeout: 5000 });
+
+  // The group row should have cells — the salary column cell should have an aggregated value
+  const firstGroupRow = page.locator(".vgrid-group-row").first();
+  const cells = firstGroupRow.locator(".vgrid-cell");
+  const cellCount = await cells.count();
+  expect(cellCount).toBeGreaterThan(1);
+
+  // At least one data cell in the group row should contain a salary (formatted as $X,XXX)
+  const groupRowText = await firstGroupRow.textContent();
+  expect(groupRowText).toMatch(/\$/);
+});
+
 test("no group columns when display type is singleColumn but grouping is empty", async ({
   page,
 }) => {

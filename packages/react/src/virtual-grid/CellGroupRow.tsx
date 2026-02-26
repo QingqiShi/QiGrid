@@ -26,7 +26,10 @@ function getGroupCellContent<TData>(
     const isActive = col.groupFor === "*" || col.groupFor === row.columnId;
     if (!isActive) return null;
 
-    if (renderGroupCell) return renderGroupCell(row, col);
+    if (renderGroupCell) {
+      const custom = renderGroupCell(row, col);
+      if (custom !== undefined) return custom;
+    }
 
     return (
       <button
@@ -44,7 +47,10 @@ function getGroupCellContent<TData>(
   }
 
   // Data column: show aggregated value if available
-  if (renderGroupCell) return renderGroupCell(row, col);
+  if (renderGroupCell) {
+    const custom = renderGroupCell(row, col);
+    if (custom !== undefined) return custom;
+  }
 
   const aggValue = row.aggregatedValues[col.id];
   if (aggValue !== undefined) return String(aggValue);

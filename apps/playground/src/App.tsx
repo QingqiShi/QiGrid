@@ -20,7 +20,7 @@ const ROW_HEIGHT = 36;
 const CONTAINER_HEIGHT = 600;
 
 const columns: ColumnDef<Employee>[] = [
-  { id: "id", accessorKey: "id", header: "ID" },
+  { id: "id", accessorKey: "id", header: "ID", aggFunc: "count" },
   { id: "firstName", accessorKey: "firstName", header: "First Name" },
   { id: "lastName", accessorKey: "lastName", header: "Last Name" },
   { id: "email", accessorKey: "email", header: "Email" },
@@ -30,6 +30,7 @@ const columns: ColumnDef<Employee>[] = [
     id: "salary",
     accessorKey: "salary",
     header: "Salary",
+    aggFunc: "sum",
   },
   { id: "startDate", accessorKey: "startDate", header: "Start Date" },
   { id: "location", accessorKey: "location", header: "Location" },
@@ -261,8 +262,9 @@ export function App() {
     [setColumnFilter],
   );
 
-  const renderGroupRow = useCallback(
-    (row: GroupRow, toggleExpansion: () => void) => (
+  const renderGroupRow = useCallback((row: GroupRow, toggleExpansion: () => void) => {
+    const salaryTotal = row.aggregatedValues.salary as number | undefined;
+    return (
       <button
         type="button"
         className="group-header"
@@ -273,10 +275,21 @@ export function App() {
         <span className="group-toggle">{row.isExpanded ? "\u25BE" : "\u25B8"}</span>
         <span className="group-value">{String(row.groupValue)}</span>
         <span className="group-count">({row.leafCount})</span>
+        {salaryTotal !== undefined && (
+          <span className="group-salary"> Total: {formatSalary(salaryTotal)}</span>
+        )}
       </button>
-    ),
-    [],
-  );
+    );
+  }, []);
+
+  const renderGroupCell = useCallback((row: GroupRow, column: Column<Employee>) => {
+    // For group columns, return undefined to use default toggle
+    if (column.groupFor) return undefined;
+    // For data columns, show aggregated value using CellValue formatter
+    const aggValue = row.aggregatedValues[column.id];
+    if (aggValue !== undefined) return <CellValue col={column} value={aggValue} />;
+    return null;
+  }, []);
 
   const visibleStart = virtualRange ? virtualRange.startIndex + 1 : 0;
   const visibleEnd = virtualRange ? virtualRange.endIndex : 0;
@@ -337,6 +350,7 @@ export function App() {
           renderHeaderCell={renderHeaderCell}
           renderFilterCell={renderFilterCell}
           renderGroupRow={renderGroupRow}
+          renderGroupCell={renderGroupCell}
           onToggleGroupExpansion={toggleGroupExpansion}
           onVirtualRangeChange={setVirtualRange}
           onColumnResize={setColumnWidth}

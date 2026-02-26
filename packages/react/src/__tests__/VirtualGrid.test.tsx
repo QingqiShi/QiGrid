@@ -427,4 +427,240 @@ describe("VirtualGrid", () => {
       expect(groupCell?.textContent).toBe("A (2)");
     });
   });
+
+  describe("group display types", () => {
+    const groupColumn: Column<Item> = {
+      id: "qigrid:group",
+      accessorKey: undefined,
+      accessorFn: undefined,
+      header: "Group",
+      getValue: () => undefined,
+      filterFn: undefined,
+      sortingFn: undefined,
+      width: 200,
+      minWidth: 100,
+      maxWidth: 600,
+      groupFor: "*",
+    };
+
+    const multiGroupCol: Column<Item> = {
+      id: "qigrid:group:name",
+      accessorKey: undefined,
+      accessorFn: undefined,
+      header: "Name",
+      getValue: () => undefined,
+      filterFn: undefined,
+      sortingFn: undefined,
+      width: 200,
+      minWidth: 100,
+      maxWidth: 600,
+      groupFor: "name",
+    };
+
+    const columnsWithGroup = [groupColumn, ...columns];
+    const columnsWithMultiGroup = [multiGroupCol, ...columns];
+
+    function makeGroupedRows(): GridRow<Item>[] {
+      return [
+        {
+          type: "group",
+          index: 0,
+          groupId: "name:A",
+          columnId: "name",
+          groupValue: "A",
+          depth: 0,
+          leafCount: 2,
+          isExpanded: true,
+        } satisfies GroupRow,
+        {
+          type: "leaf",
+          index: 1,
+          original: { name: "A1", value: 10 },
+          getValue: (colId: string) => (colId === "name" ? "A1" : 10),
+        } satisfies LeafRow<Item>,
+        {
+          type: "leaf",
+          index: 2,
+          original: { name: "A2", value: 20 },
+          getValue: (colId: string) => (colId === "name" ? "A2" : 20),
+        } satisfies LeafRow<Item>,
+      ];
+    }
+
+    it("groupRows mode: full-width group rows (no regression)", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="groupRows"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupCell = document.querySelector(".vgrid-group-cell");
+      expect(groupCell).not.toBeNull();
+      expect(groupCell?.textContent).toBe("A (2)");
+      // Group row should not have individual .vgrid-cell elements
+      const groupRow = document.querySelector(".vgrid-group-row");
+      expect(groupRow?.querySelectorAll(".vgrid-cell")).toHaveLength(0);
+    });
+
+    it("singleColumn mode: group rows have cells per column", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="singleColumn"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      // Should have individual cells (3 columns: group + name + value)
+      const cells = groupRow?.querySelectorAll(".vgrid-cell");
+      expect(cells?.length).toBe(3);
+    });
+
+    it("singleColumn mode: group column shows toggle button", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="singleColumn"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const toggleButton = document.querySelector(".vgrid-group-toggle");
+      expect(toggleButton).not.toBeNull();
+      expect(toggleButton?.textContent).toContain("A");
+      expect(toggleButton?.textContent).toContain("(2)");
+    });
+
+    it("multipleColumns mode: correct column shows content, others empty", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithMultiGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="multipleColumns"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const groupRow = document.querySelector(".vgrid-group-row");
+      const cells = groupRow?.querySelectorAll(".vgrid-cell");
+      expect(cells?.length).toBe(3);
+      // First cell (group col for "name") should have toggle
+      const toggleButton = cells?.[0]?.querySelector(".vgrid-group-toggle");
+      expect(toggleButton).not.toBeNull();
+      // Other cells should be empty (data columns)
+      expect(cells?.[1]?.textContent).toBe("");
+      expect(cells?.[2]?.textContent).toBe("");
+    });
+
+    it("leaf rows: empty group column cells, normal data cells", () => {
+      const rows = makeGroupedRows();
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="singleColumn"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      // Get leaf rows (not group rows)
+      const leafRows = document.querySelectorAll(".vgrid-row:not(.vgrid-group-row)");
+      expect(leafRows).toHaveLength(2);
+
+      const firstLeafCells = leafRows[0]?.querySelectorAll(".vgrid-cell");
+      // 3 cells: group + name + value
+      expect(firstLeafCells?.length).toBe(3);
+      // First cell (group column) should be empty
+      expect(firstLeafCells?.[0]?.textContent).toBe("");
+      // Data cells should have content
+      expect(firstLeafCells?.[1]?.textContent).toBe("A1");
+      expect(firstLeafCells?.[2]?.textContent).toBe("10");
+    });
+
+    it("renderGroupCell callback invoked for non-groupRows modes", () => {
+      const rows = makeGroupedRows();
+      const renderGroupCellFn = vi.fn((row: GroupRow) => `Custom: ${row.groupValue}`);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="singleColumn"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          renderGroupCell={renderGroupCellFn}
+        />,
+      );
+
+      expect(renderGroupCellFn).toHaveBeenCalledTimes(1);
+      expect(renderGroupCellFn).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "group", groupValue: "A" }),
+        expect.objectContaining({ id: "qigrid:group", groupFor: "*" }),
+      );
+    });
+
+    it("filter row: empty cells for group columns", () => {
+      const rows = makeGroupedRows();
+      const renderFilterCell = vi.fn((col: Column<Item>) => (
+        <input placeholder={`Filter ${col.header}`} />
+      ));
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columnsWithGroup}
+          totalWidth={TOTAL_WIDTH + 200}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          groupDisplayType="singleColumn"
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          renderFilterCell={renderFilterCell}
+        />,
+      );
+
+      const filterCells = document.querySelectorAll(".vgrid-filter-cell");
+      expect(filterCells).toHaveLength(3);
+      // First filter cell (group column) should be empty
+      expect(filterCells[0]?.querySelector("input")).toBeNull();
+      // Data filter cells should have inputs
+      expect(filterCells[1]?.querySelector("input")).not.toBeNull();
+      expect(filterCells[2]?.querySelector("input")).not.toBeNull();
+      // renderFilterCell should only be called for non-group columns
+      expect(renderFilterCell).toHaveBeenCalledTimes(2);
+    });
+  });
 });

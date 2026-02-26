@@ -26,7 +26,9 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     renderCell,
     renderHeaderCell,
     renderFilterCell,
+    groupDisplayType = "groupRows",
     renderGroupRow,
+    renderGroupCell,
     onToggleGroupExpansion,
     onVirtualRangeChange,
     deferScrollUpdates,
@@ -39,6 +41,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     onSelectionMouseUp,
     onGridKeyDown,
   } = props;
+
+  const isGroupRowsMode = groupDisplayType === "groupRows";
 
   const [scrollTop, setScrollTop] = useState(0);
   const rangeChangeRef = useRef(onVirtualRangeChange);
@@ -202,7 +206,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                     className="vgrid-filter-cell"
                     style={{ width: col.width, flexShrink: 0 }}
                   >
-                    {renderFilterCell(col)}
+                    {col.groupFor ? null : renderFilterCell(col)}
                   </div>
                 ))}
               </div>
@@ -221,7 +225,41 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
             }}
           >
             {visibleRows.map((row, i) => {
+              const rowTransform = `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`;
+
               if (row.type === "group") {
+                // --- Group row in groupRows mode: full-width spanning cell ---
+                if (isGroupRowsMode) {
+                  return (
+                    <div
+                      key={row.groupId}
+                      className="vgrid-row vgrid-group-row"
+                      data-row-index={row.index}
+                      data-group-id={row.groupId}
+                      style={{
+                        display: "flex",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: totalWidth,
+                        height: rowHeight,
+                        transform: rowTransform,
+                        willChange: "transform",
+                      }}
+                    >
+                      <div
+                        className="vgrid-group-cell"
+                        style={{ width: totalWidth, flexShrink: 0 }}
+                      >
+                        {renderGroupRow
+                          ? renderGroupRow(row, () => onToggleGroupExpansion?.(row.groupId))
+                          : `${row.groupValue} (${row.leafCount})`}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // --- Group row in singleColumn/multipleColumns mode: cells per column ---
                 return (
                   <div
                     key={row.groupId}
@@ -235,15 +273,75 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                       left: 0,
                       width: totalWidth,
                       height: rowHeight,
-                      transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
+                      transform: rowTransform,
                       willChange: "transform",
                     }}
                   >
-                    <div className="vgrid-group-cell" style={{ width: totalWidth, flexShrink: 0 }}>
-                      {renderGroupRow
-                        ? renderGroupRow(row, () => onToggleGroupExpansion?.(row.groupId))
-                        : `${row.groupValue} (${row.leafCount})`}
-                    </div>
+                    {columns.map((col, colIndex) => {
+                      const isFocused =
+                        focusedCell != null &&
+                        focusedCell.rowIndex === row.index &&
+                        focusedCell.columnIndex === colIndex;
+                      const isSelected =
+                        hasSelection &&
+                        isCellInRanges({ rowIndex: row.index, columnIndex: colIndex }, ranges);
+                      const isAnchor =
+                        selectionAnchor != null &&
+                        selectionAnchor.rowIndex === row.index &&
+                        selectionAnchor.columnIndex === colIndex &&
+                        isSelected;
+                      const selStyle = getCellSelectionStyle(row.index, colIndex);
+                      const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
+
+                      // Determine group cell content
+                      let cellContent: ReactNode = null;
+                      if (col.groupFor) {
+                        const isActive =
+                          col.groupFor === "*" || col.groupFor === row.columnId;
+                        if (isActive) {
+                          cellContent = renderGroupCell ? (
+                            renderGroupCell(row, col)
+                          ) : (
+                            <button
+                              type="button"
+                              className="vgrid-group-toggle"
+                              style={{
+                                paddingLeft:
+                                  col.groupFor === "*" ? `${row.depth * 20}px` : undefined,
+                              }}
+                              onClick={() => onToggleGroupExpansion?.(row.groupId)}
+                            >
+                              <span className="group-toggle">
+                                {row.isExpanded ? "\u25BE" : "\u25B8"}
+                              </span>{" "}
+                              {String(row.groupValue)} ({row.leafCount})
+                            </button>
+                          );
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={col.id}
+                          className={className}
+                          style={{ width: col.width, flexShrink: 0, ...selStyle }}
+                          onPointerDown={(e) => {
+                            if (!onCellMouseDown) return;
+                            isDraggingRef.current = true;
+                            onCellMouseDown(
+                              { rowIndex: row.index, columnIndex: colIndex },
+                              { shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey },
+                            );
+                          }}
+                          onPointerEnter={() => {
+                            if (!onCellMouseEnter || !isDraggingRef.current) return;
+                            onCellMouseEnter({ rowIndex: row.index, columnIndex: colIndex });
+                          }}
+                        >
+                          {cellContent}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               }
@@ -261,7 +359,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                     left: 0,
                     width: totalWidth,
                     height: rowHeight,
-                    transform: `translateY(${virtualRange.offsetTop - scrollTop + i * rowHeight}px)`,
+                    transform: rowTransform,
                     willChange: "transform",
                   }}
                 >
@@ -299,7 +397,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                           onCellMouseEnter({ rowIndex: row.index, columnIndex: colIndex });
                         }}
                       >
-                        {renderCell(row, col)}
+                        {col.groupFor ? null : renderCell(row, col)}
                       </div>
                     );
                   })}

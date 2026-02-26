@@ -1,3 +1,4 @@
+export { resolveAggFunc } from "./aggregation";
 export { buildColumnModel, buildGroupColumns, computeTotalWidth } from "./columns";
 export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { flattenGroupedRows, groupRows } from "./grouping";
@@ -14,6 +15,8 @@ export {
 } from "./selection";
 export { cycleSort, defaultComparator, sortRows } from "./sorting";
 export type {
+  AggFunc,
+  BuiltInAggFunc,
   Column,
   ColumnDef,
   ColumnFilter,

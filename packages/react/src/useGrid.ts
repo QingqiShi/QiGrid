@@ -160,7 +160,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       }));
     }
     const grouped = groupRows(sortedRows, state.grouping, baseColumnModel);
-    return flattenGroupedRows(grouped, state.collapsedGroupIds);
+    return flattenGroupedRows(grouped, state.collapsedGroupIds, baseColumnModel);
   }, [sortedRows, state.grouping, state.collapsedGroupIds, baseColumnModel]);
 
   // Stable updater functions — dispatch is stable per React guarantees

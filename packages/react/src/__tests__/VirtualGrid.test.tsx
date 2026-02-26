@@ -19,6 +19,7 @@ const columns: Column<Item>[] = [
     getValue: (row) => row.name,
     filterFn: undefined,
     sortingFn: undefined,
+    aggFunc: undefined,
     width: 200,
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
@@ -31,6 +32,7 @@ const columns: Column<Item>[] = [
     getValue: (row) => row.value,
     filterFn: undefined,
     sortingFn: undefined,
+    aggFunc: undefined,
     width: 100,
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
@@ -324,6 +326,7 @@ describe("VirtualGrid", () => {
           depth: 0,
           leafCount: 2,
           isExpanded: true,
+          aggregatedValues: {},
         } satisfies GroupRow,
         {
           type: "leaf",
@@ -440,6 +443,7 @@ describe("VirtualGrid", () => {
           depth: 0,
           leafCount: 2,
           isExpanded: true,
+          aggregatedValues: {},
         } satisfies GroupRow,
         {
           type: "leaf",
@@ -567,6 +571,7 @@ describe("VirtualGrid", () => {
       getValue: () => undefined,
       filterFn: undefined,
       sortingFn: undefined,
+      aggFunc: undefined,
       width: 200,
       minWidth: 100,
       maxWidth: 600,
@@ -581,6 +586,7 @@ describe("VirtualGrid", () => {
       getValue: () => undefined,
       filterFn: undefined,
       sortingFn: undefined,
+      aggFunc: undefined,
       width: 200,
       minWidth: 100,
       maxWidth: 600,
@@ -601,6 +607,7 @@ describe("VirtualGrid", () => {
           depth: 0,
           leafCount: 2,
           isExpanded: true,
+          aggregatedValues: {},
         } satisfies GroupRow,
         {
           type: "leaf",
@@ -755,7 +762,8 @@ describe("VirtualGrid", () => {
         />,
       );
 
-      expect(renderGroupCellFn).toHaveBeenCalledTimes(1);
+      // Called once per column: group column + 2 data columns = 3
+      expect(renderGroupCellFn).toHaveBeenCalledTimes(3);
       expect(renderGroupCellFn).toHaveBeenCalledWith(
         expect.objectContaining({ type: "group", groupValue: "A" }),
         expect.objectContaining({ id: "qigrid:group", groupFor: "*" }),

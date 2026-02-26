@@ -1,3 +1,6 @@
+export type BuiltInAggFunc = "sum" | "avg" | "count" | "min" | "max" | "first" | "last";
+export type AggFunc = BuiltInAggFunc | ((values: unknown[]) => unknown);
+
 export interface ColumnDef<TData> {
   id: string;
   accessorKey?: keyof TData & string;
@@ -5,6 +8,7 @@ export interface ColumnDef<TData> {
   header: string;
   filterFn?: (value: unknown, filterValue: unknown) => boolean;
   sortingFn?: (a: unknown, b: unknown) => number;
+  aggFunc?: AggFunc;
   width?: number;
   minWidth?: number;
   maxWidth?: number;
@@ -34,6 +38,7 @@ export interface Column<TData> {
   getValue: (row: TData) => unknown;
   filterFn: ((value: unknown, filterValue: unknown) => boolean) | undefined;
   sortingFn: ((a: unknown, b: unknown) => number) | undefined;
+  aggFunc: ((values: unknown[]) => unknown) | undefined;
   width: number;
   minWidth: number;
   maxWidth: number;
@@ -70,6 +75,7 @@ export interface GroupRow {
   depth: number;
   leafCount: number;
   isExpanded: boolean;
+  aggregatedValues: Record<string, unknown>;
 }
 
 export type GridRow<TData> = LeafRow<TData> | GroupRow;

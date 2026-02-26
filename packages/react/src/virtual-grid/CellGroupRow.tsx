@@ -22,26 +22,34 @@ function getGroupCellContent<TData>(
   renderGroupCell: ((row: GroupRow, column: Column<TData>) => ReactNode) | undefined,
   onToggleGroupExpansion: ((groupId: string) => void) | undefined,
 ): ReactNode {
-  if (!col.groupFor) return null;
+  if (col.groupFor) {
+    const isActive = col.groupFor === "*" || col.groupFor === row.columnId;
+    if (!isActive) return null;
 
-  const isActive = col.groupFor === "*" || col.groupFor === row.columnId;
-  if (!isActive) return null;
+    if (renderGroupCell) return renderGroupCell(row, col);
 
+    return (
+      <button
+        type="button"
+        className="vgrid-group-toggle"
+        style={{
+          paddingLeft: col.groupFor === "*" ? `${row.depth * 20}px` : undefined,
+        }}
+        onClick={() => onToggleGroupExpansion?.(row.groupId)}
+      >
+        <span className="group-toggle">{row.isExpanded ? "\u25BE" : "\u25B8"}</span>{" "}
+        {String(row.groupValue)} ({row.leafCount})
+      </button>
+    );
+  }
+
+  // Data column: show aggregated value if available
   if (renderGroupCell) return renderGroupCell(row, col);
 
-  return (
-    <button
-      type="button"
-      className="vgrid-group-toggle"
-      style={{
-        paddingLeft: col.groupFor === "*" ? `${row.depth * 20}px` : undefined,
-      }}
-      onClick={() => onToggleGroupExpansion?.(row.groupId)}
-    >
-      <span className="group-toggle">{row.isExpanded ? "\u25BE" : "\u25B8"}</span>{" "}
-      {String(row.groupValue)} ({row.leafCount})
-    </button>
-  );
+  const aggValue = row.aggregatedValues[col.id];
+  if (aggValue !== undefined) return String(aggValue);
+
+  return null;
 }
 
 export function CellGroupRow<TData>({

@@ -85,13 +85,17 @@ function countLeaves<TData>(node: GroupNode<TData>): number {
  * Flatten a grouped tree into a sequential array of GridRow items.
  * Collapsed groups (in collapsedGroupIds) have their children omitted.
  * Assigns sequential indices for virtualization.
+ * When columns are provided, computes aggregatedValues for each group row
+ * using columns that have an aggFunc defined.
  */
 export function flattenGroupedRows<TData>(
   groupedRows: GroupedRows<TData>,
   collapsedGroupIds: ReadonlySet<string>,
+  columns?: Column<TData>[],
 ): GridRow<TData>[] {
+  const aggColumns = columns?.filter((c) => c.aggFunc != null);
   const result: GridRow<TData>[] = [];
-  flattenLevel(groupedRows, collapsedGroupIds, 0, result);
+  flattenLevel(groupedRows, collapsedGroupIds, 0, result, aggColumns);
   return result;
 }
 
@@ -100,10 +104,22 @@ function flattenLevel<TData>(
   collapsedGroupIds: ReadonlySet<string>,
   depth: number,
   result: GridRow<TData>[],
+  aggColumns?: Column<TData>[],
 ): void {
   for (const node of nodes) {
     const isExpanded = !collapsedGroupIds.has(node.groupId);
     const leafCount = countLeaves(node);
+
+    let aggregatedValues: Record<string, unknown> = {};
+    if (aggColumns && aggColumns.length > 0) {
+      for (const col of aggColumns) {
+        const values: unknown[] = [];
+        for (const row of node.rows) {
+          values.push(col.getValue(row.original));
+        }
+        aggregatedValues[col.id] = col.aggFunc!(values);
+      }
+    }
 
     const groupRow: GroupRow = {
       type: "group",
@@ -114,13 +130,14 @@ function flattenLevel<TData>(
       depth,
       leafCount,
       isExpanded,
+      aggregatedValues,
     };
     result.push(groupRow);
 
     if (!isExpanded) continue;
 
     if (node.children.length > 0) {
-      flattenLevel(node.children, collapsedGroupIds, depth + 1, result);
+      flattenLevel(node.children, collapsedGroupIds, depth + 1, result, aggColumns);
     } else {
       for (const row of node.rows) {
         const leafRow: LeafRow<TData> = {

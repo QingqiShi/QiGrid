@@ -1,4 +1,6 @@
 export type {
+  AggFunc,
+  BuiltInAggFunc,
   CellCoord,
   CellRange,
   Column,

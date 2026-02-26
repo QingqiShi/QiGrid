@@ -1,3 +1,4 @@
+import { resolveAggFunc } from "./aggregation";
 import type { Column, ColumnDef, GroupDisplayType } from "./types";
 
 const DEFAULT_WIDTH = 150;
@@ -26,6 +27,7 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
   }
 
   const { filterFn, sortingFn } = def;
+  const aggFunc = def.aggFunc ? resolveAggFunc(def.aggFunc) : undefined;
 
   return {
     id,
@@ -35,6 +37,7 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
     getValue,
     filterFn,
     sortingFn,
+    aggFunc,
     width,
     minWidth,
     maxWidth,
@@ -78,6 +81,7 @@ export function buildGroupColumns<TData>(
         getValue: () => undefined,
         filterFn: undefined,
         sortingFn: undefined,
+        aggFunc: undefined,
         width: GROUP_COL_WIDTH,
         minWidth: GROUP_COL_MIN_WIDTH,
         maxWidth: GROUP_COL_MAX_WIDTH,
@@ -98,6 +102,7 @@ export function buildGroupColumns<TData>(
       getValue: () => undefined,
       filterFn: undefined,
       sortingFn: undefined,
+      aggFunc: undefined,
       width: GROUP_COL_WIDTH,
       minWidth: GROUP_COL_MIN_WIDTH,
       maxWidth: GROUP_COL_MAX_WIDTH,

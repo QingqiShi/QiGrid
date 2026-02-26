@@ -5,6 +5,7 @@ import type {
   ColumnDef,
   ColumnFiltersState,
   GridRow,
+  GroupDisplayType,
   GroupingState,
   GroupRow,
   LeafRow,
@@ -31,8 +32,12 @@ export interface VirtualGridProps<TData> {
   renderHeaderCell: (column: Column<TData>) => React.ReactNode;
   /** Optional render prop for filter row cells. */
   renderFilterCell?: (column: Column<TData>) => React.ReactNode;
-  /** Render prop for group row headers. */
+  /** Group display mode. Defaults to 'groupRows'. */
+  groupDisplayType?: GroupDisplayType;
+  /** Render prop for group row headers (used in groupRows mode). */
   renderGroupRow?: (row: GroupRow, toggleExpansion: () => void) => React.ReactNode;
+  /** Render prop for group cells in singleColumn/multipleColumns modes. */
+  renderGroupCell?: (row: GroupRow, column: Column<TData>) => React.ReactNode;
   /** Callback fired when a group expansion is toggled. */
   onToggleGroupExpansion?: (groupId: string) => void;
   /** Callback fired when the visible virtual range changes. */
@@ -84,6 +89,9 @@ export interface UseGridReturn<TData> {
 
   /** Current grouping state (column IDs to group by). */
   grouping: GroupingState;
+
+  /** Active group display type. */
+  groupDisplayType: GroupDisplayType;
 
   /** Original data reference (useful for "showing X of Y"). */
   data: TData[];

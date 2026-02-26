@@ -3,6 +3,7 @@ import type {
   CellRange,
   ColumnFiltersState,
   GridRow,
+  GroupDisplayType,
   GroupingState,
   GroupRow,
   LeafRow,
@@ -11,13 +12,14 @@ import type {
 } from "@qigrid/core";
 import {
   buildColumnModel,
+  buildGroupColumns,
   computeTotalWidth,
   filterRows,
   flattenGroupedRows,
   groupRows,
   sortRows,
 } from "@qigrid/core";
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { EMPTY_SELECTION, gridReducer } from "./gridReducer";
 import type { UseGridReturn } from "./types";
 
@@ -27,10 +29,14 @@ export interface UseGridOptions<TData> {
   columnFilters?: ColumnFiltersState;
   sorting?: SortingState;
   grouping?: GroupingState;
+  groupDisplayType?: GroupDisplayType;
+  hideGroupedColumns?: boolean;
 }
 
 export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TData> {
   const { data, columns: columnDefs } = options;
+  const displayType: GroupDisplayType = options.groupDisplayType ?? "groupRows";
+  const hideGroupedColumns = options.hideGroupedColumns ?? (displayType !== "groupRows");
 
   const [state, dispatch] = useReducer(gridReducer, {
     sorting: options.sorting ?? [],
@@ -44,8 +50,8 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   // Stage 1: Build base column model from defs
   const baseColumnModel = useMemo(() => buildColumnModel(columnDefs), [columnDefs]);
 
-  // Stage 1b: Apply width overrides from state, prune stale entries
-  const columnModel = useMemo(() => {
+  // Stage 1b: Apply width overrides from state to data columns, prune stale entries
+  const dataColumnModel = useMemo(() => {
     const columnIds = new Set(baseColumnModel.map((c) => c.id));
 
     // Check if any overrides exist for current columns
@@ -68,8 +74,55 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     });
   }, [baseColumnModel, state.columnWidths]);
 
-  // Stage 1c: Total width
-  const totalWidth = useMemo(() => computeTotalWidth(columnModel), [columnModel]);
+  // Stage 1c: Build auto-generated group columns
+  const groupColumns = useMemo(
+    () => buildGroupColumns(state.grouping, displayType, dataColumnModel),
+    [state.grouping, displayType, dataColumnModel],
+  );
+
+  // Stage 1d: Apply width overrides to group columns
+  const groupColumnsWithWidths = useMemo(() => {
+    if (groupColumns.length === 0) return groupColumns;
+
+    let hasOverrides = false;
+    for (const col of groupColumns) {
+      if (state.columnWidths[col.id] !== undefined) {
+        hasOverrides = true;
+        break;
+      }
+    }
+    if (!hasOverrides) return groupColumns;
+
+    return groupColumns.map((col) => {
+      const override = state.columnWidths[col.id];
+      if (override === undefined) return col;
+      const clampedWidth = Math.min(Math.max(override, col.minWidth), col.maxWidth);
+      if (clampedWidth === col.width) return col;
+      return { ...col, width: clampedWidth };
+    });
+  }, [groupColumns, state.columnWidths]);
+
+  // Stage 1e: Build display column model (group columns + visible data columns)
+  const displayColumnModel = useMemo(() => {
+    const visibleDataColumns =
+      hideGroupedColumns && state.grouping.length > 0
+        ? dataColumnModel.filter((c) => !state.grouping.includes(c.id))
+        : dataColumnModel;
+    if (groupColumnsWithWidths.length === 0) return visibleDataColumns;
+    return [...groupColumnsWithWidths, ...visibleDataColumns];
+  }, [groupColumnsWithWidths, dataColumnModel, hideGroupedColumns, state.grouping]);
+
+  // Stage 1f: Total width
+  const totalWidth = useMemo(() => computeTotalWidth(displayColumnModel), [displayColumnModel]);
+
+  // Clear selection when display column count changes (e.g. display type change)
+  const prevColCountRef = useRef(displayColumnModel.length);
+  useEffect(() => {
+    if (prevColCountRef.current !== displayColumnModel.length) {
+      prevColCountRef.current = displayColumnModel.length;
+      dispatch({ type: "CLEAR_SELECTION" });
+    }
+  }, [displayColumnModel.length]);
 
   // Stage 2: Filtered data (uses baseColumnModel to avoid re-filtering on width changes)
   const filteredData = useMemo(
@@ -168,8 +221,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   const addRange = useCallback((range: CellRange) => dispatch({ type: "ADD_RANGE", range }), []);
 
   const selectAll = useCallback(
-    () => dispatch({ type: "SELECT_ALL", rowCount: rows.length, colCount: columnModel.length }),
-    [rows.length, columnModel.length],
+    () =>
+      dispatch({ type: "SELECT_ALL", rowCount: rows.length, colCount: displayColumnModel.length }),
+    [rows.length, displayColumnModel.length],
   );
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
@@ -182,19 +236,20 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         deltaCol,
         extend,
         rowCount: rows.length,
-        colCount: columnModel.length,
+        colCount: displayColumnModel.length,
       }),
-    [rows.length, columnModel.length],
+    [rows.length, displayColumnModel.length],
   );
 
   return useMemo(
     () => ({
       rows,
-      columns: columnModel,
+      columns: displayColumnModel,
       totalWidth,
       sorting: state.sorting,
       columnFilters: state.columnFilters,
       grouping: state.grouping,
+      groupDisplayType: displayType,
       data,
       columnDefs,
       toggleSort,
@@ -218,11 +273,12 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     }),
     [
       rows,
-      columnModel,
+      displayColumnModel,
       totalWidth,
       state.sorting,
       state.columnFilters,
       state.grouping,
+      displayType,
       data,
       columnDefs,
       toggleSort,

@@ -6,6 +6,7 @@ export type {
   ColumnFilter,
   ColumnFiltersState,
   ColumnSort,
+  GroupDisplayType,
   GridOptions,
   GridRow,
   GroupingState,

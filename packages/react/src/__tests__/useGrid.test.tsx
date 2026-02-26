@@ -429,6 +429,150 @@ describe("useGrid", () => {
     });
   });
 
+  describe("group display types", () => {
+    const deptColumns: ColumnDef<Person>[] = [
+      { id: "name", accessorKey: "name", header: "Name" },
+      { id: "age", accessorKey: "age", header: "Age" },
+      { id: "department", accessorKey: "department", header: "Department" },
+    ];
+
+    const deptData: Person[] = [
+      { name: "Alice", age: 30, department: "Engineering" },
+      { name: "Bob", age: 25, department: "Sales" },
+      { name: "Carol", age: 28, department: "Engineering" },
+      { name: "Dave", age: 35, department: "Sales" },
+    ];
+
+    it("groupRows (default) does not add group columns", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: deptData, columns: deptColumns, grouping: ["department"] }),
+      );
+      expect(result.current.columns).toHaveLength(3);
+      expect(result.current.columns.every((c) => c.groupFor === undefined)).toBe(true);
+    });
+
+    it("singleColumn prepends one group column when grouping active", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "singleColumn",
+        }),
+      );
+      // 1 group column + 2 visible data columns (department hidden by default)
+      expect(result.current.columns).toHaveLength(3);
+      expect(result.current.columns[0]!.id).toBe("qigrid:group");
+      expect(result.current.columns[0]!.groupFor).toBe("*");
+    });
+
+    it("multipleColumns prepends N columns per grouping level", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "multipleColumns",
+        }),
+      );
+      // 1 group column + 2 visible data columns (department hidden by default)
+      expect(result.current.columns).toHaveLength(3);
+      expect(result.current.columns[0]!.id).toBe("qigrid:group:department");
+      expect(result.current.columns[0]!.groupFor).toBe("department");
+    });
+
+    it("hideGroupedColumns=false keeps grouped data columns", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "singleColumn",
+          hideGroupedColumns: false,
+        }),
+      );
+      // 1 group column + 3 data columns
+      expect(result.current.columns).toHaveLength(4);
+      expect(result.current.columns.map((c) => c.id)).toEqual([
+        "qigrid:group",
+        "name",
+        "age",
+        "department",
+      ]);
+    });
+
+    it("hideGroupedColumns removes grouped data columns", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "singleColumn",
+          hideGroupedColumns: true,
+        }),
+      );
+      // 1 group column + 2 visible data columns (no department)
+      expect(result.current.columns).toHaveLength(3);
+      expect(result.current.columns.map((c) => c.id)).toEqual([
+        "qigrid:group",
+        "name",
+        "age",
+      ]);
+    });
+
+    it("totalWidth includes group column widths", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "singleColumn",
+          hideGroupedColumns: false,
+        }),
+      );
+      // 200 (group) + 150*3 (data) = 650
+      expect(result.current.totalWidth).toBe(650);
+    });
+
+    it("setColumnWidth works for group column IDs", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: ["department"],
+          groupDisplayType: "singleColumn",
+        }),
+      );
+
+      act(() => result.current.setColumnWidth("qigrid:group", 300));
+      expect(result.current.columns[0]!.width).toBe(300);
+    });
+
+    it("empty grouping with non-groupRows display type returns no group columns", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          grouping: [],
+          groupDisplayType: "singleColumn",
+        }),
+      );
+      expect(result.current.columns).toHaveLength(3);
+      expect(result.current.columns.every((c) => c.groupFor === undefined)).toBe(true);
+    });
+
+    it("exposes groupDisplayType on return value", () => {
+      const { result } = renderHook(() =>
+        useGrid({
+          data: deptData,
+          columns: deptColumns,
+          groupDisplayType: "multipleColumns",
+        }),
+      );
+      expect(result.current.groupDisplayType).toBe("multipleColumns");
+    });
+  });
+
   describe("selection and anchor navigation", () => {
     it("exposes selectionAnchor reflecting state", () => {
       const data = makeData("Alice", "Bob", "Carol");

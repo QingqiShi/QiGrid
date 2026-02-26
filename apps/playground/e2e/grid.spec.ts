@@ -233,3 +233,210 @@ test("anchor cell has vgrid-cell--anchor class within a selection", async ({ pag
   const endCellAfter = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
   await expect(endCellAfter).not.toHaveClass(/vgrid-cell--anchor/);
 });
+
+// --- Group display type tests ---
+
+test("singleColumn mode shows Group column header and group rows have cells", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department first
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Switch to singleColumn display type
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // A "Group" column header should appear as the first header cell
+  const firstHeader = page.locator(".vgrid-header-cell").first();
+  await expect(firstHeader).toContainText("Group", { timeout: 5000 });
+
+  // Group rows should have individual .vgrid-cell elements (not a single .vgrid-group-cell)
+  const firstGroupRow = page.locator(".vgrid-group-row").first();
+  await expect(firstGroupRow).toBeVisible({ timeout: 5000 });
+  const groupRowCells = firstGroupRow.locator(".vgrid-cell");
+  const cellCount = await groupRowCells.count();
+  expect(cellCount).toBeGreaterThan(1);
+
+  // There should be no .vgrid-group-cell elements (those are only for groupRows mode)
+  await expect(firstGroupRow.locator(".vgrid-group-cell")).toHaveCount(0);
+
+  // The group column cell should contain a .vgrid-group-toggle button
+  const groupToggle = firstGroupRow.locator(".vgrid-group-toggle").first();
+  await expect(groupToggle).toBeVisible();
+});
+
+test("multipleColumns mode shows per-level column headers", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Switch to multipleColumns display type
+  await page.selectOption("#display-type-select", "multipleColumns");
+
+  // The first header cell should contain the grouped column's header ("Department")
+  const firstHeader = page.locator(".vgrid-header-cell").first();
+  await expect(firstHeader).toContainText("Department", { timeout: 5000 });
+
+  // Group rows should have individual .vgrid-cell elements
+  const firstGroupRow = page.locator(".vgrid-group-row").first();
+  await expect(firstGroupRow).toBeVisible({ timeout: 5000 });
+  const groupRowCells = firstGroupRow.locator(".vgrid-cell");
+  const cellCount = await groupRowCells.count();
+  expect(cellCount).toBeGreaterThan(1);
+
+  // No .vgrid-group-cell elements (groupRows mode only)
+  await expect(firstGroupRow.locator(".vgrid-group-cell")).toHaveCount(0);
+
+  // The group toggle should be visible in the group column
+  const groupToggle = firstGroupRow.locator(".vgrid-group-toggle").first();
+  await expect(groupToggle).toBeVisible();
+});
+
+test("switching back to groupRows mode restores full-width group headers", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department and switch to singleColumn
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // Verify singleColumn is active (group rows have .vgrid-cell, not .vgrid-group-cell)
+  await expect(page.locator(".vgrid-group-row .vgrid-cell").first()).toBeVisible({ timeout: 5000 });
+
+  // Switch back to groupRows
+  await page.selectOption("#display-type-select", "groupRows");
+
+  // Full-width .vgrid-group-cell should return
+  const firstGroupRow = page.locator(".vgrid-group-row").first();
+  await expect(firstGroupRow).toBeVisible({ timeout: 5000 });
+  await expect(firstGroupRow.locator(".vgrid-group-cell")).toBeVisible({ timeout: 5000 });
+
+  // No individual .vgrid-cell elements in group rows in groupRows mode
+  await expect(firstGroupRow.locator(".vgrid-cell")).toHaveCount(0);
+});
+
+test("expand and collapse works in singleColumn mode", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department and switch to singleColumn
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // Wait for singleColumn rendering
+  const firstToggle = page.locator(".vgrid-group-toggle .group-toggle").first();
+  await expect(firstToggle).toBeVisible({ timeout: 5000 });
+
+  // Should start expanded (▾)
+  await expect(firstToggle).toHaveText("▾");
+
+  // Note the "Showing X of Y" text before collapse — total row count includes children
+  const gridInfo = page.locator(".grid-info");
+  const infoBefore = await gridInfo.textContent();
+  const showingBefore = infoBefore?.match(/Showing (\d+) of/)?.[1];
+
+  // Click the toggle to collapse
+  await page.locator(".vgrid-group-toggle").first().click();
+
+  // Should now show collapsed indicator (▸)
+  await expect(firstToggle).toHaveText("▸", { timeout: 5000 });
+
+  // The "Showing X of Y" total row count should decrease (children hidden from the flattened list)
+  const infoAfter = await gridInfo.textContent();
+  const showingAfter = infoAfter?.match(/Showing (\d+) of/)?.[1];
+  expect(Number(showingAfter)).toBeLessThan(Number(showingBefore));
+
+  // Click again to expand
+  await page.locator(".vgrid-group-toggle").first().click();
+  await expect(firstToggle).toHaveText("▾", { timeout: 5000 });
+
+  // Row count should restore
+  const infoRestored = await gridInfo.textContent();
+  const showingRestored = infoRestored?.match(/Showing (\d+) of/)?.[1];
+  expect(Number(showingRestored)).toBe(Number(showingBefore));
+});
+
+test("grouped data columns are hidden in singleColumn mode", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Without grouping, there should be 9 columns
+  const headersBeforeGrouping = page.locator(".vgrid-header-cell");
+  await expect(headersBeforeGrouping).toHaveCount(9);
+
+  // Group by department and switch to singleColumn
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // Wait for the "Group" column to appear
+  await expect(page.locator(".vgrid-header-cell").first()).toContainText("Group", {
+    timeout: 5000,
+  });
+
+  // Column count: 9 original - 1 hidden (department) + 1 group column = 9
+  // The "Department" column should NOT be in the headers
+  const headers = page.locator(".vgrid-header-cell");
+  const headerCount = await headers.count();
+  expect(headerCount).toBe(9); // 9 - 1 + 1 = 9
+
+  // Verify "Department" is not present as a header text
+  const headerTexts: string[] = [];
+  for (let i = 0; i < headerCount; i++) {
+    const text = await headers.nth(i).textContent();
+    headerTexts.push(text ?? "");
+  }
+  // The grouped "Department" data column should be hidden
+  const hasDepartmentDataHeader = headerTexts.some((t, idx) => idx > 0 && t.includes("Department"));
+  expect(hasDepartmentDataHeader).toBe(false);
+});
+
+test("grouped data columns are hidden in multipleColumns mode", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department and switch to multipleColumns
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+  await page.selectOption("#display-type-select", "multipleColumns");
+
+  // Wait for the group column header
+  await expect(page.locator(".vgrid-header-cell").first()).toContainText("Department", {
+    timeout: 5000,
+  });
+
+  // Column count: 9 original - 1 hidden (department) + 1 group column = 9
+  const headers = page.locator(".vgrid-header-cell");
+  const headerCount = await headers.count();
+  expect(headerCount).toBe(9);
+
+  // Verify that "Department" appears only once (as the group column, not as a data column)
+  const headerTexts: string[] = [];
+  for (let i = 0; i < headerCount; i++) {
+    const text = await headers.nth(i).textContent();
+    headerTexts.push(text ?? "");
+  }
+  const deptOccurrences = headerTexts.filter((t) => t.includes("Department")).length;
+  expect(deptOccurrences).toBe(1); // Only the group column header, not the data column
+});
+
+test("no group columns when display type is singleColumn but grouping is empty", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Switch to singleColumn without setting a grouping
+  await page.selectOption("#display-type-select", "singleColumn");
+
+  // Should still have the original 9 columns (no group column generated)
+  const headers = page.locator(".vgrid-header-cell");
+  await expect(headers).toHaveCount(9);
+  await expect(headers.nth(0)).toContainText("ID");
+});

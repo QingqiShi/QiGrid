@@ -296,8 +296,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                       // Determine group cell content
                       let cellContent: ReactNode = null;
                       if (col.groupFor) {
-                        const isActive =
-                          col.groupFor === "*" || col.groupFor === row.columnId;
+                        const isActive = col.groupFor === "*" || col.groupFor === row.columnId;
                         if (isActive) {
                           cellContent = renderGroupCell ? (
                             renderGroupCell(row, col)

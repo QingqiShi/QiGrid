@@ -462,8 +462,8 @@ describe("useGrid", () => {
       );
       // 1 group column + 2 visible data columns (department hidden by default)
       expect(result.current.columns).toHaveLength(3);
-      expect(result.current.columns[0]!.id).toBe("qigrid:group");
-      expect(result.current.columns[0]!.groupFor).toBe("*");
+      expect(result.current.columns[0]?.id).toBe("qigrid:group");
+      expect(result.current.columns[0]?.groupFor).toBe("*");
     });
 
     it("multipleColumns prepends N columns per grouping level", () => {
@@ -477,8 +477,8 @@ describe("useGrid", () => {
       );
       // 1 group column + 2 visible data columns (department hidden by default)
       expect(result.current.columns).toHaveLength(3);
-      expect(result.current.columns[0]!.id).toBe("qigrid:group:department");
-      expect(result.current.columns[0]!.groupFor).toBe("department");
+      expect(result.current.columns[0]?.id).toBe("qigrid:group:department");
+      expect(result.current.columns[0]?.groupFor).toBe("department");
     });
 
     it("hideGroupedColumns=false keeps grouped data columns", () => {
@@ -513,11 +513,7 @@ describe("useGrid", () => {
       );
       // 1 group column + 2 visible data columns (no department)
       expect(result.current.columns).toHaveLength(3);
-      expect(result.current.columns.map((c) => c.id)).toEqual([
-        "qigrid:group",
-        "name",
-        "age",
-      ]);
+      expect(result.current.columns.map((c) => c.id)).toEqual(["qigrid:group", "name", "age"]);
     });
 
     it("totalWidth includes group column widths", () => {
@@ -545,7 +541,7 @@ describe("useGrid", () => {
       );
 
       act(() => result.current.setColumnWidth("qigrid:group", 300));
-      expect(result.current.columns[0]!.width).toBe(300);
+      expect(result.current.columns[0]?.width).toBe(300);
     });
 
     it("empty grouping with non-groupRows display type returns no group columns", () => {

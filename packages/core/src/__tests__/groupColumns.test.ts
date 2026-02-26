@@ -1,6 +1,6 @@
-import type { Column } from "../types";
-import { buildGroupColumns } from "../columns";
 import { describe, expect, it } from "vitest";
+import { buildGroupColumns } from "../columns";
+import type { Column } from "../types";
 
 interface Person {
   name: string;
@@ -67,32 +67,32 @@ describe("buildGroupColumns", () => {
     it("returns one column with correct id and header", () => {
       const result = buildGroupColumns(["department"], "singleColumn", columns);
       expect(result).toHaveLength(1);
-      expect(result[0]!.id).toBe("qigrid:group");
-      expect(result[0]!.header).toBe("Group");
+      expect(result[0]?.id).toBe("qigrid:group");
+      expect(result[0]?.header).toBe("Group");
     });
 
     it("has groupFor set to '*'", () => {
       const result = buildGroupColumns(["department"], "singleColumn", columns);
-      expect(result[0]!.groupFor).toBe("*");
+      expect(result[0]?.groupFor).toBe("*");
     });
 
     it("has correct width defaults", () => {
       const result = buildGroupColumns(["department"], "singleColumn", columns);
-      expect(result[0]!.width).toBe(200);
-      expect(result[0]!.minWidth).toBe(100);
-      expect(result[0]!.maxWidth).toBe(600);
+      expect(result[0]?.width).toBe(200);
+      expect(result[0]?.minWidth).toBe(100);
+      expect(result[0]?.maxWidth).toBe(600);
     });
 
     it("getValue returns undefined", () => {
       const result = buildGroupColumns(["department"], "singleColumn", columns);
       const person: Person = { name: "Alice", department: "Eng", location: "NY" };
-      expect(result[0]!.getValue(person)).toBeUndefined();
+      expect(result[0]?.getValue(person)).toBeUndefined();
     });
 
     it("has no filterFn or sortingFn", () => {
       const result = buildGroupColumns(["department"], "singleColumn", columns);
-      expect(result[0]!.filterFn).toBeUndefined();
-      expect(result[0]!.sortingFn).toBeUndefined();
+      expect(result[0]?.filterFn).toBeUndefined();
+      expect(result[0]?.sortingFn).toBeUndefined();
     });
 
     it("returns one column regardless of grouping depth", () => {
@@ -109,32 +109,32 @@ describe("buildGroupColumns", () => {
 
     it("columns have correct ids", () => {
       const result = buildGroupColumns(["department", "location"], "multipleColumns", columns);
-      expect(result[0]!.id).toBe("qigrid:group:department");
-      expect(result[1]!.id).toBe("qigrid:group:location");
+      expect(result[0]?.id).toBe("qigrid:group:department");
+      expect(result[1]?.id).toBe("qigrid:group:location");
     });
 
     it("headers are derived from source columns", () => {
       const result = buildGroupColumns(["department", "location"], "multipleColumns", columns);
-      expect(result[0]!.header).toBe("Department");
-      expect(result[1]!.header).toBe("Location");
+      expect(result[0]?.header).toBe("Department");
+      expect(result[1]?.header).toBe("Location");
     });
 
     it("groupFor matches the source column id", () => {
       const result = buildGroupColumns(["department", "location"], "multipleColumns", columns);
-      expect(result[0]!.groupFor).toBe("department");
-      expect(result[1]!.groupFor).toBe("location");
+      expect(result[0]?.groupFor).toBe("department");
+      expect(result[1]?.groupFor).toBe("location");
     });
 
     it("has correct width defaults", () => {
       const result = buildGroupColumns(["department"], "multipleColumns", columns);
-      expect(result[0]!.width).toBe(200);
-      expect(result[0]!.minWidth).toBe(100);
-      expect(result[0]!.maxWidth).toBe(600);
+      expect(result[0]?.width).toBe(200);
+      expect(result[0]?.minWidth).toBe(100);
+      expect(result[0]?.maxWidth).toBe(600);
     });
 
     it("falls back to columnId as header when source column not found", () => {
       const result = buildGroupColumns(["unknown"], "multipleColumns", columns);
-      expect(result[0]!.header).toBe("unknown");
+      expect(result[0]?.header).toBe("unknown");
     });
   });
 });

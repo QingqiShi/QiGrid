@@ -36,7 +36,7 @@ export interface UseGridOptions<TData> {
 export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TData> {
   const { data, columns: columnDefs } = options;
   const displayType: GroupDisplayType = options.groupDisplayType ?? "groupRows";
-  const hideGroupedColumns = options.hideGroupedColumns ?? (displayType !== "groupRows");
+  const hideGroupedColumns = options.hideGroupedColumns ?? displayType !== "groupRows";
 
   const [state, dispatch] = useReducer(gridReducer, {
     sorting: options.sorting ?? [],

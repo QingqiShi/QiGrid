@@ -2,6 +2,8 @@ export { resolveAggFunc } from "./aggregation";
 export { buildColumnModel, buildGroupColumns, computeTotalWidth } from "./columns";
 export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { flattenGroupedRows, groupRows } from "./grouping";
+export type { NavigationDirection } from "./navigation";
+export { computeNextFocus } from "./navigation";
 export type { CellCoord, CellRange } from "./selection";
 export {
   cellCoordsEqual,

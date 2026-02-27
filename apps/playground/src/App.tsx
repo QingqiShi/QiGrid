@@ -210,6 +210,22 @@ export function App() {
           event.preventDefault();
           clearSelection();
           break;
+        case "Home":
+          event.preventDefault();
+          moveFocus(0, -cols.length, event.shiftKey);
+          break;
+        case "End":
+          event.preventDefault();
+          moveFocus(0, cols.length, event.shiftKey);
+          break;
+        case "PageUp":
+          event.preventDefault();
+          moveFocus(-Math.max(1, Math.floor(CONTAINER_HEIGHT / ROW_HEIGHT)), 0, event.shiftKey);
+          break;
+        case "PageDown":
+          event.preventDefault();
+          moveFocus(Math.max(1, Math.floor(CONTAINER_HEIGHT / ROW_HEIGHT)), 0, event.shiftKey);
+          break;
         case "c":
           if (isMultiSelect && selectedRanges.length > 0) {
             event.preventDefault();
@@ -361,6 +377,7 @@ export function App() {
           onCellMouseEnter={handleCellMouseEnter}
           onSelectionMouseUp={handleSelectionMouseUp}
           onGridKeyDown={handleGridKeyDown}
+          onCellAction={() => {}}
         />
       </div>
     </div>

@@ -491,6 +491,160 @@ test("aggregated values display in singleColumn mode group rows", async ({ page 
   expect(groupRowText).toMatch(/\$/);
 });
 
+// --- Keyboard navigation tests ---
+
+test("Home moves focus to first column", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 2, col 3
+  const cell = page.locator("[data-row-index='2'] .vgrid-cell").nth(3);
+  await cell.click();
+  await expect(page.locator(".vgrid-cell--focused")).toBeVisible();
+
+  // Press Home
+  const grid = page.locator("[data-testid='virtual-grid']");
+  await grid.press("Home");
+
+  // Focused cell should be in column 0 of row 2
+  const focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  const focusedRow = await focused.locator("..").getAttribute("data-row-index");
+  expect(focusedRow).toBe("2");
+
+  // Verify it's the first cell in the row
+  const focusedCells = page.locator("[data-row-index='2'] .vgrid-cell--focused");
+  const firstCell = page.locator("[data-row-index='2'] .vgrid-cell").first();
+  await expect(focusedCells).toHaveCount(1);
+  const focusedBox = await focused.boundingBox();
+  const firstBox = await firstCell.boundingBox();
+  expect(focusedBox).toBeTruthy();
+  expect(firstBox).toBeTruthy();
+  expect(focusedBox?.x).toBe(firstBox?.x);
+});
+
+test("End moves focus to last column", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 2, col 1
+  const cell = page.locator("[data-row-index='2'] .vgrid-cell").nth(1);
+  await cell.click();
+
+  // Press End
+  const grid = page.locator("[data-testid='virtual-grid']");
+  await grid.press("End");
+
+  // Focused cell should be in the last column of row 2
+  const focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  const focusedRow = await focused.locator("..").getAttribute("data-row-index");
+  expect(focusedRow).toBe("2");
+
+  // Verify it's the last cell in the row
+  const lastCell = page.locator("[data-row-index='2'] .vgrid-cell").last();
+  const focusedBox = await focused.boundingBox();
+  const lastBox = await lastCell.boundingBox();
+  expect(focusedBox).toBeTruthy();
+  expect(lastBox).toBeTruthy();
+  expect(focusedBox?.x).toBe(lastBox?.x);
+});
+
+test("PageDown moves focus down by page size", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 0, col 0
+  const cell = page.locator("[data-row-index='0'] .vgrid-cell").nth(0);
+  await cell.click();
+
+  // Press PageDown
+  const grid = page.locator("[data-testid='virtual-grid']");
+  await grid.press("PageDown");
+
+  // Focused cell should have moved down by a page (~600/36 = 16 rows)
+  const focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  const focusedRow = await focused.locator("..").getAttribute("data-row-index");
+  const rowIdx = Number(focusedRow);
+  // Page size is floor(600/36) = 16
+  expect(rowIdx).toBe(16);
+});
+
+test("PageUp moves focus up by page size", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 0, col 0, then PageDown twice to get to row 32
+  const cell = page.locator("[data-row-index='0'] .vgrid-cell").nth(0);
+  await cell.click();
+
+  const grid = page.locator("[data-testid='virtual-grid']");
+  await grid.press("PageDown");
+  await grid.press("PageDown");
+
+  // Should be at row 32
+  let focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  let rowIdx = Number(await focused.locator("..").getAttribute("data-row-index"));
+  expect(rowIdx).toBe(32);
+
+  // Press PageUp
+  await grid.press("PageUp");
+
+  focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  rowIdx = Number(await focused.locator("..").getAttribute("data-row-index"));
+  expect(rowIdx).toBe(16);
+});
+
+test("boundary clamping: cannot navigate past grid edges", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click cell at row 0, col 0
+  const cell = page.locator("[data-row-index='0'] .vgrid-cell").nth(0);
+  await cell.click();
+
+  const grid = page.locator("[data-testid='virtual-grid']");
+
+  // Press ArrowUp — should stay at row 0
+  await grid.press("ArrowUp");
+  let focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+  expect(await focused.locator("..").getAttribute("data-row-index")).toBe("0");
+
+  // Press ArrowLeft — should stay at col 0
+  await grid.press("ArrowLeft");
+  focused = page.locator(".vgrid-cell--focused");
+  const firstCell = page.locator("[data-row-index='0'] .vgrid-cell").first();
+  const focusedBox = await focused.boundingBox();
+  const firstBox = await firstCell.boundingBox();
+  expect(focusedBox).toBeTruthy();
+  expect(firstBox).toBeTruthy();
+  expect(focusedBox?.x).toBe(firstBox?.x);
+
+  // Press Home — should stay at col 0 (already there)
+  await grid.press("Home");
+  focused = page.locator(".vgrid-cell--focused");
+  const focusedBox2 = await focused.boundingBox();
+  expect(focusedBox2).toBeTruthy();
+  expect(focusedBox2?.x).toBe(firstBox?.x);
+});
+
+test("focused cell has visible highlight CSS class", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Click a cell
+  const cell = page.locator("[data-row-index='1'] .vgrid-cell").nth(2);
+  await cell.click();
+
+  // The clicked cell should have the focused CSS class
+  const focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toHaveCount(1);
+});
+
 test("no group columns when display type is singleColumn but grouping is empty", async ({
   page,
 }) => {

@@ -69,6 +69,8 @@ export interface VirtualGridProps<TData> {
   onSelectionMouseUp?: () => void;
   /** Called for keyboard events on the grid (arrow keys, etc). */
   onGridKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+  /** Called when Enter or Space is pressed on a focused cell. */
+  onCellAction?: (cell: CellCoord) => void;
 }
 
 export interface UseGridReturn<TData> {

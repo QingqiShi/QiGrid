@@ -38,6 +38,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     onCellMouseEnter,
     onSelectionMouseUp,
     onGridKeyDown,
+    onCellAction,
   } = props;
 
   const isGroupRowsMode = groupDisplayType === "groupRows";
@@ -110,9 +111,16 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if ((e.target as HTMLElement).isContentEditable) return;
+
+      if ((e.key === "Enter" || e.key === " ") && focusedCell && onCellAction) {
+        e.preventDefault();
+        onCellAction(focusedCell);
+        return;
+      }
+
       onGridKeyDown?.(e);
     },
-    [onGridKeyDown],
+    [onGridKeyDown, focusedCell, onCellAction],
   );
 
   // --- Render ---

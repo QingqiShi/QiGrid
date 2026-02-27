@@ -39,7 +39,17 @@ export function GridCell<TData>({
 
   const selStyle = isSelected ? computeCellSelectionBorders(rowIndex, colIndex, ranges) : undefined;
 
-  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
+  // Hide the focused border when it differs from the anchor (i.e. the user
+  // has extended the selection). The anchor indicator is enough and the focus
+  // outline on the range end cell is visually confusing.
+  const anchorMatchesFocus =
+    focusedCell != null &&
+    selectionAnchor != null &&
+    focusedCell.rowIndex === selectionAnchor.rowIndex &&
+    focusedCell.columnIndex === selectionAnchor.columnIndex;
+  const showFocused = isFocused && (!hasSelection || anchorMatchesFocus);
+
+  const className = `vgrid-cell${showFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
 
   return (
     <div

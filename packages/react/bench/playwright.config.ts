@@ -5,13 +5,13 @@ export default defineConfig({
   timeout: 120_000,
   retries: 0,
   use: {
-    baseURL: "http://localhost:5174",
+    baseURL: "http://localhost:5299",
     headless: true,
   },
   webServer: {
     command: "pnpm --filter @qigrid/benchmark dev",
-    port: 5174,
-    reuseExistingServer: !process.env.CI,
+    port: 5299,
+    reuseExistingServer: false,
   },
   projects: [
     {

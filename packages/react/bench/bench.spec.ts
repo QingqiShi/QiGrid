@@ -13,8 +13,7 @@ const RUN_COUNT = 5;
 async function navigateAndWait(page: import("@playwright/test").Page, path: string): Promise<void> {
   await page.goto(path);
   await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
-  // Wait briefly for React render to complete and __grid to be assigned
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => "__grid" in window, undefined, { timeout: 5000 });
 }
 
 // ---------------------------------------------------------------------------

@@ -63,13 +63,9 @@ describe("buildColumnModel", () => {
 describe("sortRows 100k", () => {
   const rows100k = makeRows(data100k);
 
-  bench(
-    "by string column",
-    () => {
-      sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
-    },
-    { time: 10_000 },
-  );
+  bench("by string column", () => {
+    sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
+  });
 });
 
 describe("filterRows 100k", () => {
@@ -81,13 +77,9 @@ describe("filterRows 100k", () => {
 describe("groupRows 100k", () => {
   const rows100k = makeRows(data100k);
 
-  bench(
-    "single column",
-    () => {
-      groupRows(rows100k, ["department"], columns);
-    },
-    { time: 10_000 },
-  );
+  bench("single column", () => {
+    groupRows(rows100k, ["department"], columns);
+  });
 });
 
 describe("flattenGroupedRows 100k", () => {
@@ -95,13 +87,9 @@ describe("flattenGroupedRows 100k", () => {
   const grouped = groupRows(rows100k, ["department"], columns);
   const noCollapsed = new Set<string>();
 
-  bench(
-    "all expanded",
-    () => {
-      flattenGroupedRows(grouped, noCollapsed);
-    },
-    { time: 10_000 },
-  );
+  bench("all expanded", () => {
+    flattenGroupedRows(grouped, noCollapsed);
+  });
 });
 
 describe("aggregation 100k", () => {
@@ -117,29 +105,21 @@ describe("aggregation 100k", () => {
   const grouped = groupRows(rows100k, ["department"], columns);
   const noCollapsed = new Set<string>();
 
-  bench(
-    "5 columns single-level",
-    () => {
-      flattenGroupedRows(grouped, noCollapsed, aggColumns);
-    },
-    { time: 10_000 },
-  );
+  bench("5 columns single-level", () => {
+    flattenGroupedRows(grouped, noCollapsed, aggColumns);
+  });
 });
 
 describe("full pipeline 100k", () => {
-  bench(
-    "filter + wrap + sort",
-    () => {
-      const filtered = filterRows(
-        data100k,
-        [{ columnId: "department", value: "Engineering" }],
-        columns,
-      );
-      const rows = makeRows(filtered);
-      sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
-    },
-    { time: 10_000 },
-  );
+  bench("filter + wrap + sort", () => {
+    const filtered = filterRows(
+      data100k,
+      [{ columnId: "department", value: "Engineering" }],
+      columns,
+    );
+    const rows = makeRows(filtered);
+    sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
+  });
 });
 
 // Virtualization — lightweight row factory for 1M rows

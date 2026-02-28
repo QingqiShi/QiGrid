@@ -28,11 +28,15 @@ export function defaultComparator(a: unknown, b: unknown): number {
     return a - b;
   }
 
+  if (typeof a === "string" && typeof b === "string") {
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
   if (a instanceof Date && b instanceof Date) {
     return a.getTime() - b.getTime();
   }
 
-  return String(a).localeCompare(String(b));
+  return 0;
 }
 
 export function sortRows<TData>(

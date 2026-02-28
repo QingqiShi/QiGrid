@@ -1,14 +1,14 @@
 import type { CellCoord, CellRange, Column } from "@qigrid/core";
 import { isCellInRanges, normalizeRange, subtractRange } from "@qigrid/core";
 import type { ReactNode } from "react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { SELECTION_BORDER_COLOR } from "./constants";
 
 interface SelectionOverlayProps<TData> {
   ranges: CellRange[];
   columns: Column<TData>[];
   rowHeight: number;
-  scrollTop: number;
+  rangeOffsetTop: number;
   totalRowCount: number;
   selectionAnchor: CellCoord | null | undefined;
   focusedCell: CellCoord | null | undefined;
@@ -24,12 +24,16 @@ const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
  *   otherwise a single full-range background div.
  *
  * All overlays use pointer-events: none so clicks pass through to cells.
+ *
+ * Positioned inside the transform wrapper, so coordinates are relative
+ * to virtualRange.offsetTop, not scrollTop. This means the overlay
+ * only re-renders when the virtual range shifts, not on every scroll pixel.
  */
-export function SelectionOverlay<TData>({
+function SelectionOverlayInner<TData>({
   ranges,
   columns,
   rowHeight,
-  scrollTop,
+  rangeOffsetTop,
   totalRowCount,
   selectionAnchor,
   focusedCell,
@@ -58,7 +62,7 @@ export function SelectionOverlay<TData>({
         style={{
           position: "absolute",
           left: colPrefixSums[focusedCell.columnIndex] ?? 0,
-          top: focusedCell.rowIndex * rowHeight - scrollTop,
+          top: focusedCell.rowIndex * rowHeight - rangeOffsetTop,
           width:
             (colPrefixSums[focusedCell.columnIndex + 1] ?? 0) -
             (colPrefixSums[focusedCell.columnIndex] ?? 0),
@@ -96,7 +100,7 @@ export function SelectionOverlay<TData>({
 
     const x = colPrefixSums[startCol] ?? 0;
     const width = (colPrefixSums[endCol + 1] ?? 0) - x;
-    const y = startRow * rowHeight - scrollTop;
+    const y = startRow * rowHeight - rangeOffsetTop;
     const height = (endRow - startRow + 1) * rowHeight;
 
     // Border: full range, continuous outline
@@ -131,7 +135,7 @@ export function SelectionOverlay<TData>({
 
       const bgX = colPrefixSums[bgStartCol] ?? 0;
       const bgW = (colPrefixSums[bgEndCol + 1] ?? 0) - bgX;
-      const bgY = bgStartRow * rowHeight - scrollTop;
+      const bgY = bgStartRow * rowHeight - rangeOffsetTop;
       const bgH = (bgEndRow - bgStartRow + 1) * rowHeight;
 
       overlays.push(
@@ -160,3 +164,5 @@ export function SelectionOverlay<TData>({
     </>
   );
 }
+
+export const SelectionOverlay = memo(SelectionOverlayInner) as typeof SelectionOverlayInner;

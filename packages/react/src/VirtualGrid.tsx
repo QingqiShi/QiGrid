@@ -222,16 +222,16 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 />
               );
             })}
-            </div>
             <SelectionOverlay
               ranges={ranges}
               columns={columns}
               rowHeight={rowHeight}
-              scrollTop={scrollTop}
+              rangeOffsetTop={virtualRange.offsetTop}
               totalRowCount={rows.length}
               selectionAnchor={selectionAnchor}
               focusedCell={focusedCell}
             />
+            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildColumnModel } from "../columns";
-import { flattenGroupedRows, groupRows } from "../grouping";
-import type { ColumnDef, GroupRow, LeafRow, Row } from "../types";
+import { buildColumnModel } from "./columns";
+import { flattenGroupedRows, groupRows } from "./grouping";
+import type { ColumnDef, GroupRow, LeafRow, Row } from "./types";
 
 interface Person {
   name: string;

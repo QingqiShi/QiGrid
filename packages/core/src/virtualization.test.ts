@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Row, VirtualRange } from "../types";
-import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "../virtualization";
+import type { Row, VirtualRange } from "./types";
+import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "./virtualization";
 
 function makeRows(count: number): Row<{ id: number }>[] {
   return Array.from({ length: count }, (_, i) => ({

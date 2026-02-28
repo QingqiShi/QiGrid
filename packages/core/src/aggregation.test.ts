@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAggFunc } from "../aggregation";
+import { resolveAggFunc } from "./aggregation";
 
 describe("resolveAggFunc", () => {
   it("maps 'sum' to a function", () => {

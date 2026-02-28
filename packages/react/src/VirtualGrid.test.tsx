@@ -1,7 +1,7 @@
 import type { Column, GridRow, GroupRow, LeafRow } from "@qigrid/core";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { VirtualGrid } from "../VirtualGrid";
+import { VirtualGrid } from "./VirtualGrid";
 
 afterEach(cleanup);
 

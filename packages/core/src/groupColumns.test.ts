@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildGroupColumns } from "../columns";
-import type { Column } from "../types";
+import { buildGroupColumns } from "./columns";
+import type { Column } from "./types";
 
 interface Person {
   name: string;

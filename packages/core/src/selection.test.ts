@@ -10,7 +10,7 @@ import {
   serializeRangeToTSV,
   subtractFromRanges,
   subtractRange,
-} from "../selection";
+} from "./selection";
 
 describe("normalizeRange", () => {
   it("returns unchanged when start <= end", () => {

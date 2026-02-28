@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeNextFocus } from "../navigation";
+import { computeNextFocus } from "./navigation";
 
 describe("computeNextFocus", () => {
   const rows = 10;

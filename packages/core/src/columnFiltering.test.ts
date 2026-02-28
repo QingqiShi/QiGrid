@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildColumnModel } from "../columns";
-import { filterRows } from "../filtering";
-import type { ColumnDef, Row } from "../types";
+import { buildColumnModel } from "./columns";
+import { filterRows } from "./filtering";
+import type { ColumnDef, Row } from "./types";
 
 interface Person {
   name: string;

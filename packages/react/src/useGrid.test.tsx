@@ -1,7 +1,7 @@
 import type { ColumnDef, GridRow, GroupRow, LeafRow } from "@qigrid/core";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useGrid } from "../useGrid";
+import { useGrid } from "./useGrid";
 
 interface Person {
   name: string;

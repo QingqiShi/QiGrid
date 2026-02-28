@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildColumnModel, computeTotalWidth } from "../columns";
-import type { ColumnDef } from "../types";
+import { buildColumnModel, computeTotalWidth } from "./columns";
+import type { ColumnDef } from "./types";
 
 interface Person {
   name: string;

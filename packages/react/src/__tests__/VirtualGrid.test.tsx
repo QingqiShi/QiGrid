@@ -235,6 +235,58 @@ describe("VirtualGrid", () => {
     expect(screen.getByTestId("virtual-grid")).toBeDefined();
   });
 
+  describe("bufferSize", () => {
+    it("does not fire onVirtualRangeChange for scrolls within the same buffer chunk", () => {
+      const rows = makeLeafRows(1000);
+      const onRangeChange = vi.fn();
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          bufferSize={20}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onVirtualRangeChange={onRangeChange}
+        />,
+      );
+
+      // Initial render fires once
+      expect(onRangeChange).toHaveBeenCalledTimes(1);
+      const initialRange = onRangeChange.mock.calls[0]?.[0];
+      onRangeChange.mockClear();
+
+      const scrollContainer = document.querySelector(".vgrid-body") as HTMLElement;
+
+      // Scroll within the same buffer chunk (rawFirst moves from 0 to ~2, still quantized to 0)
+      Object.defineProperty(scrollContainer, "scrollTop", {
+        value: 2 * ROW_HEIGHT,
+        writable: true,
+        configurable: true,
+      });
+      fireEvent.scroll(scrollContainer);
+
+      // Should NOT fire again — same quantized range
+      expect(onRangeChange).not.toHaveBeenCalled();
+
+      // Scroll past the chunk boundary (bufferSize=20, so row 20+)
+      Object.defineProperty(scrollContainer, "scrollTop", {
+        value: 20 * ROW_HEIGHT,
+        writable: true,
+        configurable: true,
+      });
+      fireEvent.scroll(scrollContainer);
+
+      // Should fire — new chunk
+      expect(onRangeChange).toHaveBeenCalledTimes(1);
+      const newRange = onRangeChange.mock.calls[0]?.[0];
+      expect(newRange.startIndex).toBeGreaterThan(initialRange.startIndex);
+    });
+  });
+
   describe("column resizing", () => {
     it("renders resize handles when onColumnResize is provided", () => {
       const rows = makeLeafRows(5);

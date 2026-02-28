@@ -26,7 +26,7 @@
     "check": "tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
-    "bench": "vitest bench"
+    "bench": "vitest bench --run"
   },
   "devDependencies": {
     "@qigrid/tsconfig": "workspace:*",

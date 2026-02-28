@@ -1,3 +1,4 @@
+import type { VirtualRange } from "@qigrid/core";
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,6 +22,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     rowHeight,
     containerHeight,
     overscan = DEFAULT_OVERSCAN,
+    bufferSize,
     renderCell,
     renderHeaderCell,
     renderFilterCell,
@@ -47,18 +49,30 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const [scrollTop, setScrollTop] = useState(0);
   const rangeChangeRef = useRef(onVirtualRangeChange);
   rangeChangeRef.current = onVirtualRangeChange;
+  const prevRangeRef = useRef<VirtualRange | null>(null);
 
-  const virtualRange = useMemo(
-    () =>
-      computeVirtualRange({
-        totalRowCount: rows.length,
-        scrollTop,
-        containerHeight,
-        rowHeight,
-        overscan,
-      }),
-    [rows.length, scrollTop, containerHeight, rowHeight, overscan],
-  );
+  const virtualRange = useMemo(() => {
+    const params = {
+      totalRowCount: rows.length,
+      scrollTop,
+      containerHeight,
+      rowHeight,
+      overscan,
+      ...(bufferSize != null && { bufferSize }),
+    };
+    const next = computeVirtualRange(params);
+    const prev = prevRangeRef.current;
+    if (
+      prev &&
+      prev.startIndex === next.startIndex &&
+      prev.endIndex === next.endIndex &&
+      prev.totalHeight === next.totalHeight
+    ) {
+      return prev;
+    }
+    prevRangeRef.current = next;
+    return next;
+  }, [rows.length, scrollTop, containerHeight, rowHeight, overscan, bufferSize]);
 
   const visibleRows = useMemo(() => sliceVisibleRows(rows, virtualRange), [rows, virtualRange]);
 
@@ -166,12 +180,12 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
           >
             <div
               style={{
-                transform: `translateY(${virtualRange.offsetTop - scrollTop}px)`,
+                transform: `translateY(${-scrollTop}px)`,
                 willChange: "transform",
               }}
             >
               {visibleRows.map((row, i) => {
-                const offsetY = i * rowHeight;
+                const offsetY = (virtualRange.startIndex + i) * rowHeight;
 
                 if (row.type === "group") {
                   if (isGroupRowsMode) {
@@ -219,7 +233,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 ranges={ranges}
                 columns={columns}
                 rowHeight={rowHeight}
-                rangeOffsetTop={virtualRange.offsetTop}
+                rangeOffsetTop={0}
                 totalRowCount={rows.length}
                 selectionAnchor={selectionAnchor}
                 focusedCell={focusedCell}

@@ -105,4 +105,5 @@ export interface VirtualRangeParams {
   containerHeight: number;
   rowHeight: number;
   overscan?: number;
+  bufferSize?: number;
 }

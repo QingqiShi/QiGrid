@@ -63,13 +63,21 @@ describe("buildColumnModel", () => {
 describe("sorting 100k rows (pure)", () => {
   const rows100k = makeRows(data100k);
 
-  bench("sortRows by string column (name)", () => {
-    sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
-  });
+  bench(
+    "sortRows by string column (name)",
+    () => {
+      sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
+    },
+    { time: 10_000 },
+  );
 
-  bench("sortRows by numeric column (salary)", () => {
-    sortRows(rows100k, [{ columnId: "salary", direction: "asc" }], columns);
-  });
+  bench(
+    "sortRows by numeric column (salary)",
+    () => {
+      sortRows(rows100k, [{ columnId: "salary", direction: "asc" }], columns);
+    },
+    { time: 10_000 },
+  );
 });
 
 describe("filtering 100k rows (pure)", () => {
@@ -95,15 +103,19 @@ describe("filtering 100k rows (pure)", () => {
 });
 
 describe("full pipeline 100k rows (pure)", () => {
-  bench("filter + wrap + sort", () => {
-    const filtered = filterRows(
-      data100k,
-      [{ columnId: "department", value: "Engineering" }],
-      columns,
-    );
-    const rows = makeRows(filtered);
-    sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
-  });
+  bench(
+    "filter + wrap + sort",
+    () => {
+      const filtered = filterRows(
+        data100k,
+        [{ columnId: "department", value: "Engineering" }],
+        columns,
+      );
+      const rows = makeRows(filtered);
+      sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
+    },
+    { time: 10_000 },
+  );
 });
 
 // Virtualization benchmarks — lightweight row factory for 1M rows
@@ -158,9 +170,13 @@ describe("sliceVisibleRows 1M rows", () => {
 describe("groupRows 100k rows", () => {
   const rows100k = makeRows(data100k);
 
-  bench("group by single column (department)", () => {
-    groupRows(rows100k, ["department"], columns);
-  });
+  bench(
+    "group by single column (department)",
+    () => {
+      groupRows(rows100k, ["department"], columns);
+    },
+    { time: 10_000 },
+  );
 });
 
 describe("flattenGroupedRows 100k rows", () => {
@@ -168,13 +184,21 @@ describe("flattenGroupedRows 100k rows", () => {
   const grouped = groupRows(rows100k, ["department"], columns);
   const noCollapsed = new Set<string>();
 
-  bench("flatten all expanded", () => {
-    flattenGroupedRows(grouped, noCollapsed);
-  });
+  bench(
+    "flatten all expanded",
+    () => {
+      flattenGroupedRows(grouped, noCollapsed);
+    },
+    { time: 10_000 },
+  );
 
-  bench("flatten without aggregation (columns provided, no aggFunc)", () => {
-    flattenGroupedRows(grouped, noCollapsed, columns);
-  });
+  bench(
+    "flatten without aggregation (columns provided, no aggFunc)",
+    () => {
+      flattenGroupedRows(grouped, noCollapsed, columns);
+    },
+    { time: 10_000 },
+  );
 });
 
 describe("aggregation 100k rows", () => {
@@ -190,7 +214,11 @@ describe("aggregation 100k rows", () => {
   const grouped = groupRows(rows100k, ["department"], columns);
   const noCollapsed = new Set<string>();
 
-  bench("aggregate 5 columns across 100k rows (single-level)", () => {
-    flattenGroupedRows(grouped, noCollapsed, aggColumns);
-  });
+  bench(
+    "aggregate 5 columns across 100k rows (single-level)",
+    () => {
+      flattenGroupedRows(grouped, noCollapsed, aggColumns);
+    },
+    { time: 10_000 },
+  );
 });

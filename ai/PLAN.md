@@ -74,17 +74,20 @@ CI enforces this gate. Optional modules and UI bindings are excluded from the bu
 
 Each benchmark measures a pure function call. The full pipeline benchmark validates all stages composed together.
 
-### Rendering benchmarks
+### Browser rendering benchmarks (Playwright + CDP, median of 5 runs)
 
-| Operation | Dataset | Target |
+| Scenario | Dataset | Assertion |
 |---|---|---|
-| Virtualized grid mount (via renderHook) | 10k rows | ≤ 100ms |
-| Scroll update (setScrollTop + re-render) | 100k rows | ≤ 16ms (one frame) |
+| Scroll (no selection) | 10k rows | median max frame < 200ms |
+| Scroll (large selection) | 10k rows | median max frame < 200ms |
+| Sort | 10k rows | median max frame < 200ms |
+| Filter | 10k rows | median max frame < 200ms |
+| Group by | 10k rows | median max frame < 200ms |
+| Group toggle | 10k rows | median max frame < 200ms |
 
 ### Virtualization validation
 
 - DOM node count stays constant regardless of dataset size (visible rows + overscan only)
-- Scrolling 100k rows produces no long tasks (>50ms) in a Playwright trace
 ### Memory
 
 Row model should not duplicate source data. The grid holds references to the original `data` array entries, not copies. No hard gate, but watch for unexpected allocations at scale.

@@ -380,6 +380,7 @@ export function App() {
           totalWidth={totalWidth}
           rowHeight={ROW_HEIGHT}
           containerHeight={CONTAINER_HEIGHT}
+          bufferSize={10}
           groupDisplayType={groupDisplayType}
           renderCell={renderCell}
           renderHeaderCell={renderHeaderCell}

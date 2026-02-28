@@ -16,8 +16,8 @@ Every session starts fresh with no prior context. Do this first:
 3. Read the existing code you'll be modifying before writing anything.
    _Note_ You are WELCOME to challenge the task if you notice something inconsistent or you think it's not the right thing to work on. You should feel empowered to stop and voice your concerns.
 4. Implement, commit with descriptive messages explaining _what_ and _why_.
-5. Run the quality gate: `pnpm turbo build && pnpm turbo lint && pnpm turbo check && pnpm turbo test`
-6. If the task touches the playground: `cd apps/playground && npx playwright test`
+5. Run the quality gate: `pnpm build && pnpm lint && pnpm check && pnpm test`
+6. If the task touches the playground: `pnpm --filter @qigrid/playground e2e`
 7. Move the task file to `ai/tasks/done/`.
 
 ## When a session ends mid-task
@@ -61,8 +61,8 @@ This file is your persistent memory. **You are expected to update it.**
 
 This section is updated as we discover things that affect how work should be done.
 
-- **react-component-benchmark v2.0.0** requires React ^18, incompatible with React 19. Use Vitest bench + renderHook for React performance benchmarks.
-- **`pnpm turbo bench`** is configured with `cache: false` — benchmarks must never be cached.
+- **`pnpm bench`** runs: (1) core Vitest benchmarks (pure functions), (2) react Playwright benchmarks (6 browser scenarios via CDP against `@qigrid/benchmark` harness). Benchmarks are never cached (`cache: false` in turbo).
+- **React benchmarks** use Playwright + CDP, not JSdom. The `@qigrid/benchmark` package provides the harness app (port 5174) and shared helpers. Bench specs live in `packages/react/bench/`.
 - **Biome v2 config** differs from v1 — no `files.ignore`, uses VCS gitignore instead.
 - **pnpm `--filter`** — run commands in a specific package from the repo root: `pnpm --filter @qigrid/react bench`. Never `cd` into sub-packages.
 - **Playwright e2e tests** — run from repo root: `pnpm --filter @qigrid/playground e2e`

@@ -16,6 +16,7 @@ export function computeVirtualRange(params: VirtualRangeParams): VirtualRange {
     containerHeight,
     rowHeight,
     overscan = DEFAULT_OVERSCAN,
+    bufferSize = 0,
   } = params;
 
   if (totalRowCount <= 0 || rowHeight <= 0) {
@@ -26,11 +27,17 @@ export function computeVirtualRange(params: VirtualRangeParams): VirtualRange {
   const maxScrollTop = Math.max(0, totalHeight - containerHeight);
   const clampedScrollTop = Math.min(Math.max(0, scrollTop), maxScrollTop);
 
-  const firstVisibleRow = Math.floor(clampedScrollTop / rowHeight);
+  const rawFirstVisibleRow = Math.floor(clampedScrollTop / rowHeight);
   const visibleCount = Math.ceil(containerHeight / rowHeight);
 
+  const firstVisibleRow =
+    bufferSize > 0 ? Math.floor(rawFirstVisibleRow / bufferSize) * bufferSize : rawFirstVisibleRow;
+
   const startIndex = Math.max(0, firstVisibleRow - overscan);
-  const endIndex = Math.min(totalRowCount, firstVisibleRow + visibleCount + overscan);
+  const endIndex = Math.min(
+    totalRowCount,
+    firstVisibleRow + visibleCount + (bufferSize > 0 ? bufferSize : 0) + overscan,
+  );
 
   return {
     startIndex,

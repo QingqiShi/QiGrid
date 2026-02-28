@@ -249,6 +249,77 @@ describe("computeVirtualRange", () => {
       expect(a).toBe(b);
     });
   });
+
+  describe("bufferSize quantization", () => {
+    const base = {
+      totalRowCount: 1000,
+      containerHeight: 500,
+      rowHeight: 50,
+      overscan: 5,
+    };
+    // visibleCount = ceil(500/50) = 10
+
+    it("range is stable within a buffer chunk", () => {
+      // bufferSize=10, rows 0–9 are in chunk 0
+      // scrollTop=0 → rawFirst=0, quantized=0
+      const rangeA = computeVirtualRange({ ...base, scrollTop: 0, bufferSize: 10 });
+      // scrollTop=400 → rawFirst=8, quantized=floor(8/10)*10=0
+      const rangeB = computeVirtualRange({ ...base, scrollTop: 400, bufferSize: 10 });
+
+      expect(rangeA.startIndex).toBe(rangeB.startIndex);
+      expect(rangeA.endIndex).toBe(rangeB.endIndex);
+    });
+
+    it("range shifts at a chunk boundary", () => {
+      // scrollTop=400 → rawFirst=8, quantized=0
+      const rangeA = computeVirtualRange({ ...base, scrollTop: 400, bufferSize: 10 });
+      // scrollTop=500 → rawFirst=10, quantized=10
+      const rangeB = computeVirtualRange({ ...base, scrollTop: 500, bufferSize: 10 });
+
+      expect(rangeB.startIndex).toBeGreaterThan(rangeA.startIndex);
+    });
+
+    it("endIndex accounts for bufferSize (extra rows for gap between quantized and actual)", () => {
+      // Without bufferSize: firstVisible=0, end=0+10+5=15
+      const withoutBuffer = computeVirtualRange({ ...base, scrollTop: 0, bufferSize: 0 });
+      // With bufferSize=10: quantized=0, end=0+10+10+5=25
+      const withBuffer = computeVirtualRange({ ...base, scrollTop: 0, bufferSize: 10 });
+
+      expect(withBuffer.endIndex).toBe(withoutBuffer.endIndex + 10);
+    });
+
+    it("bufferSize=0 matches default behavior (no quantization)", () => {
+      const withoutParam = computeVirtualRange({ ...base, scrollTop: 2500 });
+      const withZero = computeVirtualRange({ ...base, scrollTop: 2500, bufferSize: 0 });
+
+      expect(withZero.startIndex).toBe(withoutParam.startIndex);
+      expect(withZero.endIndex).toBe(withoutParam.endIndex);
+      expect(withZero.totalHeight).toBe(withoutParam.totalHeight);
+      expect(withZero.offsetTop).toBe(withoutParam.offsetTop);
+    });
+
+    it("offsetTop reflects quantized startIndex", () => {
+      // scrollTop=400 → rawFirst=8, quantized=0, start=max(0,0-5)=0
+      const range = computeVirtualRange({ ...base, scrollTop: 400, bufferSize: 10 });
+      expect(range.offsetTop).toBe(range.startIndex * base.rowHeight);
+    });
+
+    it("clamps startIndex to 0 even with bufferSize", () => {
+      // scrollTop=0 → quantized=0, start=max(0,0-5)=0
+      const range = computeVirtualRange({ ...base, scrollTop: 0, bufferSize: 10 });
+      expect(range.startIndex).toBe(0);
+    });
+
+    it("clamps endIndex to totalRowCount even with bufferSize", () => {
+      // scrollTop near bottom
+      const range = computeVirtualRange({
+        ...base,
+        scrollTop: 49500,
+        bufferSize: 10,
+      });
+      expect(range.endIndex).toBeLessThanOrEqual(base.totalRowCount);
+    });
+  });
 });
 
 describe("sliceVisibleRows", () => {

@@ -26,6 +26,8 @@ export interface VirtualGridProps<TData> {
   containerHeight: number;
   /** Number of extra rows to render above/below the visible window. */
   overscan?: number;
+  /** Quantize the virtual range to chunks of this size. Reduces React reconciliations during fast scroll. 0 or undefined = no quantization. */
+  bufferSize?: number;
   /** Render prop for data cells (leaf rows only). */
   renderCell: (row: LeafRow<TData>, column: Column<TData>) => React.ReactNode;
   /** Render prop for header cells. */

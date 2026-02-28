@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "biome check .",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "bench": "playwright test e2e/scroll-perf.spec.ts"
   },
   "dependencies": {
     "@qigrid/core": "workspace:*",

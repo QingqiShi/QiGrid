@@ -1,5 +1,24 @@
 import type { Column, GridRow, GroupedRows, GroupNode, GroupRow, LeafRow, Row } from "./types";
 
+/**
+ * Recursively collect all group IDs from a grouped tree.
+ * Unlike scanning flattened rows, this finds groups hidden by collapsed parents.
+ */
+export function collectAllGroupIds<TData>(nodes: GroupNode<TData>[]): string[] {
+  const ids: string[] = [];
+  collectIds(nodes, ids);
+  return ids;
+}
+
+function collectIds<TData>(nodes: GroupNode<TData>[], ids: string[]): void {
+  for (const node of nodes) {
+    ids.push(node.groupId);
+    if (node.children.length > 0) {
+      collectIds(node.children, ids);
+    }
+  }
+}
+
 function serializeGroupValue(value: unknown): string {
   if (value == null) return "__null__";
   return String(value);

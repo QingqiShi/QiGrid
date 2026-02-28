@@ -1,18 +1,20 @@
 import type {
   CellCoord,
   CellRange,
+  ColumnDef,
   ColumnFiltersState,
   GridRow,
   GroupDisplayType,
   GroupingState,
-  GroupRow,
   LeafRow,
   Row,
   SortingState,
 } from "@qigrid/core";
 import {
+  applyWidthOverrides,
   buildColumnModel,
   buildGroupColumns,
+  collectAllGroupIds,
   computeTotalWidth,
   filterRows,
   flattenGroupedRows,
@@ -25,7 +27,7 @@ import type { UseGridReturn } from "./types";
 
 export interface UseGridOptions<TData> {
   data: TData[];
-  columns: import("@qigrid/core").ColumnDef<TData>[];
+  columns: ColumnDef<TData>[];
   columnFilters?: ColumnFiltersState;
   sorting?: SortingState;
   grouping?: GroupingState;
@@ -50,29 +52,11 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   // Stage 1: Build base column model from defs
   const baseColumnModel = useMemo(() => buildColumnModel(columnDefs), [columnDefs]);
 
-  // Stage 1b: Apply width overrides from state to data columns, prune stale entries
-  const dataColumnModel = useMemo(() => {
-    const columnIds = new Set(baseColumnModel.map((c) => c.id));
-
-    // Check if any overrides exist for current columns
-    let hasOverrides = false;
-    for (const id of Object.keys(state.columnWidths)) {
-      if (columnIds.has(id)) {
-        hasOverrides = true;
-        break;
-      }
-    }
-
-    if (!hasOverrides) return baseColumnModel;
-
-    return baseColumnModel.map((col) => {
-      const override = state.columnWidths[col.id];
-      if (override === undefined) return col;
-      const clampedWidth = Math.min(Math.max(override, col.minWidth), col.maxWidth);
-      if (clampedWidth === col.width) return col;
-      return { ...col, width: clampedWidth };
-    });
-  }, [baseColumnModel, state.columnWidths]);
+  // Stage 1b: Apply width overrides from state to data columns
+  const dataColumnModel = useMemo(
+    () => applyWidthOverrides(baseColumnModel, state.columnWidths),
+    [baseColumnModel, state.columnWidths],
+  );
 
   // Stage 1c: Build auto-generated group columns
   const groupColumns = useMemo(
@@ -81,26 +65,10 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   );
 
   // Stage 1d: Apply width overrides to group columns
-  const groupColumnsWithWidths = useMemo(() => {
-    if (groupColumns.length === 0) return groupColumns;
-
-    let hasOverrides = false;
-    for (const col of groupColumns) {
-      if (state.columnWidths[col.id] !== undefined) {
-        hasOverrides = true;
-        break;
-      }
-    }
-    if (!hasOverrides) return groupColumns;
-
-    return groupColumns.map((col) => {
-      const override = state.columnWidths[col.id];
-      if (override === undefined) return col;
-      const clampedWidth = Math.min(Math.max(override, col.minWidth), col.maxWidth);
-      if (clampedWidth === col.width) return col;
-      return { ...col, width: clampedWidth };
-    });
-  }, [groupColumns, state.columnWidths]);
+  const groupColumnsWithWidths = useMemo(
+    () => applyWidthOverrides(groupColumns, state.columnWidths),
+    [groupColumns, state.columnWidths],
+  );
 
   // Stage 1e: Build display column model (group columns + visible data columns)
   const displayColumnModel = useMemo(() => {
@@ -148,9 +116,16 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     [rowsBeforeSort, state.sorting, baseColumnModel],
   );
 
-  // Stage 5: Group + Flatten (or pass through as-is when no grouping)
+  // Stage 5a: Build group tree (empty when no grouping)
+  const groupedTree = useMemo(
+    () =>
+      state.grouping.length === 0 ? [] : groupRows(sortedRows, state.grouping, baseColumnModel),
+    [sortedRows, state.grouping, baseColumnModel],
+  );
+
+  // Stage 5b: Flatten (or pass through as LeafRows when no grouping)
   const rows: GridRow<TData>[] = useMemo(() => {
-    if (state.grouping.length === 0) {
+    if (groupedTree.length === 0) {
       // No grouping — wrap sorted rows as LeafRow for uniform GridRow type
       return sortedRows.map<LeafRow<TData>>((row, i) => ({
         type: "leaf",
@@ -159,9 +134,8 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         getValue: row.getValue,
       }));
     }
-    const grouped = groupRows(sortedRows, state.grouping, baseColumnModel);
-    return flattenGroupedRows(grouped, state.collapsedGroupIds, baseColumnModel);
-  }, [sortedRows, state.grouping, state.collapsedGroupIds, baseColumnModel]);
+    return flattenGroupedRows(groupedTree, state.collapsedGroupIds, baseColumnModel);
+  }, [groupedTree, sortedRows, state.collapsedGroupIds, baseColumnModel]);
 
   // Stable updater functions — dispatch is stable per React guarantees
   const toggleSort = useCallback(
@@ -203,9 +177,8 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   const expandAllGroups = useCallback(() => dispatch({ type: "EXPAND_ALL_GROUPS" }), []);
 
   const collapseAllGroups = useCallback(() => {
-    const allGroupIds = rows.filter((r): r is GroupRow => r.type === "group").map((r) => r.groupId);
-    dispatch({ type: "COLLAPSE_ALL_GROUPS", allGroupIds });
-  }, [rows]);
+    dispatch({ type: "COLLAPSE_ALL_GROUPS", allGroupIds: collectAllGroupIds(groupedTree) });
+  }, [groupedTree]);
 
   // --- Selection callbacks ---
   const selectCell = useCallback(

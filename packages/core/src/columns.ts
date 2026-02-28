@@ -5,8 +5,34 @@ const DEFAULT_WIDTH = 150;
 const DEFAULT_MIN_WIDTH = 50;
 const DEFAULT_MAX_WIDTH = Number.POSITIVE_INFINITY;
 
-function clampWidth(width: number, minWidth: number, maxWidth: number): number {
+export function clampWidth(width: number, minWidth: number, maxWidth: number): number {
   return Math.min(Math.max(width, minWidth), maxWidth);
+}
+
+/**
+ * Apply width overrides to a column array.
+ * Returns the same array reference if no overrides match (memo-friendly).
+ */
+export function applyWidthOverrides<TData>(
+  columns: Column<TData>[],
+  widthOverrides: Record<string, number>,
+): Column<TData>[] {
+  let hasOverrides = false;
+  for (const col of columns) {
+    if (widthOverrides[col.id] !== undefined) {
+      hasOverrides = true;
+      break;
+    }
+  }
+  if (!hasOverrides) return columns;
+
+  return columns.map((col) => {
+    const override = widthOverrides[col.id];
+    if (override === undefined) return col;
+    const clamped = clampWidth(override, col.minWidth, col.maxWidth);
+    if (clamped === col.width) return col;
+    return { ...col, width: clamped };
+  });
 }
 
 function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {

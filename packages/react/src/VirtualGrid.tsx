@@ -95,7 +95,10 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const ranges = selectedRanges ?? EMPTY_RANGES;
 
   const isDraggingRef = useDragSelection(onSelectionMouseUp);
-  const interaction: CellInteraction = { isDraggingRef, onCellMouseDown, onCellMouseEnter };
+  const interaction: CellInteraction = useMemo(
+    () => ({ isDraggingRef, onCellMouseDown, onCellMouseEnter }),
+    [isDraggingRef, onCellMouseDown, onCellMouseEnter],
+  );
 
   // --- Refs & scroll-to-focus ---
 
@@ -168,8 +171,14 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               width: totalWidth,
             }}
           >
+            <div
+              style={{
+                transform: `translateY(${virtualRange.offsetTop - scrollTop}px)`,
+                willChange: "transform",
+              }}
+            >
             {visibleRows.map((row, i) => {
-              const offsetY = virtualRange.offsetTop - scrollTop + i * rowHeight;
+              const offsetY = i * rowHeight;
 
               if (row.type === "group") {
                 if (isGroupRowsMode) {
@@ -213,6 +222,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 />
               );
             })}
+            </div>
             <SelectionOverlay
               ranges={ranges}
               columns={columns}

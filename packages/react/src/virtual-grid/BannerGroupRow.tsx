@@ -1,5 +1,6 @@
 import type { GroupRow } from "@qigrid/core";
 import type { ReactNode } from "react";
+import { memo } from "react";
 import { RowContainer } from "./RowContainer";
 
 interface BannerGroupRowProps {
@@ -11,7 +12,7 @@ interface BannerGroupRowProps {
   onToggleGroupExpansion?: ((groupId: string) => void) | undefined;
 }
 
-export function BannerGroupRow({
+function BannerGroupRowInner({
   row,
   totalWidth,
   rowHeight,
@@ -36,3 +37,5 @@ export function BannerGroupRow({
     </RowContainer>
   );
 }
+
+export const BannerGroupRow: typeof BannerGroupRowInner = memo(BannerGroupRowInner);

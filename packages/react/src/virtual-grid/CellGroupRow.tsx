@@ -1,5 +1,6 @@
 import type { Column, GroupRow } from "@qigrid/core";
 import type { ReactNode } from "react";
+import { memo } from "react";
 import { GridCell } from "./GridCell";
 import { RowContainer } from "./RowContainer";
 import type { CellInteraction } from "./types";
@@ -57,7 +58,7 @@ function getGroupCellContent<TData>(
   return null;
 }
 
-export function CellGroupRow<TData>({
+function CellGroupRowInner<TData>({
   row,
   columns,
   totalWidth,
@@ -90,3 +91,5 @@ export function CellGroupRow<TData>({
     </RowContainer>
   );
 }
+
+export const CellGroupRow = memo(CellGroupRowInner) as typeof CellGroupRowInner;

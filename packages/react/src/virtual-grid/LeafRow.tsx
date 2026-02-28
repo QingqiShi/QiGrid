@@ -1,5 +1,6 @@
 import type { Column, LeafRow as LeafRowType } from "@qigrid/core";
 import type { ReactNode } from "react";
+import { memo } from "react";
 import { GridCell } from "./GridCell";
 import { RowContainer } from "./RowContainer";
 import type { CellInteraction } from "./types";
@@ -14,7 +15,7 @@ interface LeafRowProps<TData> {
   renderCell: (row: LeafRowType<TData>, column: Column<TData>) => ReactNode;
 }
 
-export function LeafRow<TData>({
+function LeafRowInner<TData>({
   row,
   columns,
   totalWidth,
@@ -45,3 +46,5 @@ export function LeafRow<TData>({
     </RowContainer>
   );
 }
+
+export const LeafRow = memo(LeafRowInner) as typeof LeafRowInner;

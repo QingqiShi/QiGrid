@@ -177,60 +177,60 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 willChange: "transform",
               }}
             >
-            {visibleRows.map((row, i) => {
-              const offsetY = i * rowHeight;
+              {visibleRows.map((row, i) => {
+                const offsetY = i * rowHeight;
 
-              if (row.type === "group") {
-                if (isGroupRowsMode) {
+                if (row.type === "group") {
+                  if (isGroupRowsMode) {
+                    return (
+                      <BannerGroupRow
+                        key={row.groupId}
+                        row={row}
+                        totalWidth={totalWidth}
+                        rowHeight={rowHeight}
+                        offsetY={offsetY}
+                        renderGroupRow={renderGroupRow}
+                        onToggleGroupExpansion={onToggleGroupExpansion}
+                      />
+                    );
+                  }
                   return (
-                    <BannerGroupRow
+                    <CellGroupRow
                       key={row.groupId}
                       row={row}
+                      columns={columns}
                       totalWidth={totalWidth}
                       rowHeight={rowHeight}
                       offsetY={offsetY}
-                      renderGroupRow={renderGroupRow}
+                      interaction={interaction}
+                      renderGroupCell={renderGroupCell}
                       onToggleGroupExpansion={onToggleGroupExpansion}
                     />
                   );
                 }
+
                 return (
-                  <CellGroupRow
-                    key={row.groupId}
+                  <LeafRow
+                    key={`leaf-${row.index}`}
                     row={row}
                     columns={columns}
                     totalWidth={totalWidth}
                     rowHeight={rowHeight}
                     offsetY={offsetY}
                     interaction={interaction}
-                    renderGroupCell={renderGroupCell}
-                    onToggleGroupExpansion={onToggleGroupExpansion}
+                    renderCell={renderCell}
                   />
                 );
-              }
-
-              return (
-                <LeafRow
-                  key={`leaf-${row.index}`}
-                  row={row}
-                  columns={columns}
-                  totalWidth={totalWidth}
-                  rowHeight={rowHeight}
-                  offsetY={offsetY}
-                  interaction={interaction}
-                  renderCell={renderCell}
-                />
-              );
-            })}
-            <SelectionOverlay
-              ranges={ranges}
-              columns={columns}
-              rowHeight={rowHeight}
-              rangeOffsetTop={virtualRange.offsetTop}
-              totalRowCount={rows.length}
-              selectionAnchor={selectionAnchor}
-              focusedCell={focusedCell}
-            />
+              })}
+              <SelectionOverlay
+                ranges={ranges}
+                columns={columns}
+                rowHeight={rowHeight}
+                rangeOffsetTop={virtualRange.offsetTop}
+                totalRowCount={rows.length}
+                selectionAnchor={selectionAnchor}
+                focusedCell={focusedCell}
+              />
             </div>
           </div>
         </div>

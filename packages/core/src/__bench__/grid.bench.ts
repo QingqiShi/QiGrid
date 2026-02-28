@@ -55,54 +55,78 @@ function makeRows(data: Employee[]): Row<Employee>[] {
 }
 
 describe("buildColumnModel", () => {
-  bench("buildColumnModel with 5 columns", () => {
+  bench("5 columns", () => {
     buildColumnModel(columnDefs);
   });
 });
 
-describe("sorting 100k rows (pure)", () => {
+describe("sortRows 100k", () => {
   const rows100k = makeRows(data100k);
 
   bench(
-    "sortRows by string column (name)",
+    "by string column",
     () => {
       sortRows(rows100k, [{ columnId: "name", direction: "asc" }], columns);
     },
     { time: 10_000 },
   );
+});
+
+describe("filterRows 100k", () => {
+  bench("string includes", () => {
+    filterRows(data100k, [{ columnId: "name", value: "Alice" }], columns);
+  });
+});
+
+describe("groupRows 100k", () => {
+  const rows100k = makeRows(data100k);
 
   bench(
-    "sortRows by numeric column (salary)",
+    "single column",
     () => {
-      sortRows(rows100k, [{ columnId: "salary", direction: "asc" }], columns);
+      groupRows(rows100k, ["department"], columns);
     },
     { time: 10_000 },
   );
 });
 
-describe("filtering 100k rows (pure)", () => {
-  bench("filterRows by string includes (name contains 'Alice')", () => {
-    filterRows(data100k, [{ columnId: "name", value: "Alice" }], columns);
-  });
+describe("flattenGroupedRows 100k", () => {
+  const rows100k = makeRows(data100k);
+  const grouped = groupRows(rows100k, ["department"], columns);
+  const noCollapsed = new Set<string>();
 
-  bench("filterRows by string equality (department)", () => {
-    filterRows(data100k, [{ columnId: "department", value: "Engineering" }], columns);
-  });
-
-  bench("filterRows by numeric range (salary >= 80000)", () => {
-    const customDefs: ColumnDef<Employee>[] = [
-      {
-        id: "salary",
-        accessorKey: "salary",
-        header: "Salary",
-        filterFn: (value, filterValue) => (value as number) >= (filterValue as number),
-      },
-    ];
-    filterRows(data100k, [{ columnId: "salary", value: 80000 }], buildColumnModel(customDefs));
-  });
+  bench(
+    "all expanded",
+    () => {
+      flattenGroupedRows(grouped, noCollapsed);
+    },
+    { time: 10_000 },
+  );
 });
 
-describe("full pipeline 100k rows (pure)", () => {
+describe("aggregation 100k", () => {
+  const aggColumnDefs: ColumnDef<Employee>[] = [
+    { id: "id", accessorKey: "id", header: "ID", aggFunc: "count" },
+    { id: "name", accessorKey: "name", header: "Name", aggFunc: "first" },
+    { id: "department", accessorKey: "department", header: "Department" },
+    { id: "salary", accessorKey: "salary", header: "Salary", aggFunc: "sum" },
+    { id: "startDate", accessorKey: "startDate", header: "Start Date", aggFunc: "min" },
+  ];
+  const aggColumns = buildColumnModel(aggColumnDefs);
+  const rows100k = makeRows(data100k);
+  const grouped = groupRows(rows100k, ["department"], columns);
+  const noCollapsed = new Set<string>();
+
+  bench(
+    "5 columns single-level",
+    () => {
+      flattenGroupedRows(grouped, noCollapsed, aggColumns);
+    },
+    { time: 10_000 },
+  );
+});
+
+describe("full pipeline 100k", () => {
   bench(
     "filter + wrap + sort",
     () => {
@@ -118,24 +142,15 @@ describe("full pipeline 100k rows (pure)", () => {
   );
 });
 
-// Virtualization benchmarks — lightweight row factory for 1M rows
+// Virtualization — lightweight row factory for 1M rows
 const rows1M: Row<{ id: number }>[] = Array.from({ length: 1_000_000 }, (_, i) => ({
   index: i,
   original: { id: i },
   getValue: () => i,
 }));
 
-describe("computeVirtualRange 1M rows", () => {
-  bench("at top", () => {
-    computeVirtualRange({
-      totalRowCount: 1_000_000,
-      scrollTop: 0,
-      containerHeight: 600,
-      rowHeight: 36,
-    });
-  });
-
-  bench("at middle", () => {
+describe("computeVirtualRange 1M", () => {
+  bench("mid-scroll", () => {
     computeVirtualRange({
       totalRowCount: 1_000_000,
       scrollTop: 18_000_000,
@@ -143,18 +158,9 @@ describe("computeVirtualRange 1M rows", () => {
       rowHeight: 36,
     });
   });
-
-  bench("at bottom", () => {
-    computeVirtualRange({
-      totalRowCount: 1_000_000,
-      scrollTop: 35_999_400,
-      containerHeight: 600,
-      rowHeight: 36,
-    });
-  });
 });
 
-describe("sliceVisibleRows 1M rows", () => {
+describe("sliceVisibleRows 1M", () => {
   const range = computeVirtualRange({
     totalRowCount: 1_000_000,
     scrollTop: 18_000_000,
@@ -162,63 +168,7 @@ describe("sliceVisibleRows 1M rows", () => {
     rowHeight: 36,
   });
 
-  bench("slice from middle", () => {
+  bench("from middle", () => {
     sliceVisibleRows(rows1M, range);
   });
-});
-
-describe("groupRows 100k rows", () => {
-  const rows100k = makeRows(data100k);
-
-  bench(
-    "group by single column (department)",
-    () => {
-      groupRows(rows100k, ["department"], columns);
-    },
-    { time: 10_000 },
-  );
-});
-
-describe("flattenGroupedRows 100k rows", () => {
-  const rows100k = makeRows(data100k);
-  const grouped = groupRows(rows100k, ["department"], columns);
-  const noCollapsed = new Set<string>();
-
-  bench(
-    "flatten all expanded",
-    () => {
-      flattenGroupedRows(grouped, noCollapsed);
-    },
-    { time: 10_000 },
-  );
-
-  bench(
-    "flatten without aggregation (columns provided, no aggFunc)",
-    () => {
-      flattenGroupedRows(grouped, noCollapsed, columns);
-    },
-    { time: 10_000 },
-  );
-});
-
-describe("aggregation 100k rows", () => {
-  const aggColumnDefs: ColumnDef<Employee>[] = [
-    { id: "id", accessorKey: "id", header: "ID", aggFunc: "count" },
-    { id: "name", accessorKey: "name", header: "Name", aggFunc: "first" },
-    { id: "department", accessorKey: "department", header: "Department" },
-    { id: "salary", accessorKey: "salary", header: "Salary", aggFunc: "sum" },
-    { id: "startDate", accessorKey: "startDate", header: "Start Date", aggFunc: "min" },
-  ];
-  const aggColumns = buildColumnModel(aggColumnDefs);
-  const rows100k = makeRows(data100k);
-  const grouped = groupRows(rows100k, ["department"], columns);
-  const noCollapsed = new Set<string>();
-
-  bench(
-    "aggregate 5 columns across 100k rows (single-level)",
-    () => {
-      flattenGroupedRows(grouped, noCollapsed, aggColumns);
-    },
-    { time: 10_000 },
-  );
 });

@@ -42,10 +42,6 @@ export interface VirtualGridProps<TData> {
   onToggleGroupExpansion?: (groupId: string) => void;
   /** Callback fired when the visible virtual range changes. */
   onVirtualRangeChange?: (range: VirtualRange) => void;
-  /** Defer scroll state updates to React's async batching instead of using
-   *  synchronous rendering. Enable this if cell renderers are expensive and
-   *  you prefer batched updates over gap-free scrolling. */
-  deferScrollUpdates?: boolean;
   /** Callback fired during column resize drag. When provided, resize handles
    *  are rendered on the right edge of each header cell. */
   onColumnResize?: (columnId: string, width: number) => void;

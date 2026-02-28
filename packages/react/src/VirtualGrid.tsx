@@ -1,7 +1,6 @@
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import type { VirtualGridProps } from "./types";
 import { useColumnResize } from "./useColumnResize";
 import { BannerGroupRow } from "./virtual-grid/BannerGroupRow";
@@ -30,7 +29,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     renderGroupCell,
     onToggleGroupExpansion,
     onVirtualRangeChange,
-    deferScrollUpdates,
     onColumnResize,
     focusedCell,
     selectionAnchor,
@@ -82,12 +80,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Scroll handler ---
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const newScrollTop = e.currentTarget.scrollTop;
-    if (deferScrollUpdates) {
-      setScrollTop(newScrollTop);
-    } else {
-      flushSync(() => setScrollTop(newScrollTop));
-    }
+    setScrollTop(e.currentTarget.scrollTop);
   };
 
   // --- Selection state ---

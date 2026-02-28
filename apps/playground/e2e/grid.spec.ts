@@ -227,7 +227,7 @@ test("selection overlay renders within a selection", async ({ page }) => {
 
   // Selection overlay (combined background + border div) should be present inside .vgrid-rows
   const overlayDiv = page.locator(
-    ".vgrid-rows > div[style*='pointer-events: none'][style*='solid']",
+    ".vgrid-rows div[style*='pointer-events: none'][style*='solid']",
   );
   await expect(overlayDiv.first()).toBeVisible();
 });

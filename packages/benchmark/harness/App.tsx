@@ -1,7 +1,7 @@
 import type { Column, ColumnDef, GroupRow, LeafRow } from "@qigrid/react";
 import { useGrid, VirtualGrid } from "@qigrid/react";
 import { useCallback, useMemo } from "react";
-import { type Employee, generateEmployees } from "./data";
+import { type Employee, generateEmployees } from "../src/data";
 
 const ROW_HEIGHT = 36;
 const CONTAINER_HEIGHT = 600;

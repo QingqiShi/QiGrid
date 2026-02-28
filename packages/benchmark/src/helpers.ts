@@ -77,7 +77,7 @@ export async function collectLoaf(page: Page): Promise<LoafResult> {
       | undefined;
     if (!entries || entries.length === 0) return { count: 0, tbt: 0, maxDuration: 0 };
     const tbt = entries.reduce((sum, e) => sum + Math.max(0, e.duration - 50), 0);
-    const maxDuration = Math.max(...entries.map((e) => e.duration));
+    const maxDuration = entries.reduce((m, e) => (e.duration > m ? e.duration : m), 0);
     return { count: entries.length, tbt, maxDuration };
   });
 }

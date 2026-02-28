@@ -41,10 +41,10 @@ const columnDefs: ColumnDef<Employee>[] = [
 ];
 
 const columns = buildColumnModel(columnDefs);
+const colMap = new Map(columns.map((c) => [c.id, c]));
 const data100k = generateEmployees(100_000);
 
 function makeRows(data: Employee[]): Row<Employee>[] {
-  const colMap = new Map(columns.map((c) => [c.id, c]));
   return data.map((original, index) => ({
     index,
     original,

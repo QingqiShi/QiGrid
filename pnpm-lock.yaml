@@ -26,6 +26,9 @@ importers:
 
   apps/playground:
     dependencies:
+      '@qigrid/benchmark':
+        specifier: workspace:*
+        version: link:../../packages/benchmark
       '@qigrid/core':
         specifier: workspace:*
         version: link:../../packages/core

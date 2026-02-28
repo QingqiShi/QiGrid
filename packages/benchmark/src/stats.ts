@@ -33,11 +33,10 @@ export function computeStats(values: number[]): Stats {
 /** Print a formatted statistics table for a benchmark scenario. */
 export function printBenchTable(
   label: string,
-  runs: { maxDuration: number; tbt: number; scriptDurationMs: number }[],
-  runCount: number,
+  runs: { loaf: { maxDuration: number; tbt: number }; scriptDurationMs: number }[],
 ): void {
-  const maxDurations = runs.map((r) => r.maxDuration);
-  const tbts = runs.map((r) => r.tbt);
+  const maxDurations = runs.map((r) => r.loaf.maxDuration);
+  const tbts = runs.map((r) => r.loaf.tbt);
   const scripts = runs.map((r) => r.scriptDurationMs);
 
   const maxDurStats = computeStats(maxDurations);
@@ -46,7 +45,7 @@ export function printBenchTable(
 
   const fmt = (v: number): string => `${v.toFixed(1)}ms`;
 
-  console.log(`\n--- ${label} (${runCount} runs) ---`);
+  console.log(`\n--- ${label} (${runs.length} runs) ---`);
   console.log(
     `  Max Frame Duration: median=${fmt(maxDurStats.median)} p95=${fmt(maxDurStats.p95)} min=${fmt(maxDurStats.min)} max=${fmt(maxDurStats.max)}`,
   );

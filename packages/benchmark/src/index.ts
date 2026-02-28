@@ -1,3 +1,5 @@
+export type { Employee } from "./data";
+export { generateEmployees } from "./data";
 export type { LoafResult, RunMetrics } from "./helpers";
 export {
   collectLoaf,

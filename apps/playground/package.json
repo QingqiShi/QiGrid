@@ -11,6 +11,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@qigrid/benchmark": "workspace:*",
     "@qigrid/core": "workspace:*",
     "@qigrid/react": "workspace:*",
     "react": "^19.0.0",

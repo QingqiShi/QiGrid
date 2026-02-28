@@ -1,4 +1,4 @@
-import { serializeRangeToTSV } from "@qigrid/core";
+import { isCellInRanges, serializeRangeToTSV } from "@qigrid/core";
 import type {
   CellCoord,
   Column,
@@ -10,7 +10,7 @@ import type {
   VirtualRange,
 } from "@qigrid/react";
 import { useGrid, VirtualGrid } from "@qigrid/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
 
@@ -127,10 +127,17 @@ export function App() {
     selectAll,
     clearSelection,
     moveFocus,
+    startDeselection,
+    extendDeselection,
+    endDeselection,
   } = grid;
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
+
+  const dragModeRef = useRef<"add" | "deselect" | null>(null);
+  const selectedRangesRef = useRef(selectedRanges);
+  selectedRangesRef.current = selectedRanges;
 
   // --- Group-by handler ---
   const handleGroupByChange = useCallback(
@@ -152,24 +159,36 @@ export function App() {
       if (event.shiftKey) {
         extendSelection(coord);
       } else if (isMultiSelect) {
-        addRange({ start: coord, end: coord });
+        if (isCellInRanges(coord, selectedRangesRef.current)) {
+          startDeselection(coord);
+          dragModeRef.current = "deselect";
+        } else {
+          addRange({ start: coord, end: coord });
+          dragModeRef.current = "add";
+        }
       } else {
         selectCell(coord);
+        dragModeRef.current = null;
       }
     },
-    [selectCell, extendSelection, addRange],
+    [selectCell, extendSelection, addRange, startDeselection],
   );
 
   const handleCellMouseEnter = useCallback(
     (coord: CellCoord) => {
-      extendSelection(coord);
+      if (dragModeRef.current === "deselect") {
+        extendDeselection(coord);
+      } else {
+        extendSelection(coord);
+      }
     },
-    [extendSelection],
+    [extendSelection, extendDeselection],
   );
 
   const handleSelectionMouseUp = useCallback(() => {
-    // Drag ended — no cleanup needed, state is already correct
-  }, []);
+    endDeselection();
+    dragModeRef.current = null;
+  }, [endDeselection]);
 
   const handleGridKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {

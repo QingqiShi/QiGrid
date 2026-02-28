@@ -148,4 +148,10 @@ export interface UseGridReturn<TData> {
   clearSelection: () => void;
   /** Move focus by a delta, optionally extending selection. */
   moveFocus: (deltaRow: number, deltaCol: number, extend?: boolean) => void;
+  /** Start deselecting from a cell inside an existing selection (Ctrl+click). */
+  startDeselection: (coord: CellCoord) => void;
+  /** Extend the deselection hole during drag. */
+  extendDeselection: (coord: CellCoord) => void;
+  /** End deselection drag and clear base snapshot. */
+  endDeselection: () => void;
 }

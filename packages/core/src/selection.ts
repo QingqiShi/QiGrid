@@ -113,6 +113,69 @@ export function getCellRangeEdges(
 }
 
 /**
+ * Subtract a rectangular hole from a range, producing up to 4 non-overlapping strips.
+ * Returns the remaining pieces after removing the intersection.
+ */
+export function subtractRange(range: CellRange, hole: CellRange): CellRange[] {
+  const r = normalizeRange(range);
+  const h = normalizeRange(hole);
+
+  // Compute intersection
+  const iStartRow = Math.max(r.start.rowIndex, h.start.rowIndex);
+  const iEndRow = Math.min(r.end.rowIndex, h.end.rowIndex);
+  const iStartCol = Math.max(r.start.columnIndex, h.start.columnIndex);
+  const iEndCol = Math.min(r.end.columnIndex, h.end.columnIndex);
+
+  // No intersection — return range unchanged
+  if (iStartRow > iEndRow || iStartCol > iEndCol) {
+    return [range];
+  }
+
+  const result: CellRange[] = [];
+
+  // Top strip: full width, rows above intersection
+  if (r.start.rowIndex < iStartRow) {
+    result.push({
+      start: { rowIndex: r.start.rowIndex, columnIndex: r.start.columnIndex },
+      end: { rowIndex: iStartRow - 1, columnIndex: r.end.columnIndex },
+    });
+  }
+
+  // Bottom strip: full width, rows below intersection
+  if (r.end.rowIndex > iEndRow) {
+    result.push({
+      start: { rowIndex: iEndRow + 1, columnIndex: r.start.columnIndex },
+      end: { rowIndex: r.end.rowIndex, columnIndex: r.end.columnIndex },
+    });
+  }
+
+  // Left strip: intersection-height, columns left of intersection
+  if (r.start.columnIndex < iStartCol) {
+    result.push({
+      start: { rowIndex: iStartRow, columnIndex: r.start.columnIndex },
+      end: { rowIndex: iEndRow, columnIndex: iStartCol - 1 },
+    });
+  }
+
+  // Right strip: intersection-height, columns right of intersection
+  if (r.end.columnIndex > iEndCol) {
+    result.push({
+      start: { rowIndex: iStartRow, columnIndex: iEndCol + 1 },
+      end: { rowIndex: iEndRow, columnIndex: r.end.columnIndex },
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Subtract a rectangular hole from multiple ranges.
+ */
+export function subtractFromRanges(ranges: CellRange[], hole: CellRange): CellRange[] {
+  return ranges.flatMap((r) => subtractRange(r, hole));
+}
+
+/**
  * Serialize selected cell values to a tab-separated string (TSV).
  * Compatible with Excel/Google Sheets paste.
  */

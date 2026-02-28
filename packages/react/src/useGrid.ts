@@ -228,6 +228,18 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
 
+  const startDeselection = useCallback(
+    (coord: CellCoord) => dispatch({ type: "START_DESELECTION", coord }),
+    [],
+  );
+
+  const extendDeselection = useCallback(
+    (coord: CellCoord) => dispatch({ type: "EXTEND_DESELECTION", coord }),
+    [],
+  );
+
+  const endDeselection = useCallback(() => dispatch({ type: "END_DESELECTION" }), []);
+
   const moveFocus = useCallback(
     (deltaRow: number, deltaCol: number, extend = false) =>
       dispatch({
@@ -270,6 +282,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       selectAll,
       clearSelection,
       moveFocus,
+      startDeselection,
+      extendDeselection,
+      endDeselection,
     }),
     [
       rows,
@@ -299,6 +314,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       selectAll,
       clearSelection,
       moveFocus,
+      startDeselection,
+      extendDeselection,
+      endDeselection,
     ],
   );
 }

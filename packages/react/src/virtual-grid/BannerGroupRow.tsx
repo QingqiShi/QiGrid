@@ -1,7 +1,6 @@
 import type { GroupRow } from "@qigrid/core";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { RowContainer } from "./RowContainer";
-import { computeGroupRowSelectionBorders, isRowInRanges } from "./selectionStyles";
 import type { SelectionState } from "./types";
 
 interface BannerGroupRowProps {
@@ -24,13 +23,8 @@ export function BannerGroupRow({
   onToggleGroupExpansion,
 }: BannerGroupRowProps): ReactNode {
   const isFocused = selection.focusedCell != null && selection.focusedCell.rowIndex === row.index;
-  const isSelected = selection.hasSelection && isRowInRanges(row.index, selection.ranges);
 
-  const className = `vgrid-row vgrid-group-row vgrid-group-row--banner${isFocused ? " vgrid-group-row--focused" : ""}${isSelected ? " vgrid-group-row--selected" : ""}`;
-
-  const selectionStyle: CSSProperties | undefined = isSelected
-    ? computeGroupRowSelectionBorders(row.index, selection.ranges)
-    : undefined;
+  const className = `vgrid-row vgrid-group-row vgrid-group-row--banner${isFocused ? " vgrid-group-row--focused" : ""}`;
 
   return (
     <RowContainer
@@ -40,7 +34,6 @@ export function BannerGroupRow({
       width={totalWidth}
       height={rowHeight}
       offsetY={offsetY}
-      style={selectionStyle}
     >
       <div className="vgrid-group-cell" style={{ width: totalWidth, flexShrink: 0 }}>
         {renderGroupRow

@@ -494,7 +494,7 @@ describe("VirtualGrid", () => {
       expect(groupRow?.classList.contains("vgrid-group-row--focused")).toBe(false);
     });
 
-    it("applies vgrid-group-row--selected when group row is in selectedRanges", () => {
+    it("renders selection overlay when group row is in selectedRanges", () => {
       const rows = makeGroupedRows();
       render(
         <VirtualGrid
@@ -512,11 +512,19 @@ describe("VirtualGrid", () => {
         />,
       );
 
-      const groupRow = document.querySelector(".vgrid-group-row");
-      expect(groupRow?.classList.contains("vgrid-group-row--selected")).toBe(true);
+      // Selection is rendered via overlay divs, not per-cell classes
+      const rowsContainer = document.querySelector(".vgrid-rows");
+      const overlays = rowsContainer?.querySelectorAll("div[style]");
+      // Should have at least one overlay div with border styling
+      const hasOverlay = Array.from(overlays ?? []).some(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
+      );
+      expect(hasOverlay).toBe(true);
     });
 
-    it("does not apply vgrid-group-row--selected when group row is not in selectedRanges", () => {
+    it("does not render selection overlay when no ranges are selected", () => {
       const rows = makeGroupedRows();
       render(
         <VirtualGrid
@@ -526,39 +534,19 @@ describe("VirtualGrid", () => {
           rowHeight={ROW_HEIGHT}
           containerHeight={CONTAINER_HEIGHT}
           groupDisplayType="groupRows"
-          selectedRanges={[
-            { start: { rowIndex: 1, columnIndex: 0 }, end: { rowIndex: 1, columnIndex: 1 } },
-          ]}
+          selectedRanges={[]}
           renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
           renderHeaderCell={(col) => <span>{col.header}</span>}
         />,
       );
 
-      const groupRow = document.querySelector(".vgrid-group-row");
-      expect(groupRow?.classList.contains("vgrid-group-row--selected")).toBe(false);
-    });
-
-    it("applies selection border styles when group row is selected", () => {
-      const rows = makeGroupedRows();
-      render(
-        <VirtualGrid
-          rows={rows}
-          columns={columns}
-          totalWidth={TOTAL_WIDTH}
-          rowHeight={ROW_HEIGHT}
-          containerHeight={CONTAINER_HEIGHT}
-          groupDisplayType="groupRows"
-          selectedRanges={[
-            { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 1 } },
-          ]}
-          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
-          renderHeaderCell={(col) => <span>{col.header}</span>}
-        />,
+      const rowsContainer = document.querySelector(".vgrid-rows");
+      const overlays = Array.from(rowsContainer?.querySelectorAll("div[style]") ?? []).filter(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
       );
-
-      const groupRow = document.querySelector(".vgrid-group-row") as HTMLElement;
-      expect(groupRow.style.borderLeft).toContain("solid");
-      expect(groupRow.style.borderRight).toContain("solid");
+      expect(overlays).toHaveLength(0);
     });
   });
 

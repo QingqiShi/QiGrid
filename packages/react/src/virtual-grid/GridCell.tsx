@@ -1,7 +1,5 @@
 import type { Column } from "@qigrid/core";
-import { isCellInRanges } from "@qigrid/core";
 import type { ReactNode } from "react";
-import { computeCellSelectionBorders } from "./selectionStyles";
 import type { CellInteraction, SelectionState } from "./types";
 
 interface GridCellProps<TData> {
@@ -21,23 +19,13 @@ export function GridCell<TData>({
   interaction,
   children,
 }: GridCellProps<TData>): ReactNode {
-  const { focusedCell, selectionAnchor, ranges, hasSelection } = selection;
+  const { focusedCell, selectionAnchor, hasSelection } = selection;
   const { isDraggingRef, onCellMouseDown, onCellMouseEnter } = interaction;
 
   const isFocused =
     focusedCell != null &&
     focusedCell.rowIndex === rowIndex &&
     focusedCell.columnIndex === colIndex;
-
-  const isSelected = hasSelection && isCellInRanges({ rowIndex, columnIndex: colIndex }, ranges);
-
-  const isAnchor =
-    selectionAnchor != null &&
-    selectionAnchor.rowIndex === rowIndex &&
-    selectionAnchor.columnIndex === colIndex &&
-    isSelected;
-
-  const selStyle = isSelected ? computeCellSelectionBorders(rowIndex, colIndex, ranges) : undefined;
 
   // Hide the focused border when it differs from the anchor (i.e. the user
   // has extended the selection). The anchor indicator is enough and the focus
@@ -49,12 +37,12 @@ export function GridCell<TData>({
     focusedCell.columnIndex === selectionAnchor.columnIndex;
   const showFocused = isFocused && (!hasSelection || anchorMatchesFocus);
 
-  const className = `vgrid-cell${showFocused ? " vgrid-cell--focused" : ""}${isSelected ? " vgrid-cell--selected" : ""}${isAnchor ? " vgrid-cell--anchor" : ""}`;
+  const className = `vgrid-cell${showFocused ? " vgrid-cell--focused" : ""}`;
 
   return (
     <div
       className={className}
-      style={{ width: column.width, flexShrink: 0, ...selStyle }}
+      style={{ width: column.width, flexShrink: 0 }}
       onPointerDown={(e) => {
         if (!onCellMouseDown) return;
         isDraggingRef.current = true;

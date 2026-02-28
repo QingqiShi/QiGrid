@@ -8,6 +8,8 @@ import {
   normalizeRange,
   rangesEqual,
   serializeRangeToTSV,
+  subtractFromRanges,
+  subtractRange,
 } from "../selection";
 
 describe("normalizeRange", () => {
@@ -197,6 +199,135 @@ describe("getCellRangeEdges", () => {
       right: false,
       bottom: false,
       left: false,
+    });
+  });
+});
+
+describe("subtractRange", () => {
+  it("returns range unchanged when hole is outside", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 2, columnIndex: 2 } };
+    const hole = { start: { rowIndex: 5, columnIndex: 5 }, end: { rowIndex: 6, columnIndex: 6 } };
+    expect(subtractRange(range, hole)).toEqual([range]);
+  });
+
+  it("returns empty when hole equals range", () => {
+    const range = { start: { rowIndex: 1, columnIndex: 1 }, end: { rowIndex: 3, columnIndex: 3 } };
+    expect(subtractRange(range, range)).toEqual([]);
+  });
+
+  it("returns 4 strips when hole is in center", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 4, columnIndex: 4 } };
+    const hole = { start: { rowIndex: 2, columnIndex: 2 }, end: { rowIndex: 2, columnIndex: 2 } };
+    const result = subtractRange(range, hole);
+    expect(result).toHaveLength(4);
+    // Top strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 0 },
+      end: { rowIndex: 1, columnIndex: 4 },
+    });
+    // Bottom strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 3, columnIndex: 0 },
+      end: { rowIndex: 4, columnIndex: 4 },
+    });
+    // Left strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 2, columnIndex: 0 },
+      end: { rowIndex: 2, columnIndex: 1 },
+    });
+    // Right strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 2, columnIndex: 3 },
+      end: { rowIndex: 2, columnIndex: 4 },
+    });
+  });
+
+  it("returns 2 strips when hole is on top edge", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 2, columnIndex: 2 } };
+    const hole = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 2 } };
+    const result = subtractRange(range, hole);
+    // Only bottom strip remains
+    expect(result).toEqual([
+      { start: { rowIndex: 1, columnIndex: 0 }, end: { rowIndex: 2, columnIndex: 2 } },
+    ]);
+  });
+
+  it("returns 3 strips when hole is on left edge", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 4, columnIndex: 4 } };
+    const hole = { start: { rowIndex: 2, columnIndex: 0 }, end: { rowIndex: 2, columnIndex: 2 } };
+    const result = subtractRange(range, hole);
+    expect(result).toHaveLength(3);
+    // Top strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 0 },
+      end: { rowIndex: 1, columnIndex: 4 },
+    });
+    // Bottom strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 3, columnIndex: 0 },
+      end: { rowIndex: 4, columnIndex: 4 },
+    });
+    // Right strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 2, columnIndex: 3 },
+      end: { rowIndex: 2, columnIndex: 4 },
+    });
+  });
+
+  it("handles partial overlap", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 3, columnIndex: 3 } };
+    const hole = { start: { rowIndex: 2, columnIndex: 2 }, end: { rowIndex: 5, columnIndex: 5 } };
+    const result = subtractRange(range, hole);
+    // Top strip (rows 0-1, cols 0-3)
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 0 },
+      end: { rowIndex: 1, columnIndex: 3 },
+    });
+    // Left strip (rows 2-3, cols 0-1)
+    expect(result).toContainEqual({
+      start: { rowIndex: 2, columnIndex: 0 },
+      end: { rowIndex: 3, columnIndex: 1 },
+    });
+  });
+
+  it("handles single-cell hole in a multi-cell range", () => {
+    const range = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 2 } };
+    const hole = { start: { rowIndex: 0, columnIndex: 1 }, end: { rowIndex: 0, columnIndex: 1 } };
+    const result = subtractRange(range, hole);
+    expect(result).toHaveLength(2);
+    // Left strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 0 },
+      end: { rowIndex: 0, columnIndex: 0 },
+    });
+    // Right strip
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 2 },
+      end: { rowIndex: 0, columnIndex: 2 },
+    });
+  });
+});
+
+describe("subtractFromRanges", () => {
+  it("subtracts hole from multiple ranges", () => {
+    const ranges = [
+      { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 1, columnIndex: 1 } },
+      { start: { rowIndex: 3, columnIndex: 3 }, end: { rowIndex: 4, columnIndex: 4 } },
+    ];
+    const hole = { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 0 } };
+    const result = subtractFromRanges(ranges, hole);
+    // First range splits, second remains unchanged
+    expect(result).toContainEqual({
+      start: { rowIndex: 1, columnIndex: 0 },
+      end: { rowIndex: 1, columnIndex: 1 },
+    });
+    expect(result).toContainEqual({
+      start: { rowIndex: 0, columnIndex: 1 },
+      end: { rowIndex: 0, columnIndex: 1 },
+    });
+    expect(result).toContainEqual({
+      start: { rowIndex: 3, columnIndex: 3 },
+      end: { rowIndex: 4, columnIndex: 4 },
     });
   });
 });

@@ -9,6 +9,7 @@ import { CellGroupRow } from "./virtual-grid/CellGroupRow";
 import { EMPTY_RANGES } from "./virtual-grid/constants";
 import { GridHeader } from "./virtual-grid/GridHeader";
 import { LeafRow } from "./virtual-grid/LeafRow";
+import { SelectionOverlay } from "./virtual-grid/SelectionOverlay";
 import type { CellInteraction, SelectionState } from "./virtual-grid/types";
 import { useDragSelection } from "./virtual-grid/useDragSelection";
 import { useScrollToFocus } from "./virtual-grid/useScrollToFocus";
@@ -217,6 +218,14 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 />
               );
             })}
+            <SelectionOverlay
+              ranges={ranges}
+              columns={columns}
+              rowHeight={rowHeight}
+              scrollTop={scrollTop}
+              totalRowCount={rows.length}
+              selectionAnchor={selectionAnchor}
+            />
           </div>
         </div>
       </div>

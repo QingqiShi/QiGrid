@@ -213,7 +213,7 @@ test("grouping works alongside filtering", async ({ page }) => {
   expect(infoText).toContain("of 10000");
 });
 
-test("anchor cell has vgrid-cell--anchor class within a selection", async ({ page }) => {
+test("selection overlay and anchor cutout render within a selection", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
 
@@ -225,13 +225,17 @@ test("anchor cell has vgrid-cell--anchor class within a selection", async ({ pag
   const endCell = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
   await endCell.click({ modifiers: ["Shift"] });
 
-  // The anchor cell (row 1, col 0) should have the anchor class
-  const anchorCellAfter = page.locator("[data-row-index='1'] .vgrid-cell").nth(0);
-  await expect(anchorCellAfter).toHaveClass(/vgrid-cell--anchor/);
+  // Selection overlay (border div) should be present inside .vgrid-rows
+  const overlayDiv = page.locator(
+    ".vgrid-rows > div[style*='pointer-events: none'][style*='solid']",
+  );
+  await expect(overlayDiv.first()).toBeVisible();
 
-  // The end cell (row 3, col 0) should NOT have the anchor class
-  const endCellAfter = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
-  await expect(endCellAfter).not.toHaveClass(/vgrid-cell--anchor/);
+  // Anchor cutout (white background div at z-index 3) should be present
+  const anchorCutout = page.locator(
+    ".vgrid-rows > div[style*='pointer-events: none'][style*='background: rgb(255, 255, 255)']",
+  );
+  await expect(anchorCutout).toBeVisible();
 });
 
 // --- Group display type tests ---

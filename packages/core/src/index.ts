@@ -14,6 +14,8 @@ export {
   normalizeRange,
   rangesEqual,
   serializeRangeToTSV,
+  subtractFromRanges,
+  subtractRange,
 } from "./selection";
 export { cycleSort, defaultComparator, sortRows } from "./sorting";
 export type {

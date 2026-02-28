@@ -5,7 +5,13 @@ import type {
   GroupingState,
   SortingState,
 } from "@qigrid/core";
-import { cellCoordsEqual, clampCell, cycleSort, updateColumnFilter } from "@qigrid/core";
+import {
+  cellCoordsEqual,
+  clampCell,
+  cycleSort,
+  subtractFromRanges,
+  updateColumnFilter,
+} from "@qigrid/core";
 
 export interface GridInternalState {
   sorting: SortingState;
@@ -17,6 +23,8 @@ export interface GridInternalState {
   selectionRanges: CellRange[];
   /** Internal: the anchor cell from which shift-extend builds a range. */
   selectionAnchor: CellCoord | null;
+  /** Snapshot of ranges before deselection drag (for recomputing subtraction). */
+  deselectionBaseRanges: CellRange[] | null;
 }
 
 export type GridAction =
@@ -41,13 +49,17 @@ export type GridAction =
       extend: boolean;
       rowCount: number;
       colCount: number;
-    };
+    }
+  | { type: "START_DESELECTION"; coord: CellCoord }
+  | { type: "EXTEND_DESELECTION"; coord: CellCoord }
+  | { type: "END_DESELECTION" };
 
 /** Clear selection fields — used when data pipeline changes invalidate indices. */
 export const EMPTY_SELECTION = {
   focusedCell: null,
   selectionRanges: [] as CellRange[],
   selectionAnchor: null,
+  deselectionBaseRanges: null,
 } as const;
 
 export function gridReducer(state: GridInternalState, action: GridAction): GridInternalState {
@@ -108,6 +120,7 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
         focusedCell: coord,
         selectionAnchor: coord,
         selectionRanges: [{ start: coord, end: coord }],
+        deselectionBaseRanges: null,
       };
     }
 
@@ -130,6 +143,7 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
         focusedCell: action.range.end,
         selectionAnchor: action.range.start,
         selectionRanges: [...state.selectionRanges, action.range],
+        deselectionBaseRanges: null,
       };
 
     case "SELECT_ALL":
@@ -193,5 +207,34 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
         selectionRanges: [{ start: next, end: next }],
       };
     }
+
+    // --- Deselection actions ---
+    case "START_DESELECTION": {
+      const { coord } = action;
+      const hole: CellRange = { start: coord, end: coord };
+      return {
+        ...state,
+        deselectionBaseRanges: state.selectionRanges,
+        selectionRanges: subtractFromRanges(state.selectionRanges, hole),
+        selectionAnchor: coord,
+        focusedCell: coord,
+      };
+    }
+
+    case "EXTEND_DESELECTION": {
+      if (!state.deselectionBaseRanges || !state.selectionAnchor) return state;
+      const hole: CellRange = { start: state.selectionAnchor, end: action.coord };
+      return {
+        ...state,
+        selectionRanges: subtractFromRanges(state.deselectionBaseRanges, hole),
+        focusedCell: action.coord,
+      };
+    }
+
+    case "END_DESELECTION":
+      return {
+        ...state,
+        deselectionBaseRanges: null,
+      };
   }
 }

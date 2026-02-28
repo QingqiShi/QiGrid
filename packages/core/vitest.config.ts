@@ -6,6 +6,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     benchmark: {
       include: ["src/**/*.bench.ts"],
+      reporters: ["src/__bench__/reporter.ts"],
     },
   },
 });

@@ -213,7 +213,7 @@ test("grouping works alongside filtering", async ({ page }) => {
   expect(infoText).toContain("of 10000");
 });
 
-test("selection overlay and anchor cutout render within a selection", async ({ page }) => {
+test("selection overlay renders within a selection", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
 
@@ -225,17 +225,11 @@ test("selection overlay and anchor cutout render within a selection", async ({ p
   const endCell = page.locator("[data-row-index='3'] .vgrid-cell").nth(0);
   await endCell.click({ modifiers: ["Shift"] });
 
-  // Selection overlay (border div) should be present inside .vgrid-rows
+  // Selection overlay (combined background + border div) should be present inside .vgrid-rows
   const overlayDiv = page.locator(
     ".vgrid-rows > div[style*='pointer-events: none'][style*='solid']",
   );
   await expect(overlayDiv.first()).toBeVisible();
-
-  // Anchor cutout (white background div at z-index 3) should be present
-  const anchorCutout = page.locator(
-    ".vgrid-rows > div[style*='pointer-events: none'][style*='background: rgb(255, 255, 255)']",
-  );
-  await expect(anchorCutout).toBeVisible();
 });
 
 // --- Group display type tests ---

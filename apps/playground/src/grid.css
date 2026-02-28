@@ -165,12 +165,6 @@ body {
   color: #64748b;
 }
 
-/* Selection styles */
-.vgrid-cell--focused {
-  outline: 2px solid rgb(14, 101, 235);
-  outline-offset: -2px;
-}
-
 /* Prevent text selection during drag */
 .vgrid {
   user-select: none;

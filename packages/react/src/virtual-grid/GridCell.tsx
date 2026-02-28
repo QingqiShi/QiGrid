@@ -19,7 +19,7 @@ export function GridCell<TData>({
   interaction,
   children,
 }: GridCellProps<TData>): ReactNode {
-  const { focusedCell, selectionAnchor, hasSelection } = selection;
+  const { focusedCell } = selection;
   const { isDraggingRef, onCellMouseDown, onCellMouseEnter } = interaction;
 
   const isFocused =
@@ -27,17 +27,9 @@ export function GridCell<TData>({
     focusedCell.rowIndex === rowIndex &&
     focusedCell.columnIndex === colIndex;
 
-  // Hide the focused border when it differs from the anchor (i.e. the user
-  // has extended the selection). The anchor indicator is enough and the focus
-  // outline on the range end cell is visually confusing.
-  const anchorMatchesFocus =
-    focusedCell != null &&
-    selectionAnchor != null &&
-    focusedCell.rowIndex === selectionAnchor.rowIndex &&
-    focusedCell.columnIndex === selectionAnchor.columnIndex;
-  const showFocused = isFocused && (!hasSelection || anchorMatchesFocus);
-
-  const className = `vgrid-cell${showFocused ? " vgrid-cell--focused" : ""}`;
+  // The class is a marker for tests and accessibility — visual rendering
+  // is handled entirely by SelectionOverlay.
+  const className = `vgrid-cell${isFocused ? " vgrid-cell--focused" : ""}`;
 
   return (
     <div

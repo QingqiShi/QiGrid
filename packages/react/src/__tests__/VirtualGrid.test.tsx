@@ -454,7 +454,7 @@ describe("VirtualGrid", () => {
       ];
     }
 
-    it("applies vgrid-group-row--focused when focusedCell targets the group row", () => {
+    it("renders focused cell overlay when focusedCell targets the group row", () => {
       const rows = makeGroupedRows();
       render(
         <VirtualGrid
@@ -470,11 +470,12 @@ describe("VirtualGrid", () => {
         />,
       );
 
-      const groupRow = document.querySelector(".vgrid-group-row");
-      expect(groupRow?.classList.contains("vgrid-group-row--focused")).toBe(true);
+      const focusedOverlay = document.querySelector(".vgrid-cell--focused");
+      expect(focusedOverlay).not.toBeNull();
+      expect(focusedOverlay?.getAttribute("data-row-index")).toBe("0");
     });
 
-    it("does not apply vgrid-group-row--focused when focusedCell targets a different row", () => {
+    it("renders focused cell overlay targeting the correct row when focusedCell is on a leaf row", () => {
       const rows = makeGroupedRows();
       render(
         <VirtualGrid
@@ -490,8 +491,9 @@ describe("VirtualGrid", () => {
         />,
       );
 
-      const groupRow = document.querySelector(".vgrid-group-row");
-      expect(groupRow?.classList.contains("vgrid-group-row--focused")).toBe(false);
+      const focusedOverlay = document.querySelector(".vgrid-cell--focused");
+      expect(focusedOverlay).not.toBeNull();
+      expect(focusedOverlay?.getAttribute("data-row-index")).toBe("1");
     });
 
     it("renders selection overlay when group row is in selectedRanges", () => {

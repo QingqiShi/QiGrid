@@ -11,6 +11,7 @@ interface SelectionOverlayProps<TData> {
   scrollTop: number;
   totalRowCount: number;
   selectionAnchor: CellCoord | null | undefined;
+  focusedCell: CellCoord | null | undefined;
 }
 
 const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
@@ -31,6 +32,7 @@ export function SelectionOverlay<TData>({
   scrollTop,
   totalRowCount,
   selectionAnchor,
+  focusedCell,
 }: SelectionOverlayProps<TData>): ReactNode {
   // Column prefix sums for x positioning
   const colPrefixSums = useMemo(() => {
@@ -42,7 +44,33 @@ export function SelectionOverlay<TData>({
     return sums;
   }, [columns]);
 
-  if (ranges.length === 0) return null;
+  // Render focused cell indicator (even when no selection ranges exist)
+  const focusedOverlay =
+    focusedCell != null &&
+    focusedCell.rowIndex >= 0 &&
+    focusedCell.rowIndex < totalRowCount &&
+    focusedCell.columnIndex >= 0 &&
+    focusedCell.columnIndex < columns.length ? (
+      <div
+        className="vgrid-cell--focused"
+        data-row-index={focusedCell.rowIndex}
+        data-col-index={focusedCell.columnIndex}
+        style={{
+          position: "absolute",
+          left: colPrefixSums[focusedCell.columnIndex] ?? 0,
+          top: focusedCell.rowIndex * rowHeight - scrollTop,
+          width:
+            (colPrefixSums[focusedCell.columnIndex + 1] ?? 0) -
+            (colPrefixSums[focusedCell.columnIndex] ?? 0),
+          height: rowHeight,
+          pointerEvents: "none",
+          zIndex: 3,
+          boxSizing: "border-box",
+        }}
+      />
+    ) : null;
+
+  if (ranges.length === 0) return focusedOverlay;
 
   // Determine anchor hole for background splitting
   const anchorHole: CellRange | null =
@@ -125,5 +153,10 @@ export function SelectionOverlay<TData>({
     }
   }
 
-  return <>{overlays}</>;
+  return (
+    <>
+      {focusedOverlay}
+      {overlays}
+    </>
+  );
 }

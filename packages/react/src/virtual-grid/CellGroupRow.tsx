@@ -2,7 +2,7 @@ import type { Column, GroupRow } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { GridCell } from "./GridCell";
 import { RowContainer } from "./RowContainer";
-import type { CellInteraction, SelectionState } from "./types";
+import type { CellInteraction } from "./types";
 
 interface CellGroupRowProps<TData> {
   row: GroupRow;
@@ -10,7 +10,6 @@ interface CellGroupRowProps<TData> {
   totalWidth: number;
   rowHeight: number;
   offsetY: number;
-  selection: SelectionState;
   interaction: CellInteraction;
   renderGroupCell?: ((row: GroupRow, column: Column<TData>) => ReactNode) | undefined;
   onToggleGroupExpansion?: ((groupId: string) => void) | undefined;
@@ -64,7 +63,6 @@ export function CellGroupRow<TData>({
   totalWidth,
   rowHeight,
   offsetY,
-  selection,
   interaction,
   renderGroupCell,
   onToggleGroupExpansion,
@@ -84,7 +82,6 @@ export function CellGroupRow<TData>({
           column={col}
           colIndex={colIndex}
           rowIndex={row.index}
-          selection={selection}
           interaction={interaction}
         >
           {getGroupCellContent(row, col, renderGroupCell, onToggleGroupExpansion)}

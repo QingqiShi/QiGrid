@@ -10,7 +10,7 @@ import { EMPTY_RANGES } from "./virtual-grid/constants";
 import { GridHeader } from "./virtual-grid/GridHeader";
 import { LeafRow } from "./virtual-grid/LeafRow";
 import { SelectionOverlay } from "./virtual-grid/SelectionOverlay";
-import type { CellInteraction, SelectionState } from "./virtual-grid/types";
+import type { CellInteraction } from "./virtual-grid/types";
 import { useDragSelection } from "./virtual-grid/useDragSelection";
 import { useScrollToFocus } from "./virtual-grid/useScrollToFocus";
 
@@ -93,8 +93,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Selection state ---
 
   const ranges = selectedRanges ?? EMPTY_RANGES;
-  const hasSelection = ranges.length > 0;
-  const selection: SelectionState = { focusedCell, selectionAnchor, ranges, hasSelection };
 
   const isDraggingRef = useDragSelection(onSelectionMouseUp);
   const interaction: CellInteraction = { isDraggingRef, onCellMouseDown, onCellMouseEnter };
@@ -182,7 +180,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                       totalWidth={totalWidth}
                       rowHeight={rowHeight}
                       offsetY={offsetY}
-                      selection={selection}
                       renderGroupRow={renderGroupRow}
                       onToggleGroupExpansion={onToggleGroupExpansion}
                     />
@@ -196,7 +193,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                     totalWidth={totalWidth}
                     rowHeight={rowHeight}
                     offsetY={offsetY}
-                    selection={selection}
                     interaction={interaction}
                     renderGroupCell={renderGroupCell}
                     onToggleGroupExpansion={onToggleGroupExpansion}
@@ -212,7 +208,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                   totalWidth={totalWidth}
                   rowHeight={rowHeight}
                   offsetY={offsetY}
-                  selection={selection}
                   interaction={interaction}
                   renderCell={renderCell}
                 />
@@ -225,6 +220,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               scrollTop={scrollTop}
               totalRowCount={rows.length}
               selectionAnchor={selectionAnchor}
+              focusedCell={focusedCell}
             />
           </div>
         </div>

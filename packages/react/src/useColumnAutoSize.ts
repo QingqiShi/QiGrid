@@ -7,14 +7,11 @@ export interface UseColumnAutoSizeOptions<TData> {
   columns: Column<TData>[];
   data: TData[];
   gridRef: RefObject<HTMLElement | null>;
-  cellPadding?: number;
 }
 
 export interface UseColumnAutoSizeReturn {
   autoSizeColumns: () => Record<string, number>;
 }
-
-const DEFAULT_CELL_PADDING = 32;
 
 export function useColumnAutoSize<TData>(
   options: UseColumnAutoSizeOptions<TData>,
@@ -23,7 +20,7 @@ export function useColumnAutoSize<TData>(
   optionsRef.current = options;
 
   const autoSizeColumns = useCallback((): Record<string, number> => {
-    const { columns, gridRef, cellPadding = DEFAULT_CELL_PADDING } = optionsRef.current;
+    const { columns, gridRef } = optionsRef.current;
 
     const gridEl = gridRef.current;
     if (!gridEl) return {};
@@ -80,7 +77,7 @@ export function useColumnAutoSize<TData>(
       }
 
       if (maxWidth > 0) {
-        measuredWidths[col.id] = maxWidth + cellPadding;
+        measuredWidths[col.id] = maxWidth;
       }
     }
 

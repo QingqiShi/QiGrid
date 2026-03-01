@@ -57,7 +57,6 @@ function buildFakeGrid(
 
 /** Approximate char width used by our mock offsetWidth. */
 const CHAR_WIDTH = 8;
-const DEFAULT_PADDING = 32;
 
 /**
  * Mock offsetWidth on HTMLElement to return textContent.length * CHAR_WIDTH.
@@ -92,13 +91,13 @@ describe("useColumnAutoSize", () => {
       ];
       const columns = buildColumnModel(defs);
       const data = [
-        { name: "Alice", age: 30, email: "alice@example.com" },
+        { name: "Alice Johnson", age: 30, email: "alice@example.com" },
         { name: "Bob", age: 25, email: "bob@longer-domain.example.com" },
       ];
 
       // Build fake grid with cell content matching what renderCell would produce
       const { gridEl, cleanup } = buildFakeGrid(columns, [
-        ["Alice", "alice@example.com"],
+        ["Alice Johnson", "alice@example.com"],
         ["Bob", "bob@longer-domain.example.com"],
       ]);
 
@@ -106,13 +105,11 @@ describe("useColumnAutoSize", () => {
       const { result } = renderHook(() => useColumnAutoSize({ columns, data, gridRef: ref }));
       const widths = result.current.autoSizeColumns();
 
-      // Max content width + padding
-      // "Alice" (5 chars) > "Name" header (4 chars) → 5 * 8 = 40 + 32 = 72
-      // "bob@longer-domain.example.com" (29 chars) > "Email" header (5 chars) → 29 * 8 = 232 + 32 = 264
-      expect(widths.name).toBe("Alice".length * CHAR_WIDTH + DEFAULT_PADDING);
-      expect(widths.email).toBe(
-        "bob@longer-domain.example.com".length * CHAR_WIDTH + DEFAULT_PADDING,
-      );
+      // Max content width (offsetWidth already includes CSS padding)
+      // "Alice Johnson" (13 chars) > "Name" header (4 chars) → 13 * 8 = 104
+      // "bob@longer-domain.example.com" (29 chars) > "Email" header (5 chars) → 29 * 8 = 232
+      expect(widths.name).toBe("Alice Johnson".length * CHAR_WIDTH);
+      expect(widths.email).toBe("bob@longer-domain.example.com".length * CHAR_WIDTH);
 
       cleanup();
     } finally {
@@ -135,7 +132,7 @@ describe("useColumnAutoSize", () => {
       const { result } = renderHook(() => useColumnAutoSize({ columns, data, gridRef: ref }));
       const widths = result.current.autoSizeColumns();
 
-      // "Alice" = 5 chars * 8 = 40 + 32 = 72 → clamped to minWidth 200
+      // "Alice" = 5 chars * 8 = 40 → clamped to minWidth 200
       expect(widths.name).toBe(200);
 
       cleanup();

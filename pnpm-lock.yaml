@@ -103,6 +103,9 @@ importers:
       '@qigrid/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       tsdown:
         specifier: ^0.20.0
         version: 0.20.3(typescript@5.8.3)

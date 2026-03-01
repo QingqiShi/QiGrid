@@ -1,10 +1,14 @@
 import { expect, test } from "@playwright/test";
 import {
+  collectLoaf,
   computeStats,
+  installLoafObserver,
   measureActionRun,
   measureScrollRun,
+  metric,
   printBenchTable,
   type RunMetrics,
+  synthesizeScroll,
 } from "../../benchmark/src/index";
 
 const RUN_COUNT = 5;
@@ -151,4 +155,126 @@ test("auto-size columns performance", async ({ page, browserName }) => {
   await runBenchmark(page, "Auto-size columns", (p, cdp) =>
     measureActionRun(p, cdp, () => gridEval(p, "autoSizeColumns()")),
   );
+});
+
+// ---------------------------------------------------------------------------
+// Mount timing
+// ---------------------------------------------------------------------------
+
+test("mount timing: 10k rows under 100ms", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only works with Chromium");
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+
+  const results: number[] = [];
+  for (let i = 0; i < RUN_COUNT; i++) {
+    // Navigate to about:blank to reset
+    await page.goto("about:blank");
+    await page.waitForTimeout(200);
+
+    const before = await cdp.send("Performance.getMetrics");
+    await page.goto(`/?rows=${BENCH_ROW_COUNT}`);
+    await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+    const after = await cdp.send("Performance.getMetrics");
+
+    const scriptMs = (metric(after, "ScriptDuration") - metric(before, "ScriptDuration")) * 1000;
+    results.push(scriptMs);
+  }
+
+  const stats = computeStats(results);
+  console.log(
+    `\n--- Mount timing ${BENCH_ROW_COUNT} rows (${RUN_COUNT} runs) ---\n` +
+      `  ScriptDuration: median=${stats.median.toFixed(1)}ms p95=${stats.p95.toFixed(1)}ms`,
+  );
+  expect(stats.median).toBeLessThan(100);
+});
+
+// ---------------------------------------------------------------------------
+// DOM node count validation
+// ---------------------------------------------------------------------------
+
+test("DOM node count: constant across dataset sizes", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only works with Chromium");
+
+  const counts: number[] = [];
+  for (const rowCount of [1_000, 10_000, 100_000]) {
+    await navigateAndWait(page, `/?rows=${rowCount}`);
+    // Wait for rendering to settle
+    await page.waitForTimeout(300);
+    const count = await page.locator(".vgrid-row").count();
+    counts.push(count);
+  }
+
+  console.log(
+    `\n--- DOM node count validation ---\n` +
+      `  1k rows: ${counts[0]} DOM rows\n` +
+      `  10k rows: ${counts[1]} DOM rows\n` +
+      `  100k rows: ${counts[2]} DOM rows`,
+  );
+
+  // All counts should be equal (virtualization renders same number of rows)
+  expect(counts[0]).toBe(counts[1]);
+  expect(counts[1]).toBe(counts[2]);
+  // Sanity: not rendering all rows
+  // biome-ignore lint/style/noNonNullAssertion: counts array is non-empty
+  expect(counts[0]!).toBeLessThan(50);
+});
+
+// ---------------------------------------------------------------------------
+// Scroll 100k rows — no long tasks
+// ---------------------------------------------------------------------------
+
+test("scroll 100k rows: no long animation frames", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only works with Chromium");
+
+  await navigateAndWait(page, "/?rows=100000");
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+
+  // Warm up
+  await synthesizeScroll(cdp, { x: 400, y: 300, distance: 500 });
+  await page.waitForTimeout(300);
+
+  // Reset scroll
+  await page.locator(".vgrid-body").evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  await page.waitForTimeout(200);
+
+  // Install LoAF observer and perform a large scroll
+  await installLoafObserver(page);
+  await synthesizeScroll(cdp, { x: 400, y: 300, distance: 10000 });
+  await page.waitForTimeout(500);
+
+  const loaf = await collectLoaf(page);
+  console.log(
+    `\n--- Scroll 100k rows LoAF ---\n` +
+      `  Long frames: ${loaf.count}, max duration: ${loaf.maxDuration.toFixed(1)}ms, TBT: ${loaf.tbt.toFixed(1)}ms`,
+  );
+  expect(loaf.count).toBe(0);
+});
+
+// ---------------------------------------------------------------------------
+// Smooth scroll 100k — no blank regions
+// ---------------------------------------------------------------------------
+
+test("scroll 100k rows: no blank regions", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only works with Chromium");
+
+  await navigateAndWait(page, "/?rows=100000");
+
+  // Jump to various scroll positions and verify rows are rendered
+  const scrollPositions = [0, 500_000, 1_800_000, 3_500_000];
+  for (const scrollTop of scrollPositions) {
+    await page.locator(".vgrid-body").evaluate((el, top) => {
+      el.scrollTop = top;
+    }, scrollTop);
+    // Wait for React to re-render
+    await page.waitForTimeout(200);
+
+    const rowCount = await page.locator(".vgrid-row").count();
+    expect(rowCount).toBeGreaterThan(0);
+  }
 });

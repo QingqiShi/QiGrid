@@ -26,10 +26,12 @@
     "check": "tsc --noEmit",
     "lint": "biome check .",
     "test": "vitest run",
-    "bench": "vitest bench --run"
+    "bench": "vitest bench --run",
+    "size": "node scripts/measure-bundle-size.mjs"
   },
   "devDependencies": {
     "@qigrid/tsconfig": "workspace:*",
+    "esbuild": "^0.25.0",
     "tsdown": "^0.20.0",
     "typescript": "^5.8.0"
   }

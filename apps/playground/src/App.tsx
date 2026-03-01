@@ -9,7 +9,7 @@ import type {
   SortingState,
   VirtualRange,
 } from "@qigrid/react";
-import { useGrid, VirtualGrid } from "@qigrid/react";
+import { useColumnAutoSize, useGrid, VirtualGrid } from "@qigrid/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
@@ -131,6 +131,7 @@ export function App() {
     extendDeselection,
     endDeselection,
   } = grid;
+  const { autoSizeColumns } = useColumnAutoSize({ columns: cols, data });
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
@@ -151,6 +152,13 @@ export function App() {
   const handleDisplayTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setGroupDisplayType(e.target.value as GroupDisplayType);
   }, []);
+
+  const handleAutoSize = useCallback(() => {
+    const widths = autoSizeColumns();
+    for (const id of Object.keys(widths)) {
+      setColumnWidth(id, widths[id] as number);
+    }
+  }, [autoSizeColumns, setColumnWidth]);
 
   // --- Selection event handlers ---
   const handleCellMouseDown = useCallback(
@@ -362,6 +370,9 @@ export function App() {
             ))}
           </select>
         </label>
+        <button type="button" onClick={handleAutoSize}>
+          Auto-size columns
+        </button>
       </div>
 
       <div className="grid-container">

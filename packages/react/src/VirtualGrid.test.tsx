@@ -23,6 +23,7 @@ const columns: Column<Item>[] = [
     width: 200,
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
+    enableAutoSize: true,
   },
   {
     id: "value",
@@ -36,6 +37,7 @@ const columns: Column<Item>[] = [
     width: 100,
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
+    enableAutoSize: true,
   },
 ];
 
@@ -617,6 +619,7 @@ describe("VirtualGrid", () => {
       width: 200,
       minWidth: 100,
       maxWidth: 600,
+      enableAutoSize: true,
       groupFor: "*",
     };
 
@@ -632,6 +635,7 @@ describe("VirtualGrid", () => {
       width: 200,
       minWidth: 100,
       maxWidth: 600,
+      enableAutoSize: true,
       groupFor: "name",
     };
 

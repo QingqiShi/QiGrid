@@ -1,5 +1,5 @@
 import { bench, describe } from "vitest";
-import { buildColumnModel } from "../columns";
+import { buildColumnModel, computeAutoSizedWidths } from "../columns";
 import { filterRows } from "../filtering";
 import { flattenGroupedRows, groupRows } from "../grouping";
 import { sortRows } from "../sorting";
@@ -150,5 +150,17 @@ describe("sliceVisibleRows 1M", () => {
 
   bench("from middle", () => {
     sliceVisibleRows(rows1M, range);
+  });
+});
+
+describe("computeAutoSizedWidths 100k", () => {
+  // Pre-build measured widths for all 5 columns × 100k data points
+  const measuredWidths: Record<string, number> = {};
+  for (const col of columns) {
+    measuredWidths[col.id] = 80 + Math.floor(Math.random() * 200);
+  }
+
+  bench("9 columns", () => {
+    computeAutoSizedWidths(columns, measuredWidths);
   });
 });

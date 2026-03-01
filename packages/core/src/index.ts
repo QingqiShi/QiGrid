@@ -4,6 +4,7 @@ export {
   buildColumnModel,
   buildGroupColumns,
   clampWidth,
+  computeAutoSizedWidths,
   computeTotalWidth,
 } from "./columns";
 export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";

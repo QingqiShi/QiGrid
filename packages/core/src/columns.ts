@@ -54,6 +54,7 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
 
   const { filterFn, sortingFn } = def;
   const aggFunc = def.aggFunc ? resolveAggFunc(def.aggFunc) : undefined;
+  const enableAutoSize = def.enableAutoSize ?? true;
 
   return {
     id,
@@ -67,6 +68,7 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
     width,
     minWidth,
     maxWidth,
+    enableAutoSize,
   };
 }
 
@@ -111,6 +113,7 @@ export function buildGroupColumns<TData>(
         width: GROUP_COL_WIDTH,
         minWidth: GROUP_COL_MIN_WIDTH,
         maxWidth: GROUP_COL_MAX_WIDTH,
+        enableAutoSize: true,
         groupFor: "*",
       },
     ];
@@ -132,7 +135,22 @@ export function buildGroupColumns<TData>(
       width: GROUP_COL_WIDTH,
       minWidth: GROUP_COL_MIN_WIDTH,
       maxWidth: GROUP_COL_MAX_WIDTH,
+      enableAutoSize: true,
       groupFor: columnId,
     };
   });
+}
+
+export function computeAutoSizedWidths<TData>(
+  columns: Column<TData>[],
+  measuredWidths: Record<string, number>,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const col of columns) {
+    if (!col.enableAutoSize) continue;
+    const measured = measuredWidths[col.id];
+    if (measured === undefined) continue;
+    result[col.id] = clampWidth(measured, col.minWidth, col.maxWidth);
+  }
+  return result;
 }

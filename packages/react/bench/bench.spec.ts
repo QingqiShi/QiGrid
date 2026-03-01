@@ -139,3 +139,16 @@ test("group toggle performance", async ({ page, browserName }) => {
     return result;
   });
 });
+
+// ---------------------------------------------------------------------------
+// Auto-size scenario
+// ---------------------------------------------------------------------------
+
+test("auto-size columns performance", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only works with Chromium");
+
+  await navigateAndWait(page, `/?rows=${BENCH_ROW_COUNT}`);
+  await runBenchmark(page, "Auto-size columns", (p, cdp) =>
+    measureActionRun(p, cdp, () => gridEval(p, "autoSizeColumns()")),
+  );
+});

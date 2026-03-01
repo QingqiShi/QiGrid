@@ -171,6 +171,33 @@ describe("column model", () => {
     });
   });
 
+  describe("enableAutoSize", () => {
+    it("defaults to true when not specified", () => {
+      const columns: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.enableAutoSize).toBe(true);
+    });
+
+    it("propagates false from ColumnDef", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", enableAutoSize: false },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.enableAutoSize).toBe(false);
+    });
+
+    it("propagates true from ColumnDef", () => {
+      const columns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name", enableAutoSize: true },
+      ];
+      const cols = buildColumnModel(columns);
+
+      expect(cols[0]?.enableAutoSize).toBe(true);
+    });
+  });
+
   describe("aggFunc resolution", () => {
     it("resolves string aggFunc to a function on Column", () => {
       const columns: ColumnDef<Person>[] = [

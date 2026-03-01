@@ -1,5 +1,5 @@
 import type { Column, ColumnDef, GroupRow, LeafRow } from "@qigrid/react";
-import { useGrid, VirtualGrid } from "@qigrid/react";
+import { useColumnAutoSize, useGrid, VirtualGrid } from "@qigrid/react";
 import { useCallback, useMemo } from "react";
 import { type Employee, generateEmployees } from "../src/data";
 
@@ -35,20 +35,31 @@ export function App() {
     setGrouping,
     toggleGroupExpansion,
     setColumnFilter,
+    setColumnWidth,
     selectCell,
     extendSelection,
     selectedRanges,
   } = grid;
 
+  const { autoSizeColumns: autoSizeColumnsFn } = useColumnAutoSize({ columns: cols, data });
+
   // Expose grid API on window for Playwright benchmarks.
   // Assigned during render (not in useEffect) so it's available immediately
   // when the grid DOM element is visible — no async timing gap.
+  const autoSizeColumns = useCallback(() => {
+    const widths = autoSizeColumnsFn();
+    for (const id of Object.keys(widths)) {
+      setColumnWidth(id, widths[id] as number);
+    }
+  }, [autoSizeColumnsFn, setColumnWidth]);
+
   // biome-ignore lint/suspicious/noExplicitAny: benchmark harness window API
   (window as any).__grid = {
     toggleSort,
     setGrouping,
     toggleGroupExpansion,
     setColumnFilter,
+    autoSizeColumns,
     selectCell,
     extendSelection,
     get rows() {

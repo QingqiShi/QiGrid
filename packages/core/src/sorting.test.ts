@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildColumnModel } from "./columns";
-import { sortRows } from "./sorting";
+import { cycleSort, sortRows } from "./sorting";
 import type { ColumnDef, Row } from "./types";
 
 interface Person {
@@ -38,6 +38,72 @@ function makeRows(items: Person[]): Row<Person>[] {
 function getNames(rows: { original: Person }[]): string[] {
   return rows.map((r) => r.original.name);
 }
+
+describe("cycleSort", () => {
+  describe("single mode (default)", () => {
+    it("unsorted column → [{ columnId, direction: 'asc' }]", () => {
+      expect(cycleSort([], "name")).toEqual([{ columnId: "name", direction: "asc" }]);
+    });
+
+    it("asc → desc", () => {
+      expect(cycleSort([{ columnId: "name", direction: "asc" }], "name")).toEqual([
+        { columnId: "name", direction: "desc" },
+      ]);
+    });
+
+    it("desc → []", () => {
+      expect(cycleSort([{ columnId: "name", direction: "desc" }], "name")).toEqual([]);
+    });
+
+    it("clicking new column replaces existing sort", () => {
+      const current = [{ columnId: "name", direction: "asc" as const }];
+      expect(cycleSort(current, "age")).toEqual([{ columnId: "age", direction: "asc" }]);
+    });
+
+    it("clicking column in multi-sort clears others, keeps column at current direction", () => {
+      const current = [
+        { columnId: "name", direction: "asc" as const },
+        { columnId: "age", direction: "desc" as const },
+      ];
+      expect(cycleSort(current, "age")).toEqual([{ columnId: "age", direction: "desc" }]);
+    });
+  });
+
+  describe("multi mode", () => {
+    it("appends new column, preserving existing", () => {
+      const current = [{ columnId: "name", direction: "asc" as const }];
+      expect(cycleSort(current, "age", true)).toEqual([
+        { columnId: "name", direction: "asc" },
+        { columnId: "age", direction: "asc" },
+      ]);
+    });
+
+    it("asc → desc in place, others preserved", () => {
+      const current = [
+        { columnId: "name", direction: "asc" as const },
+        { columnId: "age", direction: "asc" as const },
+      ];
+      expect(cycleSort(current, "age", true)).toEqual([
+        { columnId: "name", direction: "asc" },
+        { columnId: "age", direction: "desc" },
+      ]);
+    });
+
+    it("desc → remove, others preserved", () => {
+      const current = [
+        { columnId: "name", direction: "asc" as const },
+        { columnId: "age", direction: "desc" as const },
+      ];
+      expect(cycleSort(current, "age", true)).toEqual([{ columnId: "name", direction: "asc" }]);
+    });
+  });
+
+  it("default (no multi arg) behaves as single mode", () => {
+    const current = [{ columnId: "name", direction: "asc" as const }];
+    // Clicking a new column replaces (single mode behavior)
+    expect(cycleSort(current, "age")).toEqual([{ columnId: "age", direction: "asc" }]);
+  });
+});
 
 describe("sorting (pure functions)", () => {
   describe("single column sort", () => {

@@ -55,9 +55,10 @@ function formatSalary(value: number): string {
 }
 
 function getSortIndicator(sorting: SortingState, columnId: string): string {
-  const sort = sorting.find((s) => s.columnId === columnId);
-  if (sort === undefined) return "";
-  return sort.direction === "asc" ? " \u2191" : " \u2193";
+  const index = sorting.findIndex((s) => s.columnId === columnId);
+  if (index === -1) return "";
+  const arrow = sorting[index]?.direction === "asc" ? "\u2191" : "\u2193";
+  return sorting.length > 1 ? ` ${arrow}${index + 1}` : ` ${arrow}`;
 }
 
 function Spinner() {
@@ -290,7 +291,11 @@ export function App() {
 
   const renderHeaderCell = useCallback(
     (column: (typeof cols)[number]) => (
-      <button type="button" className="sortable-header" onClick={() => toggleSort(column.id)}>
+      <button
+        type="button"
+        className="sortable-header"
+        onClick={(e) => toggleSort(column.id, e.ctrlKey || e.metaKey || e.shiftKey)}
+      >
         {column.header}
         <span className="sort-indicator">
           {pendingAction?.type === "sort" && pendingAction.columnId === column.id ? (

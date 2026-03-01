@@ -151,9 +151,16 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   // Stable updater functions — dispatch is stable per React guarantees.
   // Sort/filter/group dispatches are wrapped in startTransition so React can
   // show stale rows while the pipeline recomputes (concurrent rendering).
-  const toggleSort = useCallback((columnId: string) => {
+  const toggleSort = useCallback((columnId: string, multi?: boolean) => {
     setPendingAction({ type: "sort", columnId });
-    startTransition(() => dispatch({ type: "TOGGLE_SORT", columnId }));
+    startTransition(() => {
+      const action: { type: "TOGGLE_SORT"; columnId: string; multi?: boolean } = {
+        type: "TOGGLE_SORT",
+        columnId,
+      };
+      if (multi) action.multi = multi;
+      dispatch(action);
+    });
   }, []);
 
   const setSorting = useCallback((sorting: SortingState) => {

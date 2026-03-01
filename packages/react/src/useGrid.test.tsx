@@ -122,6 +122,33 @@ describe("useGrid", () => {
     expect(result.current.sorting).toEqual([]);
   });
 
+  it("toggleSort on a new column replaces existing sort (single mode)", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    act(() => result.current.toggleSort("name"));
+    expect(result.current.sorting).toEqual([{ columnId: "name", direction: "asc" }]);
+
+    // Clicking a different column replaces the sort
+    act(() => result.current.toggleSort("age"));
+    expect(result.current.sorting).toEqual([{ columnId: "age", direction: "asc" }]);
+  });
+
+  it("toggleSort with multi=true appends to existing sort", () => {
+    const data = makeData("Alice", "Bob");
+    const { result } = renderHook(() => useGrid({ data, columns }));
+
+    act(() => result.current.toggleSort("name"));
+    expect(result.current.sorting).toEqual([{ columnId: "name", direction: "asc" }]);
+
+    // Multi-mode click appends
+    act(() => result.current.toggleSort("age", true));
+    expect(result.current.sorting).toEqual([
+      { columnId: "name", direction: "asc" },
+      { columnId: "age", direction: "asc" },
+    ]);
+  });
+
   it("filters rows when setColumnFilter is called", () => {
     const data = makeData("Alice", "Bob", "Carol");
     const { result } = renderHook(() => useGrid({ data, columns }));

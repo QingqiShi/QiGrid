@@ -29,7 +29,7 @@ export interface GridInternalState {
 
 export type GridAction =
   | { type: "SET_SORTING"; sorting: SortingState }
-  | { type: "TOGGLE_SORT"; columnId: string }
+  | { type: "TOGGLE_SORT"; columnId: string; multi?: boolean }
   | { type: "SET_COLUMN_FILTERS"; filters: ColumnFiltersState }
   | { type: "SET_COLUMN_FILTER"; columnId: string; value: unknown }
   | { type: "SET_COLUMN_WIDTH"; columnId: string; width: number }
@@ -69,7 +69,11 @@ export function gridReducer(state: GridInternalState, action: GridAction): GridI
       return { ...state, sorting: action.sorting, ...EMPTY_SELECTION };
 
     case "TOGGLE_SORT":
-      return { ...state, sorting: cycleSort(state.sorting, action.columnId), ...EMPTY_SELECTION };
+      return {
+        ...state,
+        sorting: cycleSort(state.sorting, action.columnId, action.multi),
+        ...EMPTY_SELECTION,
+      };
 
     case "SET_COLUMN_FILTERS":
       return { ...state, columnFilters: action.filters, ...EMPTY_SELECTION };

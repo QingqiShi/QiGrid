@@ -111,8 +111,9 @@ export interface UseGridReturn<TData> {
   /** Column definitions as passed in. */
   columnDefs: ColumnDef<TData>[];
 
-  /** Cycle sort on a column: none → asc → desc → none. */
-  toggleSort: (columnId: string) => void;
+  /** Cycle sort on a column: none → asc → desc → none.
+   *  When `multi` is true, appends to existing sort (modifier-click behavior). */
+  toggleSort: (columnId: string, multi?: boolean) => void;
 
   /** Replace the entire sorting state. */
   setSorting: (sorting: SortingState) => void;

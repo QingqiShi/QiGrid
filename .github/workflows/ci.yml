@@ -42,7 +42,7 @@ jobs:
         run: pnpm --filter @qigrid/core size
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm --filter @qigrid/playground exec playwright install --with-deps chromium
 
       - name: E2E tests
         run: pnpm --filter @qigrid/playground e2e

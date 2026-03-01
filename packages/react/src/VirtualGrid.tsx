@@ -49,7 +49,9 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
 
   const [scrollTop, setScrollTop] = useState(0);
   const rangeChangeRef = useRef(onVirtualRangeChange);
-  rangeChangeRef.current = onVirtualRangeChange;
+  useEffect(() => {
+    rangeChangeRef.current = onVirtualRangeChange;
+  }, [onVirtualRangeChange]);
   const prevRangeRef = useRef<VirtualRange | null>(null);
 
   const virtualRange = useMemo(() => {
@@ -115,7 +117,9 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // Synchronize external ref without replacing the plain ref object on the DOM
   // (callback refs add overhead in React's commit phase).
   const externalRefRef = useRef(externalRef);
-  externalRefRef.current = externalRef;
+  useEffect(() => {
+    externalRefRef.current = externalRef;
+  }, [externalRef]);
   useEffect(() => {
     const ref = externalRefRef.current;
     const node = gridRef.current;

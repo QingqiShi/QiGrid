@@ -1,7 +1,7 @@
 import type { Column } from "@qigrid/core";
 import { computeAutoSizedWidths } from "@qigrid/core";
 import type { RefObject } from "react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export interface UseColumnAutoSizeOptions<TData> {
   columns: Column<TData>[];
@@ -17,7 +17,9 @@ export function useColumnAutoSize<TData>(
   options: UseColumnAutoSizeOptions<TData>,
 ): UseColumnAutoSizeReturn {
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const autoSizeColumns = useCallback((): Record<string, number> => {
     const { columns, gridRef } = optionsRef.current;

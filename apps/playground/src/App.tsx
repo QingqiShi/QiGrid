@@ -10,7 +10,7 @@ import type {
   VirtualRange,
 } from "@qigrid/react";
 import { useColumnAutoSize, useGrid, VirtualGrid } from "@qigrid/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Employee, generateEmployees } from "./data";
 import "./grid.css";
 
@@ -145,7 +145,9 @@ export function App() {
 
   const dragModeRef = useRef<"add" | "deselect" | null>(null);
   const selectedRangesRef = useRef(selectedRanges);
-  selectedRangesRef.current = selectedRanges;
+  useEffect(() => {
+    selectedRangesRef.current = selectedRanges;
+  }, [selectedRanges]);
 
   // --- Group-by handler ---
   const handleGroupByChange = useCallback(

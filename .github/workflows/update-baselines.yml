@@ -63,6 +63,12 @@ jobs:
           git commit -m "chore: update visual regression baselines"
           git push
 
+      - name: Clean up diff branch
+        continue-on-error: true
+        run: |
+          PR=${{ github.event.issue.number }}
+          git push origin --delete "visual-diffs/pr-${PR}" || true
+
       - name: Comment on PR
         uses: actions/github-script@v7
         with:

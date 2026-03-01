@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -52,31 +52,103 @@ jobs:
         id: e2e
         run: pnpm --filter @qigrid/playground e2e
 
-      - name: Upload Playwright diffs
-        if: failure() && steps.e2e.conclusion == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: apps/playground/test-results/
-          retention-days: 7
+      - name: Publish visual diffs
+        if: failure() && steps.e2e.conclusion == 'failure' && github.event_name == 'pull_request'
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          DIFF_DIR="apps/playground/test-results"
 
-      - name: Comment on PR with visual diff info
+          # Check if there are any actual/diff images
+          if ! find "$DIFF_DIR" -name "*-actual.png" -o -name "*-diff.png" 2>/dev/null | head -1 | grep -q .; then
+            echo "No visual diff images found — this is a non-visual test failure"
+            exit 0
+          fi
+
+          # Push diff images to an orphan branch for inline rendering
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="visual-diffs/pr-${PR}"
+          git checkout --orphan "$BRANCH"
+          git rm -rf --cached .
+          git add "$DIFF_DIR"
+          git commit -m "Visual diffs for PR #${PR}"
+          git push origin "$BRANCH" --force
+
+      - name: Comment on PR with visual diffs
         if: failure() && steps.e2e.conclusion == 'failure' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            await github.rest.issues.createComment({
+            const fs = require('fs');
+            const path = require('path');
+            const pr = context.payload.pull_request.number;
+            const branch = `visual-diffs/pr-${pr}`;
+            const baseUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${branch}`;
+            const diffDir = 'apps/playground/test-results';
+
+            // Find all diff image pairs
+            const diffs = [];
+            function walk(dir) {
+              if (!fs.existsSync(dir)) return;
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) walk(full);
+                else if (entry.name.endsWith('-actual.png')) {
+                  const base = entry.name.replace('-actual.png', '');
+                  diffs.push({
+                    name: base,
+                    dir: dir,
+                    actual: `${baseUrl}/${full}`,
+                    diff: fs.existsSync(path.join(dir, `${base}-diff.png`))
+                      ? `${baseUrl}/${path.join(dir, `${base}-diff.png`)}`
+                      : null,
+                  });
+                }
+              }
+            }
+            walk(diffDir);
+
+            if (diffs.length === 0) {
+              // Non-visual failure — no comment needed
+              return;
+            }
+
+            let body = '## Visual Regression Detected\n\n';
+            body += 'The following screenshots differ from the baselines:\n\n';
+
+            for (const d of diffs) {
+              body += `### ${d.name}\n\n`;
+              body += `| Actual | Diff |\n|---|---|\n`;
+              body += `| ![actual](${d.actual}) | ${d.diff ? `![diff](${d.diff})` : 'N/A'} |\n\n`;
+            }
+
+            body += '---\n\n';
+            body += 'If these changes are intentional, comment `/update-snapshots` to generate and commit updated baselines.\n';
+
+            // Find and update existing bot comment, or create new one
+            const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: [
-                '## Visual Regression Detected',
-                '',
-                'E2E tests failed — this may be due to visual screenshot differences.',
-                '',
-                `**[Download the Playwright report](${runUrl}#artifacts)** to review the screenshot diffs (expected vs actual vs diff images).`,
-                '',
-                'If the visual changes are intentional, comment `/update-snapshots` on this PR to generate and commit updated Linux baselines.',
-              ].join('\n'),
+              issue_number: pr,
             });
+            const existing = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Visual Regression Detected')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr,
+                body,
+              });
+            }

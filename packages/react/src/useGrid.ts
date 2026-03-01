@@ -21,7 +21,15 @@ import {
   groupRows,
   sortRows,
 } from "@qigrid/core";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { EMPTY_SELECTION, gridReducer } from "./gridReducer";
 import type { PendingAction, UseGridReturn } from "./types";
 
@@ -50,7 +58,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   });
 
   const [isPending, startTransition] = useTransition();
-  const pendingActionRef = useRef<PendingAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   // Stage 1: Build base column model from defs
   const baseColumnModel = useMemo(() => buildColumnModel(columnDefs), [columnDefs]);
@@ -144,22 +152,22 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   // Sort/filter/group dispatches are wrapped in startTransition so React can
   // show stale rows while the pipeline recomputes (concurrent rendering).
   const toggleSort = useCallback((columnId: string) => {
-    pendingActionRef.current = { type: "sort", columnId };
+    setPendingAction({ type: "sort", columnId });
     startTransition(() => dispatch({ type: "TOGGLE_SORT", columnId }));
   }, []);
 
   const setSorting = useCallback((sorting: SortingState) => {
-    pendingActionRef.current = { type: "sort" };
+    setPendingAction({ type: "sort" });
     startTransition(() => dispatch({ type: "SET_SORTING", sorting }));
   }, []);
 
   const setColumnFilter = useCallback((columnId: string, value: unknown) => {
-    pendingActionRef.current = { type: "filter", columnId };
+    setPendingAction({ type: "filter", columnId });
     startTransition(() => dispatch({ type: "SET_COLUMN_FILTER", columnId, value }));
   }, []);
 
   const setColumnFilters = useCallback((filters: ColumnFiltersState) => {
-    pendingActionRef.current = { type: "filter" };
+    setPendingAction({ type: "filter" });
     startTransition(() => dispatch({ type: "SET_COLUMN_FILTERS", filters }));
   }, []);
 
@@ -170,22 +178,22 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
 
   // --- Grouping callbacks ---
   const setGrouping = useCallback((grouping: GroupingState) => {
-    pendingActionRef.current = { type: "group" };
+    setPendingAction({ type: "group" });
     startTransition(() => dispatch({ type: "SET_GROUPING", grouping }));
   }, []);
 
   const toggleGroupExpansion = useCallback((groupId: string) => {
-    pendingActionRef.current = { type: "group" };
+    setPendingAction({ type: "group" });
     startTransition(() => dispatch({ type: "TOGGLE_GROUP_EXPANSION", groupId }));
   }, []);
 
   const expandAllGroups = useCallback(() => {
-    pendingActionRef.current = { type: "group" };
+    setPendingAction({ type: "group" });
     startTransition(() => dispatch({ type: "EXPAND_ALL_GROUPS" }));
   }, []);
 
   const collapseAllGroups = useCallback(() => {
-    pendingActionRef.current = { type: "group" };
+    setPendingAction({ type: "group" });
     startTransition(() =>
       dispatch({ type: "COLLAPSE_ALL_GROUPS", allGroupIds: collectAllGroupIds(groupedTree) }),
     );
@@ -240,7 +248,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
   return useMemo(
     () => ({
       isPending,
-      pendingAction: isPending ? pendingActionRef.current : null,
+      pendingAction: isPending ? pendingAction : null,
       rows,
       columns: displayColumnModel,
       totalWidth,
@@ -274,6 +282,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     }),
     [
       isPending,
+      pendingAction,
       rows,
       displayColumnModel,
       totalWidth,

@@ -111,17 +111,26 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Refs & scroll-to-focus ---
 
   const gridRef = useRef<HTMLDivElement>(null);
-  const mergedRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      gridRef.current = node;
-      if (typeof externalRef === "function") {
-        externalRef(node);
-      } else if (externalRef) {
-        (externalRef as { current: HTMLDivElement | null }).current = node;
-      }
-    },
-    [externalRef],
-  );
+
+  // Synchronize external ref without replacing the plain ref object on the DOM
+  // (callback refs add overhead in React's commit phase).
+  const externalRefRef = useRef(externalRef);
+  externalRefRef.current = externalRef;
+  useEffect(() => {
+    const ref = externalRefRef.current;
+    const node = gridRef.current;
+    if (!ref) return undefined;
+    if (typeof ref === "function") {
+      ref(node);
+      return () => {
+        ref(null);
+      };
+    }
+    (ref as { current: HTMLDivElement | null }).current = node;
+    return () => {
+      (ref as { current: HTMLDivElement | null }).current = null;
+    };
+  }, []);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef);
 
@@ -151,7 +160,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     <div
       className="vgrid"
       data-testid="virtual-grid"
-      ref={mergedRef}
+      ref={gridRef}
       role="grid"
       tabIndex={0}
       onKeyDown={handleKeyDown}

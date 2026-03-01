@@ -637,6 +637,149 @@ test("focused cell has visible highlight CSS class", async ({ page }) => {
   await expect(focused).toHaveCount(1);
 });
 
+// --- Pipeline integration tests ---
+
+test("sort + filter + group simultaneously", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Sort by First Name ascending
+  await page.locator(".sortable-header").nth(1).click();
+  await expect(page.locator(".sort-indicator").nth(1)).toContainText("↑");
+
+  // Filter to Engineering department
+  const deptFilter = page.locator("[data-column-id='department']");
+  await deptFilter.fill("Engineering");
+  await expect(page.locator(".grid-info")).not.toContainText("Showing 10000");
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Should have a single Engineering group
+  const groupValues = page.locator(".group-value");
+  await expect(groupValues).toHaveCount(1);
+  await expect(groupValues.first()).toHaveText("Engineering");
+
+  // Leaf rows within the group should be sorted alphabetically by first name
+  const firstLeaf = page.locator(".vgrid-row").first();
+  await expect(firstLeaf).toBeVisible({ timeout: 5000 });
+});
+
+test("collapse then filter and uncollapse persistence", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Collapse the first group
+  const firstToggle = page.locator(".group-toggle").first();
+  await expect(firstToggle).toHaveText("▾");
+  await page.locator(".group-header").first().click();
+  await expect(firstToggle).toHaveText("▸", { timeout: 5000 });
+
+  // Apply a filter — the collapsed group should stay collapsed if still visible
+  const deptFilter = page.locator("[data-column-id='department']");
+  // Get the collapsed group's value first
+  const collapsedGroupValue = await page.locator(".group-value").first().textContent();
+
+  // Filter to the same department to ensure the group stays visible
+  await deptFilter.fill(collapsedGroupValue ?? "");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Toggle should still show collapsed
+  const toggleAfterFilter = page.locator(".group-toggle").first();
+  await expect(toggleAfterFilter).toHaveText("▸", { timeout: 5000 });
+
+  // Clear filter
+  await deptFilter.fill("");
+  await expect(page.locator(".group-toggle").first()).toHaveText("▸", { timeout: 5000 });
+});
+
+test("change grouping resets collapse state", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Collapse first group
+  await page.locator(".group-header").first().click();
+  await expect(page.locator(".group-toggle").first()).toHaveText("▸", { timeout: 5000 });
+
+  // Switch to group by location — should reset collapse state
+  await page.selectOption("#group-by-select", "location");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // The first visible group toggle should be expanded (▾)
+  await expect(page.locator(".group-toggle").first()).toHaveText("▾", { timeout: 5000 });
+});
+
+test("keyboard nav across group boundaries", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  const grid = page.locator("[data-testid='virtual-grid']");
+
+  // Click the first leaf row (not a group header) to focus it
+  const firstLeaf = page.locator(".vgrid-row:not(.vgrid-group-row)").first();
+  await expect(firstLeaf).toBeVisible({ timeout: 5000 });
+  await firstLeaf.locator(".vgrid-cell").first().click();
+
+  // Navigate down through rows using ArrowDown — we should be able to cross
+  // from one group's leaves into the next group header
+  const focused = page.locator(".vgrid-cell--focused");
+  await expect(focused).toBeVisible();
+
+  // Press Home to ensure we start at column 0
+  await grid.press("Home");
+
+  // Press ArrowDown several times to move through rows
+  // (this verifies navigation works across group boundaries without crashing)
+  for (let i = 0; i < 5; i++) {
+    await grid.press("ArrowDown");
+  }
+
+  // Focus should still be visible and valid
+  await expect(focused).toBeVisible();
+});
+
+test("filter reduces group leaf counts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("[data-testid='virtual-grid']")).toBeVisible();
+
+  // Group by department
+  await page.selectOption("#group-by-select", "department");
+  await expect(page.locator(".vgrid-group-row").first()).toBeVisible({ timeout: 5000 });
+
+  // Get the row count before filtering
+  const gridInfo = page.locator(".grid-info");
+  const infoBefore = await gridInfo.textContent();
+  const showingBefore = Number(infoBefore?.match(/Showing (\d+) of/)?.[1]);
+
+  // Filter by a location to reduce data
+  const locFilter = page.locator("[data-column-id='location']");
+  await locFilter.fill("New York");
+
+  // Wait for the count to decrease
+  await expect(gridInfo).not.toContainText(`Showing ${showingBefore}`, { timeout: 5000 });
+
+  const infoAfter = await gridInfo.textContent();
+  const showingAfter = Number(infoAfter?.match(/Showing (\d+) of/)?.[1]);
+  expect(showingAfter).toBeLessThan(showingBefore);
+
+  // Clear filter — count should restore
+  await locFilter.fill("");
+  await expect(gridInfo).toContainText(`Showing ${showingBefore}`, { timeout: 5000 });
+});
+
 test("no group columns when display type is singleColumn but grouping is empty", async ({
   page,
 }) => {

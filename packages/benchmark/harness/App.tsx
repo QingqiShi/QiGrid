@@ -31,7 +31,6 @@ export function App() {
     rows,
     columns: cols,
     totalWidth,
-    sorting,
     toggleSort,
     setGrouping,
     toggleGroupExpansion,
@@ -85,25 +84,8 @@ export function App() {
   );
 
   const renderHeaderCell = useCallback(
-    (column: Column<Employee>) => {
-      const index = sorting.findIndex((s) => s.columnId === column.id);
-      const indicator =
-        index === -1
-          ? ""
-          : sorting.length > 1
-            ? ` ${sorting[index]?.direction === "asc" ? "\u2191" : "\u2193"}${index + 1}`
-            : ` ${sorting[index]?.direction === "asc" ? "\u2191" : "\u2193"}`;
-      return (
-        <button
-          type="button"
-          onClick={(e) => toggleSort(column.id, e.ctrlKey || e.metaKey || e.shiftKey)}
-        >
-          {column.header}
-          {indicator}
-        </button>
-      );
-    },
-    [sorting, toggleSort],
+    (column: Column<Employee>) => <span>{column.header}</span>,
+    [],
   );
 
   const renderFilterCell = useCallback(

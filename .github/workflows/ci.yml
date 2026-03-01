@@ -71,7 +71,7 @@ jobs:
           BRANCH="visual-diffs/pr-${PR}"
           git checkout --orphan "$BRANCH"
           git rm -rf --cached .
-          git add "$DIFF_DIR"
+          git add -f "$DIFF_DIR"
           git commit -m "Visual diffs for PR #${PR}"
           git push origin "$BRANCH" --force
 

@@ -1,5 +1,5 @@
 import type { Column } from "@qigrid/core";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 interface GridHeaderProps<TData> {
   columns: Column<TData>[];
@@ -14,7 +14,7 @@ interface GridHeaderProps<TData> {
   ) => void;
 }
 
-export function GridHeader<TData>({
+function GridHeaderInner<TData>({
   columns,
   totalWidth,
   renderHeaderCell,
@@ -65,3 +65,5 @@ export function GridHeader<TData>({
     </div>
   );
 }
+
+export const GridHeader = memo(GridHeaderInner) as typeof GridHeaderInner;

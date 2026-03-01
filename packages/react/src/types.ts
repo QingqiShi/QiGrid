@@ -73,7 +73,17 @@ export interface VirtualGridProps<TData> {
   onCellAction?: (cell: CellCoord) => void;
 }
 
+export interface PendingAction {
+  type: "sort" | "filter" | "group";
+  columnId?: string;
+}
+
 export interface UseGridReturn<TData> {
+  /** Whether a pipeline transition (sort/filter/group) is in progress. */
+  isPending: boolean;
+
+  /** What triggered the pending transition, or null if not pending. */
+  pendingAction: PendingAction | null;
   /** Final pipeline output — the rows to render (leaf + group rows). */
   rows: GridRow<TData>[];
 

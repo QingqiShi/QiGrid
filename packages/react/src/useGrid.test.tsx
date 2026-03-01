@@ -633,6 +633,61 @@ describe("useGrid", () => {
     });
   });
 
+  describe("concurrent transitions", () => {
+    it("isPending is false on initial render", () => {
+      const data = makeData("Alice", "Bob");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      expect(result.current.isPending).toBe(false);
+      expect(result.current.pendingAction).toBeNull();
+    });
+
+    it("isPending is false after a completed sort transition", () => {
+      const data = makeData("Alice", "Bob");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      act(() => result.current.toggleSort("name"));
+
+      expect(result.current.isPending).toBe(false);
+      expect(result.current.pendingAction).toBeNull();
+      // Sort results are correct
+      const names = leafRows(result.current.rows).map((r) => r.original.name);
+      expect(names).toEqual(["Alice", "Bob"]);
+    });
+
+    it("isPending is false after a completed filter transition", () => {
+      const data = makeData("Alice", "Bob", "Carol");
+      const { result } = renderHook(() => useGrid({ data, columns }));
+
+      act(() => result.current.setColumnFilter("name", "ob"));
+
+      expect(result.current.isPending).toBe(false);
+      expect(result.current.pendingAction).toBeNull();
+      expect(result.current.rows).toHaveLength(1);
+      expect(leafRows(result.current.rows)[0]?.original.name).toBe("Bob");
+    });
+
+    it("isPending is false after a completed grouping transition", () => {
+      const deptColumns: ColumnDef<Person>[] = [
+        { id: "name", accessorKey: "name", header: "Name" },
+        { id: "department", accessorKey: "department", header: "Department" },
+      ];
+      const data: Person[] = [
+        { name: "Alice", age: 30, department: "Engineering" },
+        { name: "Bob", age: 25, department: "Sales" },
+      ];
+      const { result } = renderHook(() => useGrid({ data, columns: deptColumns }));
+
+      act(() => result.current.setGrouping(["department"]));
+
+      expect(result.current.isPending).toBe(false);
+      expect(result.current.pendingAction).toBeNull();
+      // Grouping results are correct
+      const groups = result.current.rows.filter((r) => r.type === "group");
+      expect(groups).toHaveLength(2);
+    });
+  });
+
   describe("selection and anchor navigation", () => {
     it("exposes selectionAnchor reflecting state", () => {
       const data = makeData("Alice", "Bob", "Carol");

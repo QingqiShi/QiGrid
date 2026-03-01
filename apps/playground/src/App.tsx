@@ -60,6 +60,10 @@ function getSortIndicator(sorting: SortingState, columnId: string): string {
   return sort.direction === "asc" ? " \u2191" : " \u2193";
 }
 
+function Spinner() {
+  return <span className="pending-spinner" />;
+}
+
 function CellValue({ col, value }: { col: Column<Employee>; value: unknown }) {
   const str = String(value);
 
@@ -108,6 +112,8 @@ export function App() {
   const options = useMemo(() => ({ data, columns, groupDisplayType }), [groupDisplayType]);
   const grid = useGrid(options);
   const {
+    isPending,
+    pendingAction,
     rows,
     columns: cols,
     totalWidth,
@@ -284,26 +290,35 @@ export function App() {
     (column: (typeof cols)[number]) => (
       <button type="button" className="sortable-header" onClick={() => toggleSort(column.id)}>
         {column.header}
-        <span className="sort-indicator">{getSortIndicator(sorting, column.id)}</span>
+        <span className="sort-indicator">
+          {pendingAction?.type === "sort" && pendingAction.columnId === column.id ? (
+            <Spinner />
+          ) : (
+            getSortIndicator(sorting, column.id)
+          )}
+        </span>
       </button>
     ),
-    [sorting, toggleSort],
+    [sorting, toggleSort, pendingAction],
   );
 
   const renderFilterCell = useCallback(
     (column: (typeof cols)[number]) => (
-      <input
-        type="text"
-        className="filter-input"
-        placeholder={`Filter ${column.header}...`}
-        aria-label={`Filter ${column.header}`}
-        data-column-id={column.id}
-        onChange={(e) => {
-          setColumnFilter(column.id, e.target.value);
-        }}
-      />
+      <div className="filter-cell-wrapper">
+        <input
+          type="text"
+          className="filter-input"
+          placeholder={`Filter ${column.header}...`}
+          aria-label={`Filter ${column.header}`}
+          data-column-id={column.id}
+          onChange={(e) => {
+            setColumnFilter(column.id, e.target.value);
+          }}
+        />
+        {pendingAction?.type === "filter" && pendingAction.columnId === column.id && <Spinner />}
+      </div>
     ),
-    [setColumnFilter],
+    [setColumnFilter, pendingAction],
   );
 
   const renderGroupRow = useCallback((row: GroupRow, toggleExpansion: () => void) => {
@@ -356,6 +371,7 @@ export function App() {
               </option>
             ))}
           </select>
+          {pendingAction?.type === "group" && <Spinner />}
         </label>
         <label htmlFor="display-type-select">
           Display:{" "}
@@ -376,7 +392,7 @@ export function App() {
         </button>
       </div>
 
-      <div className="grid-container">
+      <div className={`grid-container${isPending ? " grid-pending" : ""}`}>
         <div className="grid-info">
           {cols.length} columns &middot; Showing {rows.length} of {totalRows} rows
           {virtualRange && (

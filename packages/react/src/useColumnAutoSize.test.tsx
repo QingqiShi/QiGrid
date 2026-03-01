@@ -1,6 +1,7 @@
-import type { ColumnDef } from "@qigrid/core";
+import type { Column, ColumnDef } from "@qigrid/core";
 import { buildColumnModel } from "@qigrid/core";
 import { renderHook } from "@testing-library/react";
+import type { RefObject } from "react";
 import { describe, expect, it } from "vitest";
 import { useColumnAutoSize } from "./useColumnAutoSize";
 
@@ -10,8 +11,49 @@ interface Person {
   email: string;
 }
 
-const alice: Person = { name: "Alice", age: 30, email: "alice@example.com" };
-const bob: Person = { name: "Bob", age: 25, email: "bob@longer-domain.example.com" };
+/**
+ * Build a minimal fake grid DOM that the hook can query.
+ * Returns the container element and a cleanup function.
+ */
+function buildFakeGrid(
+  columns: Column<Person>[],
+  rows: string[][],
+): { gridEl: HTMLDivElement; cleanup: () => void } {
+  const gridEl = document.createElement("div");
+  gridEl.className = "vgrid";
+  document.body.appendChild(gridEl);
+
+  // Header row
+  const headerRow = document.createElement("div");
+  headerRow.className = "vgrid-header-row";
+  for (const col of columns) {
+    const cell = document.createElement("div");
+    cell.className = "vgrid-header-cell";
+    cell.style.width = `${col.width}px`;
+    cell.textContent = col.header;
+    headerRow.appendChild(cell);
+  }
+  gridEl.appendChild(headerRow);
+
+  // Data rows
+  for (const rowData of rows) {
+    const row = document.createElement("div");
+    row.className = "vgrid-row";
+    for (let i = 0; i < columns.length; i++) {
+      const cell = document.createElement("div");
+      cell.className = "vgrid-cell";
+      cell.style.width = `${(columns[i] as Column<Person>).width}px`;
+      cell.textContent = String(rowData[i]);
+      row.appendChild(cell);
+    }
+    gridEl.appendChild(row);
+  }
+
+  return {
+    gridEl,
+    cleanup: () => document.body.removeChild(gridEl),
+  };
+}
 
 /** Approximate char width used by our mock offsetWidth. */
 const CHAR_WIDTH = 8;
@@ -36,8 +78,12 @@ function mockOffsetWidth(): () => void {
   };
 }
 
+function makeRef(el: HTMLElement): RefObject<HTMLElement | null> {
+  return { current: el };
+}
+
 describe("useColumnAutoSize", () => {
-  it("measures widths correctly from header and cell content", () => {
+  it("measures widths from DOM cells including formatted content", () => {
     const restore = mockOffsetWidth();
     try {
       const defs: ColumnDef<Person>[] = [
@@ -45,18 +91,30 @@ describe("useColumnAutoSize", () => {
         { id: "email", accessorKey: "email", header: "Email" },
       ];
       const columns = buildColumnModel(defs);
-      const data = [alice, bob];
+      const data = [
+        { name: "Alice", age: 30, email: "alice@example.com" },
+        { name: "Bob", age: 25, email: "bob@longer-domain.example.com" },
+      ];
 
-      const { result } = renderHook(() => useColumnAutoSize({ columns, data }));
+      // Build fake grid with cell content matching what renderCell would produce
+      const { gridEl, cleanup } = buildFakeGrid(columns, [
+        ["Alice", "alice@example.com"],
+        ["Bob", "bob@longer-domain.example.com"],
+      ]);
+
+      const ref = makeRef(gridEl);
+      const { result } = renderHook(() => useColumnAutoSize({ columns, data, gridRef: ref }));
       const widths = result.current.autoSizeColumns();
 
-      // "Bob" is shorter than "bob@longer-domain.example.com" (30 chars)
-      // Header "Name" is 4 chars, "Alice" is 5 chars → max cell = 5 * 8 = 40 + padding
-      // Header "Email" is 5 chars, longest email = 30 chars → 30 * 8 = 240 + padding
+      // Max content width + padding
+      // "Alice" (5 chars) > "Name" header (4 chars) → 5 * 8 = 40 + 32 = 72
+      // "bob@longer-domain.example.com" (29 chars) > "Email" header (5 chars) → 29 * 8 = 232 + 32 = 264
       expect(widths.name).toBe("Alice".length * CHAR_WIDTH + DEFAULT_PADDING);
       expect(widths.email).toBe(
         "bob@longer-domain.example.com".length * CHAR_WIDTH + DEFAULT_PADDING,
       );
+
+      cleanup();
     } finally {
       restore();
     }
@@ -69,13 +127,18 @@ describe("useColumnAutoSize", () => {
         { id: "name", accessorKey: "name", header: "Name", minWidth: 200, maxWidth: 300 },
       ];
       const columns = buildColumnModel(defs);
-      // "Alice" = 5 chars * 8 = 40 + 32 = 72 → should be clamped to minWidth 200
-      const data = [alice];
+      const data = [{ name: "Alice", age: 30, email: "alice@example.com" }];
 
-      const { result } = renderHook(() => useColumnAutoSize({ columns, data }));
+      const { gridEl, cleanup } = buildFakeGrid(columns, [["Alice"]]);
+      const ref = makeRef(gridEl);
+
+      const { result } = renderHook(() => useColumnAutoSize({ columns, data, gridRef: ref }));
       const widths = result.current.autoSizeColumns();
 
+      // "Alice" = 5 chars * 8 = 40 + 32 = 72 → clamped to minWidth 200
       expect(widths.name).toBe(200);
+
+      cleanup();
     } finally {
       restore();
     }
@@ -89,13 +152,18 @@ describe("useColumnAutoSize", () => {
         { id: "age", accessorKey: "age", header: "Age" },
       ];
       const columns = buildColumnModel(defs);
-      const data = [alice];
+      const data = [{ name: "Alice", age: 30, email: "alice@example.com" }];
 
-      const { result } = renderHook(() => useColumnAutoSize({ columns, data }));
+      const { gridEl, cleanup } = buildFakeGrid(columns, [["Alice", "30"]]);
+      const ref = makeRef(gridEl);
+
+      const { result } = renderHook(() => useColumnAutoSize({ columns, data, gridRef: ref }));
       const widths = result.current.autoSizeColumns();
 
       expect(widths.name).toBeUndefined();
       expect(widths.age).toBeDefined();
+
+      cleanup();
     } finally {
       restore();
     }
@@ -107,11 +175,22 @@ describe("useColumnAutoSize", () => {
       const defs: ColumnDef<Person>[] = [{ id: "name", accessorKey: "name", header: "Name" }];
       const columns = buildColumnModel(defs);
 
-      const { result } = renderHook(() => useColumnAutoSize({ columns, data: [alice] }));
-      const childCountBefore = document.body.children.length;
+      const { gridEl, cleanup } = buildFakeGrid(columns, [["Alice"]]);
+      const ref = makeRef(gridEl);
+
+      const { result } = renderHook(() =>
+        useColumnAutoSize({
+          columns,
+          data: [{ name: "Alice", age: 30, email: "alice@example.com" }],
+          gridRef: ref,
+        }),
+      );
+      const childCountBefore = gridEl.children.length;
       result.current.autoSizeColumns();
 
-      expect(document.body.children.length).toBe(childCountBefore);
+      expect(gridEl.children.length).toBe(childCountBefore);
+
+      cleanup();
     } finally {
       restore();
     }

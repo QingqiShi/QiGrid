@@ -131,7 +131,8 @@ export function App() {
     extendDeselection,
     endDeselection,
   } = grid;
-  const { autoSizeColumns } = useColumnAutoSize({ columns: cols, data });
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { autoSizeColumns } = useColumnAutoSize({ columns: cols, data, gridRef });
   const totalRows = gridData.length;
 
   const [virtualRange, setVirtualRange] = useState<VirtualRange | null>(null);
@@ -386,6 +387,7 @@ export function App() {
           )}
         </div>
         <VirtualGrid
+          ref={gridRef}
           rows={rows}
           columns={cols}
           totalWidth={totalWidth}

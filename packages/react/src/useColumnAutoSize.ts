@@ -1,11 +1,12 @@
 import type { Column } from "@qigrid/core";
 import { computeAutoSizedWidths } from "@qigrid/core";
+import type { RefObject } from "react";
 import { useCallback, useRef } from "react";
 
 export interface UseColumnAutoSizeOptions<TData> {
   columns: Column<TData>[];
   data: TData[];
-  sampleSize?: number;
+  gridRef: RefObject<HTMLElement | null>;
   cellPadding?: number;
 }
 
@@ -13,7 +14,6 @@ export interface UseColumnAutoSizeReturn {
   autoSizeColumns: () => Record<string, number>;
 }
 
-const DEFAULT_SAMPLE_SIZE = 100;
 const DEFAULT_CELL_PADDING = 32;
 
 export function useColumnAutoSize<TData>(
@@ -23,55 +23,68 @@ export function useColumnAutoSize<TData>(
   optionsRef.current = options;
 
   const autoSizeColumns = useCallback((): Record<string, number> => {
-    const {
-      columns,
-      data,
-      sampleSize = DEFAULT_SAMPLE_SIZE,
-      cellPadding = DEFAULT_CELL_PADDING,
-    } = optionsRef.current;
+    const { columns, gridRef, cellPadding = DEFAULT_CELL_PADDING } = optionsRef.current;
 
-    const container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.left = "-9999px";
-    container.style.top = "-9999px";
-    container.style.visibility = "hidden";
-    container.style.whiteSpace = "nowrap";
-    document.body.appendChild(container);
+    const gridEl = gridRef.current;
+    if (!gridEl) return {};
 
-    const headerEl = document.createElement("span");
-    headerEl.style.fontWeight = "600";
-    headerEl.style.fontSize = "12px";
-    headerEl.style.textTransform = "uppercase";
-    headerEl.style.letterSpacing = "0.05em";
-    container.appendChild(headerEl);
-
-    const cellEl = document.createElement("span");
-    cellEl.style.fontSize = "14px";
-    container.appendChild(cellEl);
-
-    const stride = Math.max(1, Math.ceil(data.length / sampleSize));
+    // Create an off-screen container that inherits the grid's font styles
+    const measureContainer = document.createElement("div");
+    measureContainer.style.position = "absolute";
+    measureContainer.style.left = "-9999px";
+    measureContainer.style.top = "-9999px";
+    measureContainer.style.visibility = "hidden";
+    measureContainer.style.whiteSpace = "nowrap";
+    // Copy computed font from the grid element so measurements use the same font
+    const gridStyles = getComputedStyle(gridEl);
+    measureContainer.style.fontFamily = gridStyles.fontFamily;
+    gridEl.appendChild(measureContainer);
 
     const measuredWidths: Record<string, number> = {};
 
-    for (const col of columns) {
+    // Measure header cells
+    const headerCells = gridEl.querySelectorAll<HTMLElement>(".vgrid-header-cell");
+    for (let colIdx = 0; colIdx < columns.length; colIdx++) {
+      const col = columns[colIdx] as Column<TData>;
       if (!col.enableAutoSize) continue;
 
-      // Measure header
-      headerEl.textContent = col.header;
-      let maxWidth = headerEl.offsetWidth;
+      const headerCell = headerCells[colIdx];
+      let maxWidth = 0;
 
-      // Measure sampled cell values
-      for (let i = 0; i < data.length; i += stride) {
-        const row = data[i] as TData;
-        cellEl.textContent = String(col.getValue(row));
-        const w = cellEl.offsetWidth;
-        if (w > maxWidth) maxWidth = w;
+      if (headerCell) {
+        // Clone header content into auto-width container to measure natural width
+        const clone = headerCell.cloneNode(true) as HTMLElement;
+        clone.style.width = "auto";
+        clone.style.position = "static";
+        clone.style.overflow = "visible";
+        // Remove resize handle from clone — it doesn't contribute to content width
+        const handle = clone.querySelector(".vgrid-resize-handle");
+        handle?.remove();
+        measureContainer.appendChild(clone);
+        maxWidth = clone.offsetWidth;
+        measureContainer.removeChild(clone);
       }
 
-      measuredWidths[col.id] = maxWidth + cellPadding;
+      // Measure visible data cells for this column
+      const dataCells = gridEl.querySelectorAll<HTMLElement>(
+        `.vgrid-row .vgrid-cell:nth-child(${colIdx + 1})`,
+      );
+      for (const cell of dataCells) {
+        const clone = cell.cloneNode(true) as HTMLElement;
+        clone.style.width = "auto";
+        clone.style.overflow = "visible";
+        measureContainer.appendChild(clone);
+        const w = clone.offsetWidth;
+        if (w > maxWidth) maxWidth = w;
+        measureContainer.removeChild(clone);
+      }
+
+      if (maxWidth > 0) {
+        measuredWidths[col.id] = maxWidth + cellPadding;
+      }
     }
 
-    document.body.removeChild(container);
+    gridEl.removeChild(measureContainer);
 
     return computeAutoSizedWidths(columns, measuredWidths);
   }, []);

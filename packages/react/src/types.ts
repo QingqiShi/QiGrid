@@ -14,6 +14,8 @@ import type {
 } from "@qigrid/core";
 
 export interface VirtualGridProps<TData> {
+  /** Ref forwarded to the root grid element. */
+  ref?: React.Ref<HTMLDivElement>;
   /** Rows from useGrid (post-filter/sort/group pipeline). */
   rows: GridRow<TData>[];
   /** Resolved column model with effective widths. */

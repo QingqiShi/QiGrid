@@ -1,6 +1,6 @@
 import type { Column, ColumnDef, GroupRow, LeafRow } from "@qigrid/react";
 import { useColumnAutoSize, useGrid, VirtualGrid } from "@qigrid/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { type Employee, generateEmployees } from "../src/data";
 
 const ROW_HEIGHT = 36;
@@ -41,7 +41,12 @@ export function App() {
     selectedRanges,
   } = grid;
 
-  const { autoSizeColumns: autoSizeColumnsFn } = useColumnAutoSize({ columns: cols, data });
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { autoSizeColumns: autoSizeColumnsFn } = useColumnAutoSize({
+    columns: cols,
+    data,
+    gridRef,
+  });
 
   // Expose grid API on window for Playwright benchmarks.
   // Assigned during render (not in useEffect) so it's available immediately
@@ -111,6 +116,7 @@ export function App() {
 
   return (
     <VirtualGrid
+      ref={gridRef}
       rows={rows}
       columns={cols}
       totalWidth={totalWidth}

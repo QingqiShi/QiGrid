@@ -16,6 +16,7 @@ import { useScrollToFocus } from "./virtual-grid/useScrollToFocus";
 
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
+    ref: externalRef,
     rows,
     columns,
     totalWidth,
@@ -110,6 +111,17 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Refs & scroll-to-focus ---
 
   const gridRef = useRef<HTMLDivElement>(null);
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      gridRef.current = node;
+      if (typeof externalRef === "function") {
+        externalRef(node);
+      } else if (externalRef) {
+        (externalRef as { current: HTMLDivElement | null }).current = node;
+      }
+    },
+    [externalRef],
+  );
   const scrollBodyRef = useRef<HTMLDivElement>(null);
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef);
 
@@ -139,7 +151,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     <div
       className="vgrid"
       data-testid="virtual-grid"
-      ref={gridRef}
+      ref={mergedRef}
       role="grid"
       tabIndex={0}
       onKeyDown={handleKeyDown}

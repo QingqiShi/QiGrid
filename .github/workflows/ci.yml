@@ -44,5 +44,11 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @qigrid/playground exec playwright install --with-deps chromium
 
-      - name: E2E tests
-        run: pnpm --filter @qigrid/playground e2e
+      - name: Generate Linux visual baselines
+        run: pnpm --filter @qigrid/playground exec playwright test --update-snapshots
+
+      - name: Upload Linux baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-screenshots
+          path: apps/playground/e2e/__screenshots__/**/linux/

@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
-  snapshotPathTemplate: "{testDir}/__screenshots__/{testName}/{platform}/{arg}{ext}",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{testName}/{arg}{ext}",
   use: {
     baseURL: "http://localhost:5173",
     headless: true,

@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+// Visual baselines are generated on linux (CI). Skip locally on other platforms.
+test.skip(() => process.platform !== "linux", "Visual regression tests only run on linux (CI)");
+
 test.describe("visual regression", () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });

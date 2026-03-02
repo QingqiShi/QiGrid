@@ -53,13 +53,14 @@ jobs:
         run: pnpm --filter @qigrid/playground e2e
 
       - name: Publish visual diffs
+        id: publish-diffs
         if: failure() && steps.e2e.conclusion == 'failure' && github.event_name == 'pull_request'
         run: |
           PR=${{ github.event.pull_request.number }}
           DIFF_DIR="apps/playground/test-results"
 
           # Check if there are any actual/diff images
-          if ! find "$DIFF_DIR" -name "*-actual.png" -o -name "*-diff.png" 2>/dev/null | head -1 | grep -q .; then
+          if ! find "$DIFF_DIR" \( -name "*-actual.png" -o -name "*-diff.png" \) 2>/dev/null | head -1 | grep -q .; then
             echo "No visual diff images found — this is a non-visual test failure"
             exit 0
           fi
@@ -76,7 +77,7 @@ jobs:
           git push origin "$BRANCH" --force
 
       - name: Comment on PR with visual diffs
-        if: failure() && steps.e2e.conclusion == 'failure' && github.event_name == 'pull_request'
+        if: failure() && steps.publish-diffs.conclusion == 'success' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |

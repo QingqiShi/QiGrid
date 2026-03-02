@@ -11,14 +11,17 @@ Every session starts fresh with no prior context. Do this first:
 
 ## How to work on a task
 
-1. Move the task file to `ai/tasks/in-progress/`.
-2. Read the task file fully — it has acceptance criteria and edge cases.
-3. Read the existing code you'll be modifying before writing anything.
+1. Create a feature branch: `git checkout -b task-NNN-short-description`
+2. Move the task file to `ai/tasks/in-progress/`.
+3. Read the task file fully — it has acceptance criteria and edge cases.
+4. Read the existing code you'll be modifying before writing anything.
    _Note_ You are WELCOME to challenge the task if you notice something inconsistent or you think it's not the right thing to work on. You should feel empowered to stop and voice your concerns.
-4. Implement, commit with descriptive messages explaining _what_ and _why_.
-5. Run the quality gate: `pnpm build && pnpm lint && pnpm check && pnpm test`
-6. If the task touches the playground: `pnpm --filter @qigrid/playground e2e`
-7. Move the task file to `ai/tasks/done/`.
+5. Implement, commit with descriptive messages explaining _what_ and _why_.
+6. Run the quality gate: `pnpm build && pnpm lint && pnpm check && pnpm test`
+7. If the task touches the playground: `pnpm --filter @qigrid/playground e2e`
+8. Move the task file to `ai/tasks/done/`.
+9. Push and open a PR: `git push -u origin HEAD && gh pr create --fill`
+10. CI must pass before merge. Use `gh pr merge --squash` to merge.
 
 ## When a session ends mid-task
 

@@ -111,7 +111,9 @@ describe("aggregation 100k", () => {
 });
 
 describe("full pipeline 100k", () => {
-  bench("filter + wrap + sort", () => {
+  const noCollapsed = new Set<string>();
+
+  bench("filter + wrap + sort + group + flatten", () => {
     const filtered = filterRows(
       data100k,
       [{ columnId: "department", value: "Engineering" }],
@@ -119,6 +121,8 @@ describe("full pipeline 100k", () => {
     );
     const rows = makeRows(filtered);
     sortRows(rows, [{ columnId: "name", direction: "asc" }], columns);
+    const grouped = groupRows(rows, ["department"], columns);
+    flattenGroupedRows(grouped, noCollapsed);
   });
 });
 

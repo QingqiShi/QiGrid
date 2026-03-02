@@ -16,6 +16,9 @@
       "dependsOn": ["^build"],
       "cache": false
     },
+    "size": {
+      "dependsOn": ["build"]
+    },
     "e2e": {
       "dependsOn": ["^build"]
     },

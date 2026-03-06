@@ -847,4 +847,98 @@ describe("VirtualGrid", () => {
       expect(renderFilterCell).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("pinned rows", () => {
+    it("renders pinned-top section with correct CSS class", () => {
+      const rows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      expect(pinnedTop).not.toBeNull();
+      const pinnedRows = pinnedTop?.querySelectorAll(".vgrid-row");
+      expect(pinnedRows?.length).toBe(2);
+    });
+
+    it("renders pinned-bottom section with correct CSS class", () => {
+      const rows = makeLeafRows(10);
+      const pinnedBottomRows = makeLeafRows(3);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedBottomRows={pinnedBottomRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedBottom = document.querySelector(".vgrid-pinned-bottom");
+      expect(pinnedBottom).not.toBeNull();
+      const pinnedRows = pinnedBottom?.querySelectorAll(".vgrid-row");
+      expect(pinnedRows?.length).toBe(3);
+    });
+
+    it("no pinned rows → no pinned containers in DOM", () => {
+      const rows = makeLeafRows(10);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      expect(document.querySelector(".vgrid-pinned-top")).toBeNull();
+      expect(document.querySelector(".vgrid-pinned-bottom")).toBeNull();
+    });
+
+    it("scroll body height accounts for pinned row heights", () => {
+      const rows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+      const pinnedBottomRows = makeLeafRows(1);
+      const pinnedTopHeight = 2 * ROW_HEIGHT;
+      const pinnedBottomHeight = 1 * ROW_HEIGHT;
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          pinnedBottomRows={pinnedBottomRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const scrollBody = document.querySelector(".vgrid-body") as HTMLElement;
+      expect(scrollBody).not.toBeNull();
+      const expectedHeight = CONTAINER_HEIGHT - pinnedTopHeight - pinnedBottomHeight;
+      expect(scrollBody.style.height).toBe(`${expectedHeight}px`);
+    });
+  });
 });

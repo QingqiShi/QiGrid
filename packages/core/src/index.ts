@@ -11,6 +11,7 @@ export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { collectAllGroupIds, flattenGroupedRows, groupRows } from "./grouping";
 export type { NavigationDirection } from "./navigation";
 export { computeNextFocus } from "./navigation";
+export { partitionPinnedRows } from "./pinnedRows";
 export type { CellCoord, CellRange } from "./selection";
 export {
   cellCoordsEqual,
@@ -41,6 +42,7 @@ export type {
   GroupNode,
   GroupRow,
   LeafRow,
+  PinnedPartition,
   Row,
   SortingState,
   VirtualRange,

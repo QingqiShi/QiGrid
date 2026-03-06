@@ -110,12 +110,26 @@ const DISPLAY_TYPE_OPTIONS: { label: string; value: GroupDisplayType }[] = [
 
 export function App() {
   const [groupDisplayType, setGroupDisplayType] = useState<GroupDisplayType>("groupRows");
-  const options = useMemo(() => ({ data, columns, groupDisplayType }), [groupDisplayType]);
+  const [pinnedIds, setPinnedIds] = useState<Set<number>>(() => new Set());
+
+  const pinnedTopPredicate = useCallback((row: Employee) => pinnedIds.has(row.id), [pinnedIds]);
+
+  const options = useMemo(
+    () => ({
+      data,
+      columns,
+      groupDisplayType,
+      ...(pinnedIds.size > 0 && { pinnedTopPredicate }),
+    }),
+    [groupDisplayType, pinnedIds, pinnedTopPredicate],
+  );
   const grid = useGrid(options);
   const {
     isPending,
     pendingAction,
     rows,
+    pinnedTopRows,
+    pinnedBottomRows,
     columns: cols,
     totalWidth,
     sorting,
@@ -285,9 +299,40 @@ export function App() {
     [moveFocus, selectAll, clearSelection, selectedRanges, cols, rows],
   );
 
-  const renderCell = useCallback((row: LeafRow<Employee>, column: Column<Employee>) => {
-    return <CellValue col={column} value={row.getValue(column.id)} />;
+  const togglePin = useCallback((id: number) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
+
+  const renderCell = useCallback(
+    (row: LeafRow<Employee>, column: Column<Employee>) => {
+      if (column.id === "id") {
+        const isPinned = pinnedIds.has(row.original.id);
+        return (
+          <span className="cell-id">
+            <button
+              type="button"
+              className={`pin-button${isPinned ? " pinned" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePin(row.original.id);
+              }}
+              title={isPinned ? "Unpin row" : "Pin row to top"}
+            >
+              {isPinned ? "\u25C9" : "\u25CB"}
+            </button>
+            {String(row.getValue(column.id))}
+          </span>
+        );
+      }
+      return <CellValue col={column} value={row.getValue(column.id)} />;
+    },
+    [pinnedIds, togglePin],
+  );
 
   const renderHeaderCell = useCallback(
     (column: (typeof cols)[number]) => (
@@ -412,6 +457,8 @@ export function App() {
         <VirtualGrid
           ref={gridRef}
           rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          pinnedBottomRows={pinnedBottomRows}
           columns={cols}
           totalWidth={totalWidth}
           rowHeight={ROW_HEIGHT}

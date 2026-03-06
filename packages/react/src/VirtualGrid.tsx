@@ -18,6 +18,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
     ref: externalRef,
     rows,
+    pinnedTopRows = [],
+    pinnedBottomRows = [],
     columns,
     totalWidth,
     rowHeight,
@@ -88,7 +90,9 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const headerRowHeight = rowHeight;
   const filterRowHeight = renderFilterCell ? rowHeight : 0;
   const stickyHeight = headerRowHeight + filterRowHeight;
-  const rowAreaHeight = containerHeight - stickyHeight;
+  const pinnedTopHeight = pinnedTopRows.length * rowHeight;
+  const pinnedBottomHeight = pinnedBottomRows.length * rowHeight;
+  const rowAreaHeight = containerHeight - stickyHeight - pinnedTopHeight - pinnedBottomHeight;
 
   // --- Column resize ---
 
@@ -170,11 +174,36 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       onKeyDown={handleKeyDown}
       style={{ outline: "none" }}
     >
+      {pinnedTopRows.length > 0 && (
+        <div
+          className="vgrid-pinned-top"
+          style={{ height: pinnedTopHeight, overflow: "hidden", width: totalWidth }}
+        >
+          {pinnedTopRows.map((row, i) => {
+            const offsetY = i * rowHeight;
+            if (row.type === "leaf") {
+              return (
+                <LeafRow
+                  key={`pinned-top-${row.index}`}
+                  row={row}
+                  columns={columns}
+                  totalWidth={totalWidth}
+                  rowHeight={rowHeight}
+                  offsetY={offsetY}
+                  interaction={interaction}
+                  renderCell={renderCell}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
       <div
         ref={scrollBodyRef}
         className="vgrid-body"
         onScroll={handleScroll}
-        style={{ height: containerHeight, overflow: "auto" }}
+        style={{ height: containerHeight - pinnedTopHeight - pinnedBottomHeight, overflow: "auto" }}
       >
         <div
           className="vgrid-spacer"
@@ -267,6 +296,31 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
           </div>
         </div>
       </div>
+      {pinnedBottomRows.length > 0 && (
+        <div
+          className="vgrid-pinned-bottom"
+          style={{ height: pinnedBottomHeight, overflow: "hidden", width: totalWidth }}
+        >
+          {pinnedBottomRows.map((row, i) => {
+            const offsetY = i * rowHeight;
+            if (row.type === "leaf") {
+              return (
+                <LeafRow
+                  key={`pinned-bottom-${row.index}`}
+                  row={row}
+                  columns={columns}
+                  totalWidth={totalWidth}
+                  rowHeight={rowHeight}
+                  offsetY={offsetY}
+                  interaction={interaction}
+                  renderCell={renderCell}
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
     </div>
   );
 }

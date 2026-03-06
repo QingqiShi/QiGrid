@@ -19,6 +19,7 @@ import {
   filterRows,
   flattenGroupedRows,
   groupRows,
+  partitionPinnedRows,
   sortRows,
 } from "@qigrid/core";
 import {
@@ -41,6 +42,8 @@ export interface UseGridOptions<TData> {
   grouping?: GroupingState;
   groupDisplayType?: GroupDisplayType;
   hideGroupedColumns?: boolean;
+  pinnedTopPredicate?: (row: TData, index: number) => boolean;
+  pinnedBottomPredicate?: (row: TData, index: number) => boolean;
 }
 
 export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TData> {
@@ -148,6 +151,16 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     return flattenGroupedRows(groupedTree, state.collapsedGroupIds, baseColumnModel);
   }, [groupedTree, sortedRows, state.collapsedGroupIds, baseColumnModel]);
 
+  // Stage 6: Partition pinned rows
+  const {
+    pinnedTop: pinnedTopRows,
+    body: bodyRows,
+    pinnedBottom: pinnedBottomRows,
+  } = useMemo(
+    () => partitionPinnedRows(rows, options.pinnedTopPredicate, options.pinnedBottomPredicate),
+    [rows, options.pinnedTopPredicate, options.pinnedBottomPredicate],
+  );
+
   // Stable updater functions — dispatch is stable per React guarantees.
   // Sort/filter/group dispatches are wrapped in startTransition so React can
   // show stale rows while the pipeline recomputes (concurrent rendering).
@@ -221,8 +234,12 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
 
   const selectAll = useCallback(
     () =>
-      dispatch({ type: "SELECT_ALL", rowCount: rows.length, colCount: displayColumnModel.length }),
-    [rows.length, displayColumnModel.length],
+      dispatch({
+        type: "SELECT_ALL",
+        rowCount: bodyRows.length,
+        colCount: displayColumnModel.length,
+      }),
+    [bodyRows.length, displayColumnModel.length],
   );
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
@@ -246,17 +263,19 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         deltaRow,
         deltaCol,
         extend,
-        rowCount: rows.length,
+        rowCount: bodyRows.length,
         colCount: displayColumnModel.length,
       }),
-    [rows.length, displayColumnModel.length],
+    [bodyRows.length, displayColumnModel.length],
   );
 
   return useMemo(
     () => ({
       isPending,
       pendingAction: isPending ? pendingAction : null,
-      rows,
+      rows: bodyRows,
+      pinnedTopRows,
+      pinnedBottomRows,
       columns: displayColumnModel,
       totalWidth,
       sorting: state.sorting,
@@ -290,7 +309,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     [
       isPending,
       pendingAction,
-      rows,
+      bodyRows,
+      pinnedTopRows,
+      pinnedBottomRows,
       displayColumnModel,
       totalWidth,
       state.sorting,

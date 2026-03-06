@@ -343,6 +343,80 @@ describe("useGrid integration — multi-step state transitions", () => {
   });
 
   // -----------------------------------------------------------------------
+  // pinned rows
+  // -----------------------------------------------------------------------
+  describe("pinned rows", () => {
+    it("returns empty pinnedTopRows/pinnedBottomRows by default", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns }),
+      );
+
+      expect(result.current.pinnedTopRows).toEqual([]);
+      expect(result.current.pinnedBottomRows).toEqual([]);
+      expect(result.current.rows.length).toBe(employeeData.length);
+    });
+
+    it("partitions rows with top predicate", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice" || row.name === "Bob";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      expect(leafRows(result.current.pinnedTopRows).map((r) => r.original.name)).toEqual([
+        "Alice",
+        "Bob",
+      ]);
+      expect(result.current.rows.length).toBe(employeeData.length - 2);
+      expect(result.current.pinnedBottomRows).toEqual([]);
+    });
+
+    it("partitions rows with bottom predicate", () => {
+      const pinnedBottomPredicate = (row: Employee) => row.name === "Carol";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedBottomPredicate }),
+      );
+
+      expect(result.current.pinnedTopRows).toEqual([]);
+      expect(leafRows(result.current.pinnedBottomRows).map((r) => r.original.name)).toEqual([
+        "Carol",
+      ]);
+      expect(result.current.rows.length).toBe(employeeData.length - 1);
+    });
+
+    it("pinned rows with grouping — pinned leaves extracted from groups", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      act(() => result.current.setGrouping(["department"]));
+
+      expect(leafRows(result.current.pinnedTopRows).map((r) => r.original.name)).toEqual(["Alice"]);
+
+      // Engineering group should have reduced leafCount
+      const engGroup = groupRowsOf(result.current.rows).find((g) => g.groupValue === "Engineering");
+      expect(engGroup).toBeDefined();
+      // Alice was in Engineering, so 4 - 1 = 3
+      expect(engGroup?.leafCount).toBe(3);
+    });
+
+    it("memoization: same predicates + same data → same references", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result, rerender } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      const firstTop = result.current.pinnedTopRows;
+      const firstBody = result.current.rows;
+
+      rerender();
+
+      expect(result.current.pinnedTopRows).toBe(firstTop);
+      expect(result.current.rows).toBe(firstBody);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // aggregation on transitions
   // -----------------------------------------------------------------------
   describe("aggregation on transitions", () => {

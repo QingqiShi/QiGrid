@@ -1,4 +1,4 @@
-import type { VirtualRange } from "@qigrid/core";
+import type { Column, LeafRow as LeafRowType, VirtualRange } from "@qigrid/core";
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,6 +13,45 @@ import { SelectionOverlay } from "./virtual-grid/SelectionOverlay";
 import type { CellInteraction } from "./virtual-grid/types";
 import { useDragSelection } from "./virtual-grid/useDragSelection";
 import { useScrollToFocus } from "./virtual-grid/useScrollToFocus";
+
+function PinnedSection<TData>({
+  rows,
+  className,
+  keyPrefix,
+  height,
+  columns,
+  totalWidth,
+  rowHeight,
+  interaction,
+  renderCell,
+}: {
+  rows: LeafRowType<TData>[];
+  className: string;
+  keyPrefix: string;
+  height: number;
+  columns: Column<TData>[];
+  totalWidth: number;
+  rowHeight: number;
+  interaction: CellInteraction;
+  renderCell: (row: LeafRowType<TData>, column: Column<TData>) => ReactNode;
+}) {
+  return (
+    <div className={className} style={{ height, overflow: "hidden", width: totalWidth }}>
+      {rows.map((row, i) => (
+        <LeafRow
+          key={`${keyPrefix}-${row.index}`}
+          row={row}
+          columns={columns}
+          totalWidth={totalWidth}
+          rowHeight={rowHeight}
+          offsetY={i * rowHeight}
+          interaction={interaction}
+          renderCell={renderCell}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const {
@@ -175,29 +214,17 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       style={{ outline: "none" }}
     >
       {pinnedTopRows.length > 0 && (
-        <div
+        <PinnedSection
+          rows={pinnedTopRows}
           className="vgrid-pinned-top"
-          style={{ height: pinnedTopHeight, overflow: "hidden", width: totalWidth }}
-        >
-          {pinnedTopRows.map((row, i) => {
-            const offsetY = i * rowHeight;
-            if (row.type === "leaf") {
-              return (
-                <LeafRow
-                  key={`pinned-top-${row.index}`}
-                  row={row}
-                  columns={columns}
-                  totalWidth={totalWidth}
-                  rowHeight={rowHeight}
-                  offsetY={offsetY}
-                  interaction={interaction}
-                  renderCell={renderCell}
-                />
-              );
-            }
-            return null;
-          })}
-        </div>
+          keyPrefix="pinned-top"
+          height={pinnedTopHeight}
+          columns={columns}
+          totalWidth={totalWidth}
+          rowHeight={rowHeight}
+          interaction={interaction}
+          renderCell={renderCell}
+        />
       )}
       <div
         ref={scrollBodyRef}
@@ -297,29 +324,17 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
         </div>
       </div>
       {pinnedBottomRows.length > 0 && (
-        <div
+        <PinnedSection
+          rows={pinnedBottomRows}
           className="vgrid-pinned-bottom"
-          style={{ height: pinnedBottomHeight, overflow: "hidden", width: totalWidth }}
-        >
-          {pinnedBottomRows.map((row, i) => {
-            const offsetY = i * rowHeight;
-            if (row.type === "leaf") {
-              return (
-                <LeafRow
-                  key={`pinned-bottom-${row.index}`}
-                  row={row}
-                  columns={columns}
-                  totalWidth={totalWidth}
-                  rowHeight={rowHeight}
-                  offsetY={offsetY}
-                  interaction={interaction}
-                  renderCell={renderCell}
-                />
-              );
-            }
-            return null;
-          })}
-        </div>
+          keyPrefix="pinned-bottom"
+          height={pinnedBottomHeight}
+          columns={columns}
+          totalWidth={totalWidth}
+          rowHeight={rowHeight}
+          interaction={interaction}
+          renderCell={renderCell}
+        />
       )}
     </div>
   );

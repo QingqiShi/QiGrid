@@ -157,8 +157,14 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     body: bodyRows,
     pinnedBottom: pinnedBottomRows,
   } = useMemo(
-    () => partitionPinnedRows(rows, options.pinnedTopPredicate, options.pinnedBottomPredicate),
-    [rows, options.pinnedTopPredicate, options.pinnedBottomPredicate],
+    () =>
+      partitionPinnedRows(
+        rows,
+        options.pinnedTopPredicate,
+        options.pinnedBottomPredicate,
+        state.grouping.length > 0,
+      ),
+    [rows, options.pinnedTopPredicate, options.pinnedBottomPredicate, state.grouping.length],
   );
 
   // Stable updater functions — dispatch is stable per React guarantees.

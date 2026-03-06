@@ -19,9 +19,9 @@ export interface VirtualGridProps<TData> {
   /** Rows from useGrid (post-filter/sort/group pipeline). */
   rows: GridRow<TData>[];
   /** Rows pinned to the top of the grid (non-virtualized). */
-  pinnedTopRows?: GridRow<TData>[];
+  pinnedTopRows?: LeafRow<TData>[];
   /** Rows pinned to the bottom of the grid (non-virtualized). */
-  pinnedBottomRows?: GridRow<TData>[];
+  pinnedBottomRows?: LeafRow<TData>[];
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];
   /** Total width of all columns. */
@@ -92,10 +92,10 @@ export interface UseGridReturn<TData> {
   rows: GridRow<TData>[];
 
   /** Rows pinned to the top of the grid (non-virtualized). */
-  pinnedTopRows: GridRow<TData>[];
+  pinnedTopRows: LeafRow<TData>[];
 
   /** Rows pinned to the bottom of the grid (non-virtualized). */
-  pinnedBottomRows: GridRow<TData>[];
+  pinnedBottomRows: LeafRow<TData>[];
 
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];

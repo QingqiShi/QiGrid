@@ -102,9 +102,9 @@ export interface VirtualRange {
 }
 
 export interface PinnedPartition<TData> {
-  pinnedTop: GridRow<TData>[];
+  pinnedTop: LeafRow<TData>[];
   body: GridRow<TData>[];
-  pinnedBottom: GridRow<TData>[];
+  pinnedBottom: LeafRow<TData>[];
 }
 
 export interface VirtualRangeParams {

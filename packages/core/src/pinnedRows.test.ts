@@ -140,7 +140,7 @@ describe("partitionPinnedRows", () => {
   describe("with grouping", () => {
     it("pinned leaves extracted from groups, group leafCount adjusted", () => {
       const rows = makeGroupedRows(people, ["department"]);
-      const result = partitionPinnedRows(rows, topPred, bottomPred);
+      const result = partitionPinnedRows(rows, topPred, bottomPred, true);
 
       // Alice & Eve pinned top (Engineering), Carol pinned bottom (Sales)
       expect(leafNames(result.pinnedTop)).toEqual(["Alice", "Eve"]);
@@ -169,7 +169,7 @@ describe("partitionPinnedRows", () => {
         { name: "Carol", department: "Sales" },
       ];
       const rows = makeGroupedRows(data, ["department"]);
-      const result = partitionPinnedRows(rows, topPred);
+      const result = partitionPinnedRows(rows, topPred, undefined, true);
 
       // Engineering group should be gone from body since all its leaves are pinned
       expect(groupIds(result.body)).not.toContain("department:Engineering");
@@ -188,7 +188,7 @@ describe("partitionPinnedRows", () => {
 
       // Group by department only (single level)
       const rows = makeGroupedRows(data, ["department"]);
-      const result = partitionPinnedRows(rows, topPred);
+      const result = partitionPinnedRows(rows, topPred, undefined, true);
 
       expect(leafNames(result.pinnedTop)).toEqual(["Alice"]);
       expect(leafNames(result.body)).toEqual(["Bob", "Carol"]);

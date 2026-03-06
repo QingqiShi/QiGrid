@@ -1,5 +1,8 @@
 import type { GridRow, GroupRow, LeafRow, PinnedPartition } from "./types";
 
+// Stable empty array — preserves referential equality across calls
+const EMPTY_LEAVES: LeafRow<never>[] = [];
+
 /**
  * Partition post-pipeline rows into pinned-top, body, and pinned-bottom sections.
  *
@@ -14,17 +17,16 @@ export function partitionPinnedRows<TData>(
   rows: GridRow<TData>[],
   pinnedTopPredicate?: (row: TData, index: number) => boolean,
   pinnedBottomPredicate?: (row: TData, index: number) => boolean,
+  hasGroups = false,
 ): PinnedPartition<TData> {
-  // Fast path: no predicates → zero overhead, same reference
+  // Fast path: no predicates → zero overhead, same references
   if (!pinnedTopPredicate && !pinnedBottomPredicate) {
     return {
-      pinnedTop: [],
+      pinnedTop: EMPTY_LEAVES as LeafRow<TData>[],
       body: rows,
-      pinnedBottom: [],
+      pinnedBottom: EMPTY_LEAVES as LeafRow<TData>[],
     };
   }
-
-  const hasGroups = rows.some((r) => r.type === "group");
 
   if (!hasGroups) {
     return partitionFlat(rows as LeafRow<TData>[], pinnedTopPredicate, pinnedBottomPredicate);
@@ -59,7 +61,6 @@ function partitionFlat<TData>(
     else body.push(row);
   }
 
-  // Re-index each partition
   reindex(pinnedTop);
   reindex(body);
   reindex(pinnedBottom);
@@ -72,23 +73,11 @@ function partitionGrouped<TData>(
   pinnedTopPredicate?: (row: TData, index: number) => boolean,
   pinnedBottomPredicate?: (row: TData, index: number) => boolean,
 ): PinnedPartition<TData> {
-  // Pass 1: Classify each leaf row, track how many body leaves remain per group.
-  // We use a map from groupId to the number of leaves that will stay in body.
+  // Pass 1: Classify each leaf and count body leaves per group.
+  // Groups are initialized when encountered in the stack walk (no separate init pass).
   const leafClassification = new Map<LeafRow<TData>, "top" | "bottom" | "body">();
-
-  // Track group stack to associate leaves with groups.
-  // For each GroupRow, count how many body leaves it has.
   const groupBodyLeafCount = new Map<string, number>();
 
-  // Initialize all group counts to 0
-  for (const row of rows) {
-    if (row.type === "group") {
-      groupBodyLeafCount.set(row.groupId, 0);
-    }
-  }
-
-  // Walk the flat array. Group rows define the "current" groups.
-  // Each leaf follows its group ancestors in the flat array.
   const groupStack: GroupRow[] = [];
   for (const row of rows) {
     if (row.type === "group") {
@@ -97,12 +86,14 @@ function partitionGrouped<TData>(
         groupStack.pop();
       }
       groupStack.push(row);
+      if (!groupBodyLeafCount.has(row.groupId)) {
+        groupBodyLeafCount.set(row.groupId, 0);
+      }
     } else {
       const cls = classify(row, pinnedTopPredicate, pinnedBottomPredicate);
       leafClassification.set(row, cls);
 
       if (cls === "body") {
-        // Increment count for all ancestor groups
         for (const g of groupStack) {
           groupBodyLeafCount.set(g.groupId, (groupBodyLeafCount.get(g.groupId) ?? 0) + 1);
         }
@@ -111,19 +102,15 @@ function partitionGrouped<TData>(
   }
 
   // Pass 2: Build the three partitions.
-  const pinnedTop: GridRow<TData>[] = [];
+  const pinnedTop: LeafRow<TData>[] = [];
   const body: GridRow<TData>[] = [];
-  const pinnedBottom: GridRow<TData>[] = [];
+  const pinnedBottom: LeafRow<TData>[] = [];
 
   for (const row of rows) {
     if (row.type === "group") {
       const bodyCount = groupBodyLeafCount.get(row.groupId) ?? 0;
-      if (bodyCount === 0) {
-        // All leaves were pinned — skip group from body
-        continue;
-      }
+      if (bodyCount === 0) continue;
       if (bodyCount !== row.leafCount) {
-        // Clone with adjusted leafCount
         body.push({ ...row, leafCount: bodyCount });
       } else {
         body.push(row);
@@ -136,7 +123,6 @@ function partitionGrouped<TData>(
     }
   }
 
-  // Re-index each partition
   reindex(pinnedTop);
   reindex(body);
   reindex(pinnedBottom);
@@ -144,7 +130,7 @@ function partitionGrouped<TData>(
   return { pinnedTop, body, pinnedBottom };
 }
 
-function reindex<TData>(rows: GridRow<TData>[]): void {
+function reindex<T extends { index: number }>(rows: T[]): void {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!;
     if (row.index !== i) {

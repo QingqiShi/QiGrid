@@ -243,9 +243,9 @@ test("singleColumn mode shows Group column header and group rows have cells", as
   // Switch to singleColumn display type
   await page.selectOption("#display-type-select", "singleColumn");
 
-  // A "Group" column header should appear as the first header cell
-  const firstHeader = page.locator(".vgrid-header-cell").first();
-  await expect(firstHeader).toContainText("Group", { timeout: 5000 });
+  // A "Group" column header should appear among the header cells
+  const groupHeader = page.locator(".vgrid-header-cell", { hasText: "Group" });
+  await expect(groupHeader).toBeVisible({ timeout: 5000 });
 
   // Group rows should have individual .vgrid-cell elements (not a single .vgrid-group-cell)
   const firstGroupRow = page.locator(".vgrid-group-row").first();
@@ -273,9 +273,9 @@ test("multipleColumns mode shows per-level column headers", async ({ page }) => 
   // Switch to multipleColumns display type
   await page.selectOption("#display-type-select", "multipleColumns");
 
-  // The first header cell should contain the grouped column's header ("Department")
-  const firstHeader = page.locator(".vgrid-header-cell").first();
-  await expect(firstHeader).toContainText("Department", { timeout: 5000 });
+  // A header cell should contain the grouped column's header ("Department")
+  const deptHeader = page.locator(".vgrid-header-cell", { hasText: "Department" });
+  await expect(deptHeader).toBeVisible({ timeout: 5000 });
 
   // Group rows should have individual .vgrid-cell elements
   const firstGroupRow = page.locator(".vgrid-group-row").first();
@@ -372,7 +372,7 @@ test("grouped data columns are hidden in singleColumn mode", async ({ page }) =>
   await page.selectOption("#display-type-select", "singleColumn");
 
   // Wait for the "Group" column to appear
-  await expect(page.locator(".vgrid-header-cell").first()).toContainText("Group", {
+  await expect(page.locator(".vgrid-header-cell", { hasText: "Group" })).toBeVisible({
     timeout: 5000,
   });
 
@@ -403,7 +403,7 @@ test("grouped data columns are hidden in multipleColumns mode", async ({ page })
   await page.selectOption("#display-type-select", "multipleColumns");
 
   // Wait for the group column header
-  await expect(page.locator(".vgrid-header-cell").first()).toContainText("Department", {
+  await expect(page.locator(".vgrid-header-cell", { hasText: "Department" })).toBeVisible({
     timeout: 5000,
   });
 
@@ -433,10 +433,12 @@ test("multipleColumns with multi-level grouping shows two group columns", async 
   // Switch to multipleColumns display type
   await page.selectOption("#display-type-select", "multipleColumns");
 
-  // Should have two group column headers: "Department" and "Location"
+  // Should have group column headers for "Department" and "Location"
   const headers = page.locator(".vgrid-header-cell");
-  await expect(headers.nth(0)).toContainText("Department", { timeout: 5000 });
-  await expect(headers.nth(1)).toContainText("Location");
+  await expect(page.locator(".vgrid-header-cell", { hasText: "Department" })).toBeVisible({
+    timeout: 5000,
+  });
+  await expect(page.locator(".vgrid-header-cell", { hasText: "Location" })).toBeVisible();
 
   // Original 9 - 2 hidden (department, location) + 2 group columns = 9
   await expect(headers).toHaveCount(9);
@@ -534,13 +536,10 @@ test("End moves focus to last column", async ({ page }) => {
   await expect(focused).toBeVisible();
   expect(await focused.getAttribute("data-row-index")).toBe("2");
 
-  // Verify it's the last cell in the row
-  const lastCell = page.locator("[data-row-index='2'] .vgrid-cell").last();
-  const focusedBox = await focused.boundingBox();
-  const lastBox = await lastCell.boundingBox();
-  expect(focusedBox).toBeTruthy();
-  expect(lastBox).toBeTruthy();
-  expect(focusedBox?.x).toBe(lastBox?.x);
+  // Verify focus is at the last column index
+  const colIndex = await focused.getAttribute("data-col-index");
+  const totalCols = await page.locator("[data-row-index='2'] .vgrid-cell").count();
+  expect(Number(colIndex)).toBe(totalCols - 1);
 });
 
 test("PageDown moves focus down by page size", async ({ page }) => {

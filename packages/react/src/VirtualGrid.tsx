@@ -2,6 +2,7 @@ import type {
   CellCoord,
   CellRange,
   Column,
+  ColumnPinMeta,
   LeafRow as LeafRowType,
   VirtualRange,
 } from "@qigrid/core";
@@ -37,6 +38,7 @@ function PinnedSection<TData>({
   focusedCell,
   rowIndexOffset,
   sectionRowCount,
+  pinMeta,
 }: {
   rows: LeafRowType<TData>[];
   className: string;
@@ -54,6 +56,7 @@ function PinnedSection<TData>({
   focusedCell: CellCoord | null | undefined;
   rowIndexOffset: number;
   sectionRowCount: number;
+  pinMeta?: ColumnPinMeta[] | undefined;
 }) {
   return (
     <div
@@ -64,7 +67,8 @@ function PinnedSection<TData>({
         ...(stickyBottom != null && { bottom: stickyBottom }),
         zIndex: 2,
         height,
-        overflow: "hidden",
+        overflowY: "clip",
+        overflowX: "visible",
         width: totalWidth,
       }}
     >
@@ -78,6 +82,7 @@ function PinnedSection<TData>({
           offsetY={i * rowHeight}
           interaction={interaction}
           renderCell={renderCell}
+          pinMeta={pinMeta}
         />
       ))}
       <SelectionOverlay
@@ -122,6 +127,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     onSelectionMouseUp,
     onGridKeyDown,
     onCellAction,
+    pinMeta,
   } = props;
 
   const isGroupRowsMode = groupDisplayType === "groupRows";
@@ -330,6 +336,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
             renderFilterCell={renderFilterCell}
             onColumnResize={onColumnResize}
             onResizePointerDown={handleResizePointerDown}
+            pinMeta={pinMeta}
           />
 
           {pinnedTopRows.length > 0 && (
@@ -349,6 +356,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               focusedCell={focusedCell}
               rowIndexOffset={0}
               sectionRowCount={pinnedTopCount}
+              pinMeta={pinMeta}
             />
           )}
 
@@ -358,7 +366,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               position: "sticky",
               top: stickyHeight + pinnedTopHeight,
               height: rowAreaHeight,
-              overflow: "hidden",
+              overflowY: "clip",
+              overflowX: "visible",
               zIndex: 1,
               width: totalWidth,
             }}
@@ -397,6 +406,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                       interaction={bodyInteraction}
                       renderGroupCell={renderGroupCell}
                       onToggleGroupExpansion={onToggleGroupExpansion}
+                      pinMeta={pinMeta}
                     />
                   );
                 }
@@ -411,6 +421,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                     offsetY={offsetY}
                     interaction={bodyInteraction}
                     renderCell={renderCell}
+                    pinMeta={pinMeta}
                   />
                 );
               })}
@@ -443,6 +454,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               focusedCell={focusedCell}
               rowIndexOffset={pinnedBottomOffset}
               sectionRowCount={pinnedBottomRows.length}
+              pinMeta={pinMeta}
             />
           )}
         </div>

@@ -69,6 +69,7 @@ function buildColumn<TData>(def: ColumnDef<TData>): Column<TData> {
     minWidth,
     maxWidth,
     enableAutoSize,
+    pin: def.pin,
   };
 }
 
@@ -114,6 +115,7 @@ export function buildGroupColumns<TData>(
         minWidth: GROUP_COL_MIN_WIDTH,
         maxWidth: GROUP_COL_MAX_WIDTH,
         enableAutoSize: true,
+        pin: undefined,
         groupFor: "*",
       },
     ];
@@ -136,6 +138,7 @@ export function buildGroupColumns<TData>(
       minWidth: GROUP_COL_MIN_WIDTH,
       maxWidth: GROUP_COL_MAX_WIDTH,
       enableAutoSize: true,
+      pin: undefined,
       groupFor: columnId,
     };
   });

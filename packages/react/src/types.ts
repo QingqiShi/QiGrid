@@ -4,6 +4,7 @@ import type {
   Column,
   ColumnDef,
   ColumnFiltersState,
+  ColumnPinMeta,
   GridRow,
   GroupDisplayType,
   GroupingState,
@@ -75,6 +76,8 @@ export interface VirtualGridProps<TData> {
   onGridKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   /** Called when Enter or Space is pressed on a focused cell. */
   onCellAction?: (cell: CellCoord) => void;
+  /** Pin offset metadata for each column (indexed by display column order). */
+  pinMeta?: ColumnPinMeta[];
 }
 
 export interface PendingAction {
@@ -105,6 +108,9 @@ export interface UseGridReturn<TData> {
 
   /** Total width of all columns. */
   totalWidth: number;
+
+  /** Pin offset metadata for each column (indexed by display column order). */
+  pinMeta: ColumnPinMeta[];
 
   /** Current sorting state. */
   sorting: SortingState;

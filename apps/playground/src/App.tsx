@@ -20,8 +20,8 @@ const ROW_HEIGHT = 36;
 const CONTAINER_HEIGHT = 600;
 
 const columns: ColumnDef<Employee>[] = [
-  { id: "id", accessorKey: "id", header: "ID", aggFunc: "count" },
-  { id: "firstName", accessorKey: "firstName", header: "First Name" },
+  { id: "id", accessorKey: "id", header: "ID", aggFunc: "count", pin: "left" as const },
+  { id: "firstName", accessorKey: "firstName", header: "First Name", pin: "left" as const },
   { id: "lastName", accessorKey: "lastName", header: "Last Name" },
   { id: "email", accessorKey: "email", header: "Email" },
   { id: "department", accessorKey: "department", header: "Department" },
@@ -33,7 +33,7 @@ const columns: ColumnDef<Employee>[] = [
     aggFunc: "sum",
   },
   { id: "startDate", accessorKey: "startDate", header: "Start Date" },
-  { id: "location", accessorKey: "location", header: "Location" },
+  { id: "location", accessorKey: "location", header: "Location", pin: "right" as const },
 ];
 
 /** Map department names to subtle background colors for badges */
@@ -453,6 +453,7 @@ export function App() {
           onToggleGroupExpansion={toggleGroupExpansion}
           onVirtualRangeChange={setVirtualRange}
           onColumnResize={setColumnWidth}
+          pinMeta={grid.pinMeta}
           focusedCell={focusedCell}
           selectionAnchor={selectionAnchor}
           selectedRanges={selectedRanges}

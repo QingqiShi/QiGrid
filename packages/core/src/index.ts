@@ -11,6 +11,8 @@ export { defaultFilterFn, filterRows, updateColumnFilter } from "./filtering";
 export { collectAllGroupIds, flattenGroupedRows, groupRows } from "./grouping";
 export type { NavigationDirection } from "./navigation";
 export { computeNextFocus } from "./navigation";
+export type { ColumnPinMeta } from "./pinnedColumns";
+export { computePinOffsets, reorderColumnsForPinning } from "./pinnedColumns";
 export { partitionPinnedRows } from "./pinnedRows";
 export type { CellCoord, CellRange } from "./selection";
 export {

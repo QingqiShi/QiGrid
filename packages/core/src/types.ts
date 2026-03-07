@@ -13,6 +13,7 @@ export interface ColumnDef<TData> {
   minWidth?: number;
   maxWidth?: number;
   enableAutoSize?: boolean;
+  pin?: "left" | "right";
 }
 
 export interface ColumnSort {
@@ -44,6 +45,7 @@ export interface Column<TData> {
   minWidth: number;
   maxWidth: number;
   enableAutoSize: boolean;
+  pin: "left" | "right" | undefined;
   groupFor?: string;
 }
 

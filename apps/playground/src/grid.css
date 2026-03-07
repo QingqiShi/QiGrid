@@ -62,6 +62,10 @@ body {
   background: #f1f5f9;
 }
 
+.vgrid-header-row {
+  background: inherit;
+}
+
 .vgrid-header-cell {
   padding: 10px 16px;
   text-align: left;
@@ -103,6 +107,7 @@ body {
 
 .vgrid-filter-cell {
   padding: 6px 8px;
+  background: inherit;
 }
 
 .filter-input {
@@ -128,6 +133,7 @@ body {
 
 .vgrid-row {
   border-bottom: 1px solid #f1f5f9;
+  background: #fff;
 }
 
 .vgrid-row-even {
@@ -311,6 +317,20 @@ body {
 .vgrid-pinned-bottom {
   background: #eff6ff;
   border-top: 2px solid #3b82f6;
+}
+
+/* Pinned (frozen) columns */
+.vgrid-cell-pinned-left,
+.vgrid-cell-pinned-right {
+  background: inherit;
+}
+
+.vgrid-cell-pinned-last-left {
+  border-right: 2px solid #cbd5e1;
+}
+
+.vgrid-cell-pinned-first-right {
+  border-left: 2px solid #cbd5e1;
 }
 
 .vgrid-resize-handle {

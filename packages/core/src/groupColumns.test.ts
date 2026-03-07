@@ -22,6 +22,7 @@ const columns: Column<Person>[] = [
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
     enableAutoSize: true,
+    pin: undefined,
   },
   {
     id: "department",
@@ -36,6 +37,7 @@ const columns: Column<Person>[] = [
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
     enableAutoSize: true,
+    pin: undefined,
   },
   {
     id: "location",
@@ -50,6 +52,7 @@ const columns: Column<Person>[] = [
     minWidth: 50,
     maxWidth: Number.POSITIVE_INFINITY,
     enableAutoSize: true,
+    pin: undefined,
   },
 ];
 

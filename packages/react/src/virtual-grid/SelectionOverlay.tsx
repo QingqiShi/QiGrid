@@ -1,4 +1,4 @@
-import type { CellCoord, CellRange, Column } from "@qigrid/core";
+import type { CellCoord, CellRange, Column, ColumnPinMeta } from "@qigrid/core";
 import { isCellInRanges, normalizeRange, subtractRange } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { memo, useMemo } from "react";
@@ -12,9 +12,39 @@ interface SelectionOverlayProps<TData> {
   sectionRowCount: number;
   selectionAnchor: CellCoord | null | undefined;
   focusedCell: CellCoord | null | undefined;
+  pinMeta?: ColumnPinMeta[] | undefined;
+  scrollLeft?: number | undefined;
+  containerWidth?: number | undefined;
 }
 
 const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
+
+/**
+ * Compute the visual left position of a column, accounting for sticky pinning.
+ *
+ * - Left-pinned: max(layoutLeft, scrollLeft + stickyOffset)
+ * - Right-pinned: min(layoutLeft, scrollLeft + containerWidth - stickyOffset - colWidth)
+ * - Unpinned: layoutLeft (from prefix sums)
+ */
+function colVisualLeft(
+  colIndex: number,
+  colPrefixSums: number[],
+  pinMeta: ColumnPinMeta[] | undefined,
+  scrollLeft: number,
+  containerWidth: number,
+  columns: Column<unknown>[],
+): number {
+  const layoutLeft = colPrefixSums[colIndex] ?? 0;
+  if (!pinMeta) return layoutLeft;
+  const meta = pinMeta[colIndex];
+  if (!meta?.pin) return layoutLeft;
+  if (meta.pin === "left") {
+    return Math.max(layoutLeft, scrollLeft + meta.stickyOffset);
+  }
+  // right
+  const colWidth = columns[colIndex]?.width ?? 0;
+  return Math.min(layoutLeft, scrollLeft + containerWidth - meta.stickyOffset - colWidth);
+}
 
 /**
  * Renders selection overlays on top of rows. Each range produces:
@@ -28,6 +58,10 @@ const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
  * Selection coordinates are in global space. This component clips ranges
  * to [rowIndexOffset, rowIndexOffset + sectionRowCount - 1] and converts
  * to local Y positions by subtracting rowIndexOffset.
+ *
+ * When pinMeta is provided, overlay positions are computed using the
+ * same sticky logic as CSS (max/min of layout vs scroll position) so
+ * they track pinned cells during horizontal scroll.
  */
 function SelectionOverlayInner<TData>({
   ranges,
@@ -37,6 +71,9 @@ function SelectionOverlayInner<TData>({
   sectionRowCount,
   selectionAnchor,
   focusedCell,
+  pinMeta,
+  scrollLeft = 0,
+  containerWidth = 0,
 }: SelectionOverlayProps<TData>): ReactNode {
   // Column prefix sums for x positioning
   const colPrefixSums = useMemo(() => {
@@ -48,33 +85,56 @@ function SelectionOverlayInner<TData>({
     return sums;
   }, [columns]);
 
+  /** Compute visual left of a column (sticky-aware). */
+  function vLeft(colIndex: number): number {
+    return colVisualLeft(
+      colIndex,
+      colPrefixSums,
+      pinMeta,
+      scrollLeft,
+      containerWidth,
+      columns as Column<unknown>[],
+    );
+  }
+
+  /** Compute visual right edge of a column. */
+  function vRight(colIndex: number): number {
+    return vLeft(colIndex) + (columns[colIndex]?.width ?? 0);
+  }
+
   const sectionEnd = rowIndexOffset + sectionRowCount - 1;
 
   // Render focused cell indicator (even when no selection ranges exist)
-  const focusedOverlay =
+  let focusedOverlay: ReactNode = null;
+  if (
     focusedCell != null &&
     focusedCell.rowIndex >= rowIndexOffset &&
     focusedCell.rowIndex <= sectionEnd &&
     focusedCell.columnIndex >= 0 &&
-    focusedCell.columnIndex < columns.length ? (
+    focusedCell.columnIndex < columns.length
+  ) {
+    const ci = focusedCell.columnIndex;
+    const fx = vLeft(ci);
+    const fw = columns[ci]?.width ?? 0;
+    const fy = (focusedCell.rowIndex - rowIndexOffset) * rowHeight;
+    focusedOverlay = (
       <div
         className="vgrid-cell--focused"
         data-row-index={focusedCell.rowIndex}
         data-col-index={focusedCell.columnIndex}
         style={{
           position: "absolute",
-          left: colPrefixSums[focusedCell.columnIndex] ?? 0,
-          top: (focusedCell.rowIndex - rowIndexOffset) * rowHeight,
-          width:
-            (colPrefixSums[focusedCell.columnIndex + 1] ?? 0) -
-            (colPrefixSums[focusedCell.columnIndex] ?? 0),
+          left: fx,
+          top: fy,
+          width: fw,
           height: rowHeight,
           pointerEvents: "none",
           zIndex: 3,
           boxSizing: "border-box",
         }}
       />
-    ) : null;
+    );
+  }
 
   if (ranges.length === 0) return focusedOverlay;
 
@@ -100,12 +160,13 @@ function SelectionOverlayInner<TData>({
 
     if (startRow > endRow || startCol > endCol) continue;
 
-    const x = colPrefixSums[startCol] ?? 0;
-    const width = (colPrefixSums[endCol + 1] ?? 0) - x;
     const y = (startRow - rowIndexOffset) * rowHeight;
     const height = (endRow - startRow + 1) * rowHeight;
 
-    // Border: full range, continuous outline
+    const x = vLeft(startCol);
+    const width = vRight(endCol) - x;
+
+    // Border: continuous outline
     overlays.push(
       <div
         key={`border-${i}`}
@@ -128,7 +189,6 @@ function SelectionOverlayInner<TData>({
 
     for (const bgRange of bgRanges) {
       const bgNr = normalizeRange(bgRange);
-      // Clamp bg ranges to this section too
       const bgStartRow = Math.max(rowIndexOffset, bgNr.start.rowIndex);
       const bgEndRow = Math.min(sectionEnd, bgNr.end.rowIndex);
       const bgStartCol = Math.max(0, bgNr.start.columnIndex);
@@ -136,10 +196,11 @@ function SelectionOverlayInner<TData>({
 
       if (bgStartRow > bgEndRow || bgStartCol > bgEndCol) continue;
 
-      const bgX = colPrefixSums[bgStartCol] ?? 0;
-      const bgW = (colPrefixSums[bgEndCol + 1] ?? 0) - bgX;
       const bgY = (bgStartRow - rowIndexOffset) * rowHeight;
       const bgH = (bgEndRow - bgStartRow + 1) * rowHeight;
+
+      const bgX = vLeft(bgStartCol);
+      const bgW = vRight(bgEndCol) - bgX;
 
       overlays.push(
         <div

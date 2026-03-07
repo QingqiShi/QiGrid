@@ -110,18 +110,19 @@ const DISPLAY_TYPE_OPTIONS: { label: string; value: GroupDisplayType }[] = [
 
 export function App() {
   const [groupDisplayType, setGroupDisplayType] = useState<GroupDisplayType>("groupRows");
-  const [pinnedIds, setPinnedIds] = useState<Set<number>>(() => new Set());
+  const [pinTopEnabled, setPinTopEnabled] = useState(false);
 
-  const pinnedTopPredicate = useCallback((row: Employee) => pinnedIds.has(row.id), [pinnedIds]);
+  // Pin the first 3 rows (IDs 1–3) when the checkbox is checked
+  const pinnedTopPredicate = useCallback((row: Employee) => row.id <= 3, []);
 
   const options = useMemo(
     () => ({
       data,
       columns,
       groupDisplayType,
-      ...(pinnedIds.size > 0 && { pinnedTopPredicate }),
+      ...(pinTopEnabled && { pinnedTopPredicate }),
     }),
-    [groupDisplayType, pinnedIds, pinnedTopPredicate],
+    [groupDisplayType, pinTopEnabled, pinnedTopPredicate],
   );
   const grid = useGrid(options);
   const {
@@ -130,6 +131,7 @@ export function App() {
     rows,
     pinnedTopRows,
     pinnedBottomRows,
+    allRows,
     columns: cols,
     totalWidth,
     sorting,
@@ -284,7 +286,7 @@ export function App() {
             // serializeRangeToTSV skips rows without getValue (group rows)
             const parts = selectedRanges.map((range) =>
               serializeRangeToTSV(
-                rows as { getValue?: (id: string) => unknown }[],
+                allRows as { getValue?: (id: string) => unknown }[],
                 columnIds,
                 range,
               ),
@@ -296,43 +298,12 @@ export function App() {
           break;
       }
     },
-    [moveFocus, selectAll, clearSelection, selectedRanges, cols, rows],
+    [moveFocus, selectAll, clearSelection, selectedRanges, cols, allRows],
   );
 
-  const togglePin = useCallback((id: number) => {
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const renderCell = useCallback((row: LeafRow<Employee>, column: Column<Employee>) => {
+    return <CellValue col={column} value={row.getValue(column.id)} />;
   }, []);
-
-  const renderCell = useCallback(
-    (row: LeafRow<Employee>, column: Column<Employee>) => {
-      if (column.id === "id") {
-        const isPinned = pinnedIds.has(row.original.id);
-        return (
-          <span className="cell-id">
-            <button
-              type="button"
-              className={`pin-button${isPinned ? " pinned" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePin(row.original.id);
-              }}
-              title={isPinned ? "Unpin row" : "Pin row to top"}
-            >
-              {isPinned ? "\u25C9" : "\u25CB"}
-            </button>
-            {String(row.getValue(column.id))}
-          </span>
-        );
-      }
-      return <CellValue col={column} value={row.getValue(column.id)} />;
-    },
-    [pinnedIds, togglePin],
-  );
 
   const renderHeaderCell = useCallback(
     (column: (typeof cols)[number]) => (
@@ -442,6 +413,15 @@ export function App() {
         <button type="button" onClick={handleAutoSize}>
           Auto-size columns
         </button>
+        <label htmlFor="pin-top-check">
+          <input
+            id="pin-top-check"
+            type="checkbox"
+            checked={pinTopEnabled}
+            onChange={(e) => setPinTopEnabled(e.target.checked)}
+          />{" "}
+          Pin top 3 rows
+        </label>
       </div>
 
       <div className={`grid-container${isPending ? " grid-pending" : ""}`}>

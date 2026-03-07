@@ -1,4 +1,10 @@
-import type { Column, LeafRow as LeafRowType, VirtualRange } from "@qigrid/core";
+import type {
+  CellCoord,
+  CellRange,
+  Column,
+  LeafRow as LeafRowType,
+  VirtualRange,
+} from "@qigrid/core";
 import { computeVirtualRange, DEFAULT_OVERSCAN, sliceVisibleRows } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,8 +28,15 @@ function PinnedSection<TData>({
   columns,
   totalWidth,
   rowHeight,
+  stickyTop,
+  stickyBottom,
   interaction,
   renderCell,
+  selectedRanges,
+  selectionAnchor,
+  focusedCell,
+  rowIndexOffset,
+  sectionRowCount,
 }: {
   rows: LeafRowType<TData>[];
   className: string;
@@ -32,11 +45,29 @@ function PinnedSection<TData>({
   columns: Column<TData>[];
   totalWidth: number;
   rowHeight: number;
+  stickyTop?: number;
+  stickyBottom?: number;
   interaction: CellInteraction;
   renderCell: (row: LeafRowType<TData>, column: Column<TData>) => ReactNode;
+  selectedRanges: CellRange[];
+  selectionAnchor: CellCoord | null | undefined;
+  focusedCell: CellCoord | null | undefined;
+  rowIndexOffset: number;
+  sectionRowCount: number;
 }) {
   return (
-    <div className={className} style={{ height, overflow: "hidden", width: totalWidth }}>
+    <div
+      className={className}
+      style={{
+        position: "sticky",
+        ...(stickyTop != null && { top: stickyTop }),
+        ...(stickyBottom != null && { bottom: stickyBottom }),
+        zIndex: 2,
+        height,
+        overflow: "hidden",
+        width: totalWidth,
+      }}
+    >
       {rows.map((row, i) => (
         <LeafRow
           key={`${keyPrefix}-${row.index}`}
@@ -49,6 +80,15 @@ function PinnedSection<TData>({
           renderCell={renderCell}
         />
       ))}
+      <SelectionOverlay
+        ranges={selectedRanges}
+        columns={columns}
+        rowHeight={rowHeight}
+        rowIndexOffset={rowIndexOffset}
+        sectionRowCount={sectionRowCount}
+        selectionAnchor={selectionAnchor}
+        focusedCell={focusedCell}
+      />
     </div>
   );
 }
@@ -148,9 +188,66 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const ranges = selectedRanges ?? EMPTY_RANGES;
 
   const isDraggingRef = useDragSelection(onSelectionMouseUp);
-  const interaction: CellInteraction = useMemo(
-    () => ({ isDraggingRef, onCellMouseDown, onCellMouseEnter }),
+
+  // --- Offset-aware interactions for global coordinate space ---
+  const pinnedTopCount = pinnedTopRows.length;
+  const bodyCount = rows.length;
+
+  const pinnedTopInteraction: CellInteraction = useMemo(
+    () => ({
+      isDraggingRef,
+      onCellMouseDown: onCellMouseDown
+        ? (coord, mods) =>
+            onCellMouseDown({ rowIndex: coord.rowIndex, columnIndex: coord.columnIndex }, mods)
+        : undefined,
+      onCellMouseEnter: onCellMouseEnter
+        ? (coord) => onCellMouseEnter({ rowIndex: coord.rowIndex, columnIndex: coord.columnIndex })
+        : undefined,
+    }),
     [isDraggingRef, onCellMouseDown, onCellMouseEnter],
+  );
+
+  const bodyInteraction: CellInteraction = useMemo(
+    () => ({
+      isDraggingRef,
+      onCellMouseDown: onCellMouseDown
+        ? (coord, mods) =>
+            onCellMouseDown(
+              { rowIndex: coord.rowIndex + pinnedTopCount, columnIndex: coord.columnIndex },
+              mods,
+            )
+        : undefined,
+      onCellMouseEnter: onCellMouseEnter
+        ? (coord) =>
+            onCellMouseEnter({
+              rowIndex: coord.rowIndex + pinnedTopCount,
+              columnIndex: coord.columnIndex,
+            })
+        : undefined,
+    }),
+    [isDraggingRef, onCellMouseDown, onCellMouseEnter, pinnedTopCount],
+  );
+
+  const pinnedBottomOffset = pinnedTopCount + bodyCount;
+  const pinnedBottomInteraction: CellInteraction = useMemo(
+    () => ({
+      isDraggingRef,
+      onCellMouseDown: onCellMouseDown
+        ? (coord, mods) =>
+            onCellMouseDown(
+              { rowIndex: coord.rowIndex + pinnedBottomOffset, columnIndex: coord.columnIndex },
+              mods,
+            )
+        : undefined,
+      onCellMouseEnter: onCellMouseEnter
+        ? (coord) =>
+            onCellMouseEnter({
+              rowIndex: coord.rowIndex + pinnedBottomOffset,
+              columnIndex: coord.columnIndex,
+            })
+        : undefined,
+    }),
+    [isDraggingRef, onCellMouseDown, onCellMouseEnter, pinnedBottomOffset],
   );
 
   // --- Refs & scroll-to-focus ---
@@ -179,7 +276,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     };
   }, []);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
-  useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef);
+  useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef, pinnedTopCount, bodyCount);
 
   // --- Keyboard: skip events from interactive elements (e.g. filter inputs) ---
 
@@ -211,31 +308,18 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
       role="grid"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      style={{ outline: "none" }}
+      style={{ outline: "none", height: containerHeight }}
     >
-      {pinnedTopRows.length > 0 && (
-        <PinnedSection
-          rows={pinnedTopRows}
-          className="vgrid-pinned-top"
-          keyPrefix="pinned-top"
-          height={pinnedTopHeight}
-          columns={columns}
-          totalWidth={totalWidth}
-          rowHeight={rowHeight}
-          interaction={interaction}
-          renderCell={renderCell}
-        />
-      )}
       <div
         ref={scrollBodyRef}
         className="vgrid-body"
         onScroll={handleScroll}
-        style={{ height: containerHeight - pinnedTopHeight - pinnedBottomHeight, overflow: "auto" }}
+        style={{ height: containerHeight, overflow: "auto" }}
       >
         <div
           className="vgrid-spacer"
           style={{
-            height: virtualRange.totalHeight + stickyHeight,
+            height: virtualRange.totalHeight + stickyHeight + pinnedTopHeight + pinnedBottomHeight,
             width: totalWidth,
           }}
         >
@@ -248,11 +332,31 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
             onResizePointerDown={handleResizePointerDown}
           />
 
+          {pinnedTopRows.length > 0 && (
+            <PinnedSection
+              rows={pinnedTopRows}
+              className="vgrid-pinned-top"
+              keyPrefix="pinned-top"
+              height={pinnedTopHeight}
+              columns={columns}
+              totalWidth={totalWidth}
+              rowHeight={rowHeight}
+              stickyTop={stickyHeight}
+              interaction={pinnedTopInteraction}
+              renderCell={renderCell}
+              selectedRanges={ranges}
+              selectionAnchor={selectionAnchor}
+              focusedCell={focusedCell}
+              rowIndexOffset={0}
+              sectionRowCount={pinnedTopCount}
+            />
+          )}
+
           <div
             className="vgrid-rows"
             style={{
               position: "sticky",
-              top: stickyHeight,
+              top: stickyHeight + pinnedTopHeight,
               height: rowAreaHeight,
               overflow: "hidden",
               zIndex: 1,
@@ -290,7 +394,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                       totalWidth={totalWidth}
                       rowHeight={rowHeight}
                       offsetY={offsetY}
-                      interaction={interaction}
+                      interaction={bodyInteraction}
                       renderGroupCell={renderGroupCell}
                       onToggleGroupExpansion={onToggleGroupExpansion}
                     />
@@ -305,7 +409,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                     totalWidth={totalWidth}
                     rowHeight={rowHeight}
                     offsetY={offsetY}
-                    interaction={interaction}
+                    interaction={bodyInteraction}
                     renderCell={renderCell}
                   />
                 );
@@ -314,28 +418,35 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 ranges={ranges}
                 columns={columns}
                 rowHeight={rowHeight}
-                rangeOffsetTop={0}
-                totalRowCount={rows.length}
+                rowIndexOffset={pinnedTopCount}
+                sectionRowCount={bodyCount}
                 selectionAnchor={selectionAnchor}
                 focusedCell={focusedCell}
               />
             </div>
           </div>
+
+          {pinnedBottomRows.length > 0 && (
+            <PinnedSection
+              rows={pinnedBottomRows}
+              className="vgrid-pinned-bottom"
+              keyPrefix="pinned-bottom"
+              height={pinnedBottomHeight}
+              columns={columns}
+              totalWidth={totalWidth}
+              rowHeight={rowHeight}
+              stickyBottom={0}
+              interaction={pinnedBottomInteraction}
+              renderCell={renderCell}
+              selectedRanges={ranges}
+              selectionAnchor={selectionAnchor}
+              focusedCell={focusedCell}
+              rowIndexOffset={pinnedBottomOffset}
+              sectionRowCount={pinnedBottomRows.length}
+            />
+          )}
         </div>
       </div>
-      {pinnedBottomRows.length > 0 && (
-        <PinnedSection
-          rows={pinnedBottomRows}
-          className="vgrid-pinned-bottom"
-          keyPrefix="pinned-bottom"
-          height={pinnedBottomHeight}
-          columns={columns}
-          totalWidth={totalWidth}
-          rowHeight={rowHeight}
-          interaction={interaction}
-          renderCell={renderCell}
-        />
-      )}
     </div>
   );
 }

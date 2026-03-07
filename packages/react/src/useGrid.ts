@@ -167,6 +167,14 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     [rows, options.pinnedTopPredicate, options.pinnedBottomPredicate, state.grouping.length],
   );
 
+  // Stage 7: Total row count and allRows for selection (global coordinate space)
+  const totalRowCount = pinnedTopRows.length + bodyRows.length + pinnedBottomRows.length;
+
+  const allRows = useMemo<GridRow<TData>[]>(() => {
+    if (pinnedTopRows.length === 0 && pinnedBottomRows.length === 0) return bodyRows;
+    return [...pinnedTopRows, ...bodyRows, ...pinnedBottomRows];
+  }, [pinnedTopRows, bodyRows, pinnedBottomRows]);
+
   // Stable updater functions — dispatch is stable per React guarantees.
   // Sort/filter/group dispatches are wrapped in startTransition so React can
   // show stale rows while the pipeline recomputes (concurrent rendering).
@@ -242,10 +250,10 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     () =>
       dispatch({
         type: "SELECT_ALL",
-        rowCount: bodyRows.length,
+        rowCount: totalRowCount,
         colCount: displayColumnModel.length,
       }),
-    [bodyRows.length, displayColumnModel.length],
+    [totalRowCount, displayColumnModel.length],
   );
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
@@ -269,10 +277,10 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         deltaRow,
         deltaCol,
         extend,
-        rowCount: bodyRows.length,
+        rowCount: totalRowCount,
         colCount: displayColumnModel.length,
       }),
-    [bodyRows.length, displayColumnModel.length],
+    [totalRowCount, displayColumnModel.length],
   );
 
   return useMemo(
@@ -282,6 +290,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       rows: bodyRows,
       pinnedTopRows,
       pinnedBottomRows,
+      allRows,
       columns: displayColumnModel,
       totalWidth,
       sorting: state.sorting,
@@ -318,6 +327,7 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       bodyRows,
       pinnedTopRows,
       pinnedBottomRows,
+      allRows,
       displayColumnModel,
       totalWidth,
       state.sorting,

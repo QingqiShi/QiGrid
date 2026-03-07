@@ -97,6 +97,9 @@ export interface UseGridReturn<TData> {
   /** Rows pinned to the bottom of the grid (non-virtualized). */
   pinnedBottomRows: LeafRow<TData>[];
 
+  /** All rows in global order: pinnedTop + body + pinnedBottom. */
+  allRows: GridRow<TData>[];
+
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];
 

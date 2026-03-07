@@ -59,9 +59,9 @@ function colVisualLeft(
  * to [rowIndexOffset, rowIndexOffset + sectionRowCount - 1] and converts
  * to local Y positions by subtracting rowIndexOffset.
  *
- * When pinMeta is provided, overlay rects spanning pinned and unpinned
- * columns are split into separate segments so each segment aligns with
- * the visual position of sticky cells during horizontal scroll.
+ * When pinMeta is provided, overlay positions are computed using the
+ * same sticky logic as CSS (max/min of layout vs scroll position) so
+ * they track pinned cells during horizontal scroll.
  */
 function SelectionOverlayInner<TData>({
   ranges,
@@ -85,75 +85,21 @@ function SelectionOverlayInner<TData>({
     return sums;
   }, [columns]);
 
-  // Determine pin boundaries
-  const { leftPinCount, rightPinStart } = useMemo(() => {
-    if (!pinMeta) return { leftPinCount: 0, rightPinStart: columns.length };
-    let lpc = 0;
-    while (lpc < pinMeta.length && pinMeta[lpc]?.pin === "left") lpc++;
-    let rps = columns.length;
-    while (rps > lpc && pinMeta[rps - 1]?.pin === "right") rps--;
-    return { leftPinCount: lpc, rightPinStart: rps };
-  }, [pinMeta, columns.length]);
+  /** Compute visual left of a column (sticky-aware). */
+  function vLeft(colIndex: number): number {
+    return colVisualLeft(
+      colIndex,
+      colPrefixSums,
+      pinMeta,
+      scrollLeft,
+      containerWidth,
+      columns as Column<unknown>[],
+    );
+  }
 
-  const hasPinning = leftPinCount > 0 || rightPinStart < columns.length;
-
-  /**
-   * Render overlay div(s) for a column range, splitting at pin boundaries
-   * so each segment aligns with the visual position of its columns.
-   */
-  function renderOverlayDivs(
-    startCol: number,
-    endCol: number,
-    y: number,
-    h: number,
-    extraStyle: React.CSSProperties,
-    keyBase: string,
-  ): ReactNode[] {
-    if (!hasPinning) {
-      const x = colPrefixSums[startCol] ?? 0;
-      const w = (colPrefixSums[endCol + 1] ?? 0) - x;
-      return [
-        <div
-          key={keyBase}
-          style={{ position: "absolute", left: x, top: y, width: w, height: h, ...extraStyle }}
-        />,
-      ];
-    }
-
-    const parts: ReactNode[] = [];
-    const segments: Array<[number, number, string]> = [];
-
-    if (startCol < leftPinCount) {
-      segments.push([startCol, Math.min(endCol, leftPinCount - 1), "pl"]);
-    }
-    const bodyStart = Math.max(startCol, leftPinCount);
-    const bodyEnd = Math.min(endCol, rightPinStart - 1);
-    if (bodyStart <= bodyEnd) {
-      segments.push([bodyStart, bodyEnd, "body"]);
-    }
-    if (endCol >= rightPinStart) {
-      segments.push([Math.max(startCol, rightPinStart), endCol, "pr"]);
-    }
-
-    for (const [sStart, sEnd, suffix] of segments) {
-      const x = colVisualLeft(
-        sStart,
-        colPrefixSums,
-        pinMeta,
-        scrollLeft,
-        containerWidth,
-        columns as Column<unknown>[],
-      );
-      const w = (colPrefixSums[sEnd + 1] ?? 0) - (colPrefixSums[sStart] ?? 0);
-      parts.push(
-        <div
-          key={`${keyBase}-${suffix}`}
-          style={{ position: "absolute", left: x, top: y, width: w, height: h, ...extraStyle }}
-        />,
-      );
-    }
-
-    return parts;
+  /** Compute visual right edge of a column. */
+  function vRight(colIndex: number): number {
+    return vLeft(colIndex) + (columns[colIndex]?.width ?? 0);
   }
 
   const sectionEnd = rowIndexOffset + sectionRowCount - 1;
@@ -168,15 +114,8 @@ function SelectionOverlayInner<TData>({
     focusedCell.columnIndex < columns.length
   ) {
     const ci = focusedCell.columnIndex;
-    const fx = colVisualLeft(
-      ci,
-      colPrefixSums,
-      pinMeta,
-      scrollLeft,
-      containerWidth,
-      columns as Column<unknown>[],
-    );
-    const fw = (colPrefixSums[ci + 1] ?? 0) - (colPrefixSums[ci] ?? 0);
+    const fx = vLeft(ci);
+    const fw = columns[ci]?.width ?? 0;
     const fy = (focusedCell.rowIndex - rowIndexOffset) * rowHeight;
     focusedOverlay = (
       <div
@@ -224,21 +163,25 @@ function SelectionOverlayInner<TData>({
     const y = (startRow - rowIndexOffset) * rowHeight;
     const height = (endRow - startRow + 1) * rowHeight;
 
-    // Border: split by pin segments
+    const x = vLeft(startCol);
+    const width = vRight(endCol) - x;
+
+    // Border: continuous outline
     overlays.push(
-      ...renderOverlayDivs(
-        startCol,
-        endCol,
-        y,
-        height,
-        {
+      <div
+        key={`border-${i}`}
+        style={{
+          position: "absolute",
+          left: x,
+          top: y,
+          width,
+          height,
           border: `2px solid ${SELECTION_BORDER_COLOR}`,
           pointerEvents: "none",
           zIndex: 2,
           boxSizing: "border-box",
-        },
-        `border-${i}`,
-      ),
+        }}
+      />,
     );
 
     // Background: split around anchor if it falls within this range
@@ -256,20 +199,24 @@ function SelectionOverlayInner<TData>({
       const bgY = (bgStartRow - rowIndexOffset) * rowHeight;
       const bgH = (bgEndRow - bgStartRow + 1) * rowHeight;
 
+      const bgX = vLeft(bgStartCol);
+      const bgW = vRight(bgEndCol) - bgX;
+
       overlays.push(
-        ...renderOverlayDivs(
-          bgStartCol,
-          bgEndCol,
-          bgY,
-          bgH,
-          {
+        <div
+          key={`bg-${bgKey++}`}
+          style={{
+            position: "absolute",
+            left: bgX,
+            top: bgY,
+            width: bgW,
+            height: bgH,
             background: SELECTION_BG,
             pointerEvents: "none",
             zIndex: 2,
             boxSizing: "border-box",
-          },
-          `bg-${bgKey++}`,
-        ),
+          }}
+        />,
       );
     }
   }

@@ -1,0 +1,348 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - heading "QiGrid Playground" [level=1] [ref=e4]
+  - paragraph [ref=e5]:
+    - text: Showing 10010 of 10000 rows via
+    - code [ref=e6]: "@qigrid/react"
+    - text: →
+    - code [ref=e7]: "@qigrid/core"
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - text: "Group by:"
+      - combobox "Group by:" [ref=e10] [cursor=pointer]:
+        - option "None"
+        - option "Department" [selected]
+        - option "Location"
+        - option "Dept + Location"
+    - generic [ref=e11]:
+      - text: "Display:"
+      - combobox "Display:" [ref=e12] [cursor=pointer]:
+        - option "Group Rows"
+        - option "Single Column"
+        - option "Multiple Columns" [selected]
+    - button "Auto-size columns" [ref=e13]
+    - generic [ref=e14]:
+      - checkbox "Pin top 3 rows" [ref=e15]
+      - text: Pin top 3 rows
+  - generic [ref=e16]:
+    - generic [ref=e17]: 9 columns · Showing 10010 of 10000 rows · Visible rows 1-32 of 10010
+    - grid [ref=e18]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - button "ID" [ref=e24] [cursor=pointer]: ID
+            - button "First Name" [ref=e27] [cursor=pointer]: First Name
+            - button "Department" [ref=e30] [cursor=pointer]: Department
+            - button "Last Name" [ref=e33] [cursor=pointer]: Last Name
+            - button "Email" [ref=e36] [cursor=pointer]: Email
+            - button "Job Title" [ref=e39] [cursor=pointer]: Job Title
+            - button "Salary" [ref=e42] [cursor=pointer]: Salary
+            - button "Start Date" [ref=e45] [cursor=pointer]: Start Date
+            - button "Location" [ref=e48] [cursor=pointer]: Location
+          - generic [ref=e50]:
+            - textbox "Filter ID" [ref=e53]:
+              - /placeholder: Filter ID...
+            - textbox "Filter First Name" [ref=e56]:
+              - /placeholder: Filter First Name...
+            - textbox "Filter Last Name" [ref=e60]:
+              - /placeholder: Filter Last Name...
+            - textbox "Filter Email" [ref=e63]:
+              - /placeholder: Filter Email...
+            - textbox "Filter Job Title" [ref=e66]:
+              - /placeholder: Filter Job Title...
+            - textbox "Filter Salary" [ref=e69]:
+              - /placeholder: Filter Salary...
+            - textbox "Filter Start Date" [ref=e72]:
+              - /placeholder: Filter Start Date...
+            - textbox "Filter Location" [ref=e75]:
+              - /placeholder: Filter Location...
+        - generic [ref=e76]:
+          - generic:
+            - generic [ref=e77]:
+              - generic [ref=e78]: "995"
+              - button "▾ Product (995)" [ref=e81] [cursor=pointer]:
+                - generic [ref=e82]: ▾
+                - text: Product (995)
+              - generic [ref=e86]: $114,873,618
+            - generic [ref=e89]:
+              - generic [ref=e90]: "1"
+              - generic [ref=e91]: Zara
+              - generic [ref=e93]: Ibrahim
+              - generic [ref=e94]: zara.ibrahim@example.com
+              - generic [ref=e95]: Product Analyst
+              - generic [ref=e96]: $127,566
+              - generic [ref=e97]: 2018-11-07
+              - generic [ref=e98]: Portland, OR
+            - generic [ref=e99]:
+              - generic [ref=e100]: "3"
+              - generic [ref=e101]: Rosa
+              - generic [ref=e103]: Ortiz
+              - generic [ref=e104]: rosa.ortiz@example.com
+              - generic [ref=e105]: Senior Product Manager
+              - generic [ref=e106]: $95,009
+              - generic [ref=e107]: 2021-11-19
+              - generic [ref=e108]: Seattle, WA
+            - generic [ref=e109]:
+              - generic [ref=e110]: "4"
+              - generic [ref=e111]: Gabriel
+              - generic [ref=e113]: Xie
+              - generic [ref=e114]: gabriel.xie@example.com
+              - generic [ref=e115]: Product Manager
+              - generic [ref=e116]: $93,729
+              - generic [ref=e117]: 2022-09-11
+              - generic [ref=e118]: Atlanta, GA
+            - generic [ref=e119]:
+              - generic [ref=e120]: "6"
+              - generic [ref=e121]: Michael
+              - generic [ref=e123]: Baker
+              - generic [ref=e124]: michael.baker@example.com
+              - generic [ref=e125]: Director of Product
+              - generic [ref=e126]: $128,941
+              - generic [ref=e127]: 2021-07-02
+              - generic [ref=e128]: Boston, MA
+            - generic [ref=e129]:
+              - generic [ref=e130]: "22"
+              - generic [ref=e131]: Quinn
+              - generic [ref=e133]: Ortiz
+              - generic [ref=e134]: quinn.ortiz@example.com
+              - generic [ref=e135]: Senior Product Manager
+              - generic [ref=e136]: $114,850
+              - generic [ref=e137]: 2019-07-09
+              - generic [ref=e138]: Denver, CO
+            - generic [ref=e139]:
+              - generic [ref=e140]: "25"
+              - generic [ref=e141]: Nathan
+              - generic [ref=e143]: Quinn
+              - generic [ref=e144]: nathan.quinn@example.com
+              - generic [ref=e145]: Product Manager
+              - generic [ref=e146]: $109,763
+              - generic [ref=e147]: 2018-11-03
+              - generic [ref=e148]: Los Angeles, CA
+            - generic [ref=e149]:
+              - generic [ref=e150]: "28"
+              - generic [ref=e151]: Lydia
+              - generic [ref=e153]: Lopez
+              - generic [ref=e154]: lydia.lopez@example.com
+              - generic [ref=e155]: Senior Product Manager
+              - generic [ref=e156]: $133,049
+              - generic [ref=e157]: 2019-02-22
+              - generic [ref=e158]: Boston, MA
+            - generic [ref=e159]:
+              - generic [ref=e160]: "38"
+              - generic [ref=e161]: Edward
+              - generic [ref=e163]: Ibrahim
+              - generic [ref=e164]: edward.ibrahim@example.com
+              - generic [ref=e165]: Product Analyst
+              - generic [ref=e166]: $127,106
+              - generic [ref=e167]: 2020-07-26
+              - generic [ref=e168]: Boston, MA
+            - generic [ref=e169]:
+              - generic [ref=e170]: "52"
+              - generic [ref=e171]: George
+              - generic [ref=e173]: Miller
+              - generic [ref=e174]: george.miller@example.com
+              - generic [ref=e175]: Associate PM
+              - generic [ref=e176]: $111,588
+              - generic [ref=e177]: 2023-07-15
+              - generic [ref=e178]: San Francisco, CA
+            - generic [ref=e179]:
+              - generic [ref=e180]: "54"
+              - generic [ref=e181]: Quinn
+              - generic [ref=e183]: Harris
+              - generic [ref=e184]: quinn.harris@example.com
+              - generic [ref=e185]: Associate PM
+              - generic [ref=e186]: $125,884
+              - generic [ref=e187]: 2023-03-06
+              - generic [ref=e188]: Portland, OR
+            - generic [ref=e189]:
+              - generic [ref=e190]: "63"
+              - generic [ref=e191]: Zara
+              - generic [ref=e193]: Jones
+              - generic [ref=e194]: zara.jones@example.com
+              - generic [ref=e195]: Product Analyst
+              - generic [ref=e196]: $114,543
+              - generic [ref=e197]: 2019-04-19
+              - generic [ref=e198]: Remote
+            - generic [ref=e199]:
+              - generic [ref=e200]: "74"
+              - generic [ref=e201]: Ulrich
+              - generic [ref=e203]: Diaz
+              - generic [ref=e204]: ulrich.diaz@example.com
+              - generic [ref=e205]: Senior Product Manager
+              - generic [ref=e206]: $119,725
+              - generic [ref=e207]: 2021-11-10
+              - generic [ref=e208]: New York, NY
+            - generic [ref=e209]:
+              - generic [ref=e210]: "91"
+              - generic [ref=e211]: Ulrich
+              - generic [ref=e213]: Foster
+              - generic [ref=e214]: ulrich.foster@example.com
+              - generic [ref=e215]: Product Analyst
+              - generic [ref=e216]: $90,991
+              - generic [ref=e217]: 2021-03-28
+              - generic [ref=e218]: Los Angeles, CA
+            - generic [ref=e219]:
+              - generic [ref=e220]: "101"
+              - generic [ref=e221]: Hannah
+              - generic [ref=e223]: Reed
+              - generic [ref=e224]: hannah.reed@example.com
+              - generic [ref=e225]: Associate PM
+              - generic [ref=e226]: $123,983
+              - generic [ref=e227]: 2018-04-10
+              - generic [ref=e228]: Denver, CO
+            - generic [ref=e229]:
+              - generic [ref=e230]: "104"
+              - generic [ref=e231]: Kyle
+              - generic [ref=e233]: Chen
+              - generic [ref=e234]: kyle.chen@example.com
+              - generic [ref=e235]: Associate PM
+              - generic [ref=e236]: $130,278
+              - generic [ref=e237]: 2018-07-04
+              - generic [ref=e238]: Portland, OR
+            - generic [ref=e239]:
+              - generic [ref=e240]: "111"
+              - generic [ref=e241]: Olivia
+              - generic [ref=e243]: Harris
+              - generic [ref=e244]: olivia.harris@example.com
+              - generic [ref=e245]: Director of Product
+              - generic [ref=e246]: $123,008
+              - generic [ref=e247]: 2019-01-22
+              - generic [ref=e248]: Denver, CO
+            - generic [ref=e249]:
+              - generic [ref=e250]: "117"
+              - generic [ref=e251]: Oscar
+              - generic [ref=e253]: Walker
+              - generic [ref=e254]: oscar.walker@example.com
+              - generic [ref=e255]: Senior Product Manager
+              - generic [ref=e256]: $98,727
+              - generic [ref=e257]: 2022-11-06
+              - generic [ref=e258]: Miami, FL
+            - generic [ref=e259]:
+              - generic [ref=e260]: "124"
+              - generic [ref=e261]: Bob
+              - generic [ref=e263]: Miller
+              - generic [ref=e264]: bob.miller@example.com
+              - generic [ref=e265]: Product Manager
+              - generic [ref=e266]: $128,238
+              - generic [ref=e267]: 2023-12-16
+              - generic [ref=e268]: Denver, CO
+            - generic [ref=e269]:
+              - generic [ref=e270]: "143"
+              - generic [ref=e271]: Olivia
+              - generic [ref=e273]: Nelson
+              - generic [ref=e274]: olivia.nelson@example.com
+              - generic [ref=e275]: Director of Product
+              - generic [ref=e276]: $127,120
+              - generic [ref=e277]: 2018-04-15
+              - generic [ref=e278]: Remote
+            - generic [ref=e279]:
+              - generic [ref=e280]: "176"
+              - generic [ref=e281]: Rachel
+              - generic [ref=e283]: Jones
+              - generic [ref=e284]: rachel.jones@example.com
+              - generic [ref=e285]: Director of Product
+              - generic [ref=e286]: $103,232
+              - generic [ref=e287]: 2020-04-04
+              - generic [ref=e288]: Boston, MA
+            - generic [ref=e289]:
+              - generic [ref=e290]: "188"
+              - generic [ref=e291]: Wendy
+              - generic [ref=e293]: Davis
+              - generic [ref=e294]: wendy.davis@example.com
+              - generic [ref=e295]: Senior Product Manager
+              - generic [ref=e296]: $122,813
+              - generic [ref=e297]: 2018-08-10
+              - generic [ref=e298]: Seattle, WA
+            - generic [ref=e299]:
+              - generic [ref=e300]: "215"
+              - generic [ref=e301]: Tanya
+              - generic [ref=e303]: Vasquez
+              - generic [ref=e304]: tanya.vasquez@example.com
+              - generic [ref=e305]: Senior Product Manager
+              - generic [ref=e306]: $137,941
+              - generic [ref=e307]: 2018-09-25
+              - generic [ref=e308]: New York, NY
+            - generic [ref=e309]:
+              - generic [ref=e310]: "217"
+              - generic [ref=e311]: Vanessa
+              - generic [ref=e313]: Lee
+              - generic [ref=e314]: vanessa.lee@example.com
+              - generic [ref=e315]: Associate PM
+              - generic [ref=e316]: $109,047
+              - generic [ref=e317]: 2020-07-13
+              - generic [ref=e318]: Seattle, WA
+            - generic [ref=e319]:
+              - generic [ref=e320]: "227"
+              - generic [ref=e321]: Carlos
+              - generic [ref=e323]: Baker
+              - generic [ref=e324]: carlos.baker@example.com
+              - generic [ref=e325]: Product Analyst
+              - generic [ref=e326]: $112,467
+              - generic [ref=e327]: 2024-12-16
+              - generic [ref=e328]: Seattle, WA
+            - generic [ref=e329]:
+              - generic [ref=e330]: "254"
+              - generic [ref=e331]: Peter
+              - generic [ref=e333]: Vega
+              - generic [ref=e334]: peter.vega@example.com
+              - generic [ref=e335]: Director of Product
+              - generic [ref=e336]: $108,639
+              - generic [ref=e337]: 2022-03-17
+              - generic [ref=e338]: Portland, OR
+            - generic [ref=e339]:
+              - generic [ref=e340]: "257"
+              - generic [ref=e341]: Oscar
+              - generic [ref=e343]: Quinn
+              - generic [ref=e344]: oscar.quinn@example.com
+              - generic [ref=e345]: Product Analyst
+              - generic [ref=e346]: $96,973
+              - generic [ref=e347]: 2022-03-22
+              - generic [ref=e348]: Remote
+            - generic [ref=e349]:
+              - generic [ref=e350]: "263"
+              - generic [ref=e351]: Kevin
+              - generic [ref=e353]: Scott
+              - generic [ref=e354]: kevin.scott@example.com
+              - generic [ref=e355]: Director of Product
+              - generic [ref=e356]: $112,674
+              - generic [ref=e357]: 2023-02-25
+              - generic [ref=e358]: San Francisco, CA
+            - generic [ref=e359]:
+              - generic [ref=e360]: "275"
+              - generic [ref=e361]: Hannah
+              - generic [ref=e363]: Scott
+              - generic [ref=e364]: hannah.scott@example.com
+              - generic [ref=e365]: Associate PM
+              - generic [ref=e366]: $127,766
+              - generic [ref=e367]: 2019-05-12
+              - generic [ref=e368]: Austin, TX
+            - generic [ref=e369]:
+              - generic [ref=e370]: "277"
+              - generic [ref=e371]: Adrian
+              - generic [ref=e373]: Xu
+              - generic [ref=e374]: adrian.xu@example.com
+              - generic [ref=e375]: Product Manager
+              - generic [ref=e376]: $128,227
+              - generic [ref=e377]: 2024-03-25
+              - generic [ref=e378]: Denver, CO
+            - generic [ref=e379]:
+              - generic [ref=e380]: "279"
+              - generic [ref=e381]: Olivia
+              - generic [ref=e383]: Adams
+              - generic [ref=e384]: olivia.adams@example.com
+              - generic [ref=e385]: Product Analyst
+              - generic [ref=e386]: $109,931
+              - generic [ref=e387]: 2023-08-14
+              - generic [ref=e388]: Boston, MA
+            - generic [ref=e389]:
+              - generic [ref=e390]: "284"
+              - generic [ref=e391]: Nathan
+              - generic [ref=e393]: Diaz
+              - generic [ref=e394]: nathan.diaz@example.com
+              - generic [ref=e395]: Director of Product
+              - generic [ref=e396]: $131,317
+              - generic [ref=e397]: 2018-05-25
+              - generic [ref=e398]: Seattle, WA
+```

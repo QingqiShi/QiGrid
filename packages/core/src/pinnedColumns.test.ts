@@ -42,12 +42,7 @@ describe("reorderColumnsForPinning", () => {
   });
 
   it("handles mixed left and right pins", () => {
-    const columns = [
-      col("a", 100),
-      col("b", 100, "left"),
-      col("c", 100, "right"),
-      col("d", 100),
-    ];
+    const columns = [col("a", 100), col("b", 100, "left"), col("c", 100, "right"), col("d", 100)];
     const result = reorderColumnsForPinning(columns);
     expect(result.map((c) => c.id)).toEqual(["b", "a", "d", "c"]);
   });

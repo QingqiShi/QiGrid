@@ -302,6 +302,17 @@ body {
 }
 
 /* Resize handle */
+/* Pinned row sections */
+.vgrid-pinned-top {
+  background: #eff6ff;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.vgrid-pinned-bottom {
+  background: #eff6ff;
+  border-top: 2px solid #3b82f6;
+}
+
 .vgrid-resize-handle {
   position: absolute;
   right: 0;

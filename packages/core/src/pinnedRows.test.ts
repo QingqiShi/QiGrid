@@ -152,14 +152,14 @@ describe("partitionPinnedRows", () => {
         (r): r is GroupRow => r.type === "group" && r.groupValue === "Engineering",
       );
       expect(engGroup).toBeDefined();
-      expect(engGroup!.leafCount).toBe(1);
+      expect(engGroup?.leafCount).toBe(1);
 
       // Sales group should have leafCount = 1 (only Dave remains)
       const salesGroup = result.body.find(
         (r): r is GroupRow => r.type === "group" && r.groupValue === "Sales",
       );
       expect(salesGroup).toBeDefined();
-      expect(salesGroup!.leafCount).toBe(1);
+      expect(salesGroup?.leafCount).toBe(1);
     });
 
     it("all leaves pinned → group removed from body", () => {
@@ -197,7 +197,7 @@ describe("partitionPinnedRows", () => {
         (r): r is GroupRow => r.type === "group" && r.groupValue === "Engineering",
       );
       expect(engGroup).toBeDefined();
-      expect(engGroup!.leafCount).toBe(1);
+      expect(engGroup?.leafCount).toBe(1);
     });
 
     it("no predicates with groups → same reference, no change", () => {

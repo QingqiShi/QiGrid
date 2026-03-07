@@ -82,7 +82,10 @@ function partitionGrouped<TData>(
   for (const row of rows) {
     if (row.type === "group") {
       // Adjust stack to match current depth
-      while (groupStack.length > 0 && groupStack[groupStack.length - 1]!.depth >= row.depth) {
+      while (
+        groupStack.length > 0 &&
+        (groupStack[groupStack.length - 1] as GroupRow).depth >= row.depth
+      ) {
         groupStack.pop();
       }
       groupStack.push(row);
@@ -132,7 +135,7 @@ function partitionGrouped<TData>(
 
 function reindex<T extends { index: number }>(rows: T[]): void {
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i]!;
+    const row = rows[i] as T;
     if (row.index !== i) {
       rows[i] = { ...row, index: i };
     }

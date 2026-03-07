@@ -343,6 +343,144 @@ describe("useGrid integration — multi-step state transitions", () => {
   });
 
   // -----------------------------------------------------------------------
+  // pinned rows
+  // -----------------------------------------------------------------------
+  describe("pinned rows", () => {
+    it("returns empty pinnedTopRows/pinnedBottomRows by default", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns }),
+      );
+
+      expect(result.current.pinnedTopRows).toEqual([]);
+      expect(result.current.pinnedBottomRows).toEqual([]);
+      expect(result.current.rows.length).toBe(employeeData.length);
+    });
+
+    it("partitions rows with top predicate", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice" || row.name === "Bob";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      expect(leafRows(result.current.pinnedTopRows).map((r) => r.original.name)).toEqual([
+        "Alice",
+        "Bob",
+      ]);
+      expect(result.current.rows.length).toBe(employeeData.length - 2);
+      expect(result.current.pinnedBottomRows).toEqual([]);
+    });
+
+    it("partitions rows with bottom predicate", () => {
+      const pinnedBottomPredicate = (row: Employee) => row.name === "Carol";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedBottomPredicate }),
+      );
+
+      expect(result.current.pinnedTopRows).toEqual([]);
+      expect(leafRows(result.current.pinnedBottomRows).map((r) => r.original.name)).toEqual([
+        "Carol",
+      ]);
+      expect(result.current.rows.length).toBe(employeeData.length - 1);
+    });
+
+    it("pinned rows with grouping — pinned leaves extracted from groups", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      act(() => result.current.setGrouping(["department"]));
+
+      expect(leafRows(result.current.pinnedTopRows).map((r) => r.original.name)).toEqual(["Alice"]);
+
+      // Engineering group should have reduced leafCount
+      const engGroup = groupRowsOf(result.current.rows).find((g) => g.groupValue === "Engineering");
+      expect(engGroup).toBeDefined();
+      // Alice was in Engineering, so 4 - 1 = 3
+      expect(engGroup?.leafCount).toBe(3);
+    });
+
+    it("memoization: same predicates + same data → same references", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result, rerender } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      const firstTop = result.current.pinnedTopRows;
+      const firstBody = result.current.rows;
+
+      rerender();
+
+      expect(result.current.pinnedTopRows).toBe(firstTop);
+      expect(result.current.rows).toBe(firstBody);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // allRows and global selection with pinned rows
+  // -----------------------------------------------------------------------
+  describe("allRows and global selection with pinned rows", () => {
+    it("allRows merges pinnedTop + body + pinnedBottom in order", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const pinnedBottomPredicate = (row: Employee) => row.name === "Leo";
+      const { result } = renderHook(() =>
+        useGrid({
+          data: employeeData,
+          columns: employeeColumns,
+          pinnedTopPredicate,
+          pinnedBottomPredicate,
+        }),
+      );
+
+      const { allRows: all, pinnedTopRows, rows, pinnedBottomRows } = result.current;
+      expect(all.length).toBe(pinnedTopRows.length + rows.length + pinnedBottomRows.length);
+      // First element should be Alice (pinned top)
+      expect((all[0] as LeafRow<Employee>).original.name).toBe("Alice");
+      // Last element should be Leo (pinned bottom)
+      expect((all[all.length - 1] as LeafRow<Employee>).original.name).toBe("Leo");
+    });
+
+    it("allRows === bodyRows when no pinned rows", () => {
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns }),
+      );
+
+      expect(result.current.allRows).toBe(result.current.rows);
+    });
+
+    it("selectAll covers all partitions", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      act(() => result.current.selectAll());
+
+      const ranges = result.current.selectedRanges;
+      expect(ranges.length).toBe(1);
+      const range = at(ranges, 0);
+      // Should cover all rows: pinnedTop(1) + body(11) = 12
+      expect(range.start.rowIndex).toBe(0);
+      expect(range.end.rowIndex).toBe(employeeData.length - 1);
+    });
+
+    it("moveFocus navigates across pinned-top → body boundary", () => {
+      const pinnedTopPredicate = (row: Employee) => row.name === "Alice";
+      const { result } = renderHook(() =>
+        useGrid({ data: employeeData, columns: employeeColumns, pinnedTopPredicate }),
+      );
+
+      // Select the first cell (global 0 = pinned top)
+      act(() => result.current.selectCell({ rowIndex: 0, columnIndex: 0 }));
+      expect(result.current.focusedCell?.rowIndex).toBe(0);
+
+      // Move down — should move to global 1 (first body row)
+      act(() => result.current.moveFocus(1, 0));
+      expect(result.current.focusedCell?.rowIndex).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // aggregation on transitions
   // -----------------------------------------------------------------------
   describe("aggregation on transitions", () => {

@@ -110,12 +110,28 @@ const DISPLAY_TYPE_OPTIONS: { label: string; value: GroupDisplayType }[] = [
 
 export function App() {
   const [groupDisplayType, setGroupDisplayType] = useState<GroupDisplayType>("groupRows");
-  const options = useMemo(() => ({ data, columns, groupDisplayType }), [groupDisplayType]);
+  const [pinTopEnabled, setPinTopEnabled] = useState(false);
+
+  // Pin the first 3 rows (IDs 1–3) when the checkbox is checked
+  const pinnedTopPredicate = useCallback((row: Employee) => row.id <= 3, []);
+
+  const options = useMemo(
+    () => ({
+      data,
+      columns,
+      groupDisplayType,
+      ...(pinTopEnabled && { pinnedTopPredicate }),
+    }),
+    [groupDisplayType, pinTopEnabled, pinnedTopPredicate],
+  );
   const grid = useGrid(options);
   const {
     isPending,
     pendingAction,
     rows,
+    pinnedTopRows,
+    pinnedBottomRows,
+    allRows,
     columns: cols,
     totalWidth,
     sorting,
@@ -270,7 +286,7 @@ export function App() {
             // serializeRangeToTSV skips rows without getValue (group rows)
             const parts = selectedRanges.map((range) =>
               serializeRangeToTSV(
-                rows as { getValue?: (id: string) => unknown }[],
+                allRows as { getValue?: (id: string) => unknown }[],
                 columnIds,
                 range,
               ),
@@ -282,7 +298,7 @@ export function App() {
           break;
       }
     },
-    [moveFocus, selectAll, clearSelection, selectedRanges, cols, rows],
+    [moveFocus, selectAll, clearSelection, selectedRanges, cols, allRows],
   );
 
   const renderCell = useCallback((row: LeafRow<Employee>, column: Column<Employee>) => {
@@ -397,6 +413,15 @@ export function App() {
         <button type="button" onClick={handleAutoSize}>
           Auto-size columns
         </button>
+        <label htmlFor="pin-top-check">
+          <input
+            id="pin-top-check"
+            type="checkbox"
+            checked={pinTopEnabled}
+            onChange={(e) => setPinTopEnabled(e.target.checked)}
+          />{" "}
+          Pin top 3 rows
+        </label>
       </div>
 
       <div className={`grid-container${isPending ? " grid-pending" : ""}`}>
@@ -412,6 +437,8 @@ export function App() {
         <VirtualGrid
           ref={gridRef}
           rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          pinnedBottomRows={pinnedBottomRows}
           columns={cols}
           totalWidth={totalWidth}
           rowHeight={ROW_HEIGHT}

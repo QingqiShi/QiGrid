@@ -18,6 +18,10 @@ export interface VirtualGridProps<TData> {
   ref?: React.Ref<HTMLDivElement>;
   /** Rows from useGrid (post-filter/sort/group pipeline). */
   rows: GridRow<TData>[];
+  /** Rows pinned to the top of the grid (non-virtualized). */
+  pinnedTopRows?: LeafRow<TData>[];
+  /** Rows pinned to the bottom of the grid (non-virtualized). */
+  pinnedBottomRows?: LeafRow<TData>[];
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];
   /** Total width of all columns. */
@@ -84,8 +88,17 @@ export interface UseGridReturn<TData> {
 
   /** What triggered the pending transition, or null if not pending. */
   pendingAction: PendingAction | null;
-  /** Final pipeline output — the rows to render (leaf + group rows). */
+  /** Final pipeline output — the body rows to render (leaf + group rows). */
   rows: GridRow<TData>[];
+
+  /** Rows pinned to the top of the grid (non-virtualized). */
+  pinnedTopRows: LeafRow<TData>[];
+
+  /** Rows pinned to the bottom of the grid (non-virtualized). */
+  pinnedBottomRows: LeafRow<TData>[];
+
+  /** All rows in global order: pinnedTop + body + pinnedBottom. */
+  allRows: GridRow<TData>[];
 
   /** Resolved column model with effective widths. */
   columns: Column<TData>[];

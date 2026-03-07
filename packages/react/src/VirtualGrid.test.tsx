@@ -847,4 +847,321 @@ describe("VirtualGrid", () => {
       expect(renderFilterCell).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe("pinned rows", () => {
+    it("renders pinned-top section with correct CSS class", () => {
+      const rows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      expect(pinnedTop).not.toBeNull();
+      const pinnedRows = pinnedTop?.querySelectorAll(".vgrid-row");
+      expect(pinnedRows?.length).toBe(2);
+    });
+
+    it("renders pinned-bottom section with correct CSS class", () => {
+      const rows = makeLeafRows(10);
+      const pinnedBottomRows = makeLeafRows(3);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedBottomRows={pinnedBottomRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedBottom = document.querySelector(".vgrid-pinned-bottom");
+      expect(pinnedBottom).not.toBeNull();
+      const pinnedRows = pinnedBottom?.querySelectorAll(".vgrid-row");
+      expect(pinnedRows?.length).toBe(3);
+    });
+
+    it("no pinned rows → no pinned containers in DOM", () => {
+      const rows = makeLeafRows(10);
+
+      render(
+        <VirtualGrid
+          rows={rows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      expect(document.querySelector(".vgrid-pinned-top")).toBeNull();
+      expect(document.querySelector(".vgrid-pinned-bottom")).toBeNull();
+    });
+
+    it("scroll body height accounts for pinned row heights", () => {
+      const rows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+      const pinnedBottomRows = makeLeafRows(1);
+      render(
+        <VirtualGrid
+          rows={rows}
+          pinnedTopRows={pinnedTopRows}
+          pinnedBottomRows={pinnedBottomRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const scrollBody = document.querySelector(".vgrid-body") as HTMLElement;
+      expect(scrollBody).not.toBeNull();
+      // Pinned sections are inside the scroll body as sticky elements,
+      // so the body takes the full container height.
+      expect(scrollBody.style.height).toBe(`${CONTAINER_HEIGHT}px`);
+    });
+
+    it("onCellMouseDown in pinned-top fires with global rowIndex 0", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+      const onCellMouseDown = vi.fn();
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onCellMouseDown={onCellMouseDown}
+        />,
+      );
+
+      // Click the second pinned-top row's first cell
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      const cells = pinnedTop?.querySelectorAll(".vgrid-cell");
+      expect(cells?.length).toBeGreaterThan(0);
+      fireEvent.pointerDown(cells?.[2] as HTMLElement); // row 1, col 0
+
+      expect(onCellMouseDown).toHaveBeenCalledWith(
+        { rowIndex: 1, columnIndex: 0 },
+        expect.any(Object),
+      );
+    });
+
+    it("onCellMouseDown in body fires with global rowIndex = pinnedTopCount + localIndex", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(3);
+      const onCellMouseDown = vi.fn();
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onCellMouseDown={onCellMouseDown}
+        />,
+      );
+
+      // Click the first body row's first cell
+      const bodySection = document.querySelector(".vgrid-rows");
+      const cells = bodySection?.querySelectorAll(".vgrid-cell");
+      expect(cells?.length).toBeGreaterThan(0);
+      fireEvent.pointerDown(cells?.[0] as HTMLElement); // body row 0
+
+      // Global index = pinnedTopCount(3) + localIndex(0) = 3
+      expect(onCellMouseDown).toHaveBeenCalledWith(
+        { rowIndex: 3, columnIndex: 0 },
+        expect.any(Object),
+      );
+    });
+
+    it("onCellMouseDown in pinned-bottom fires with global rowIndex = pinnedTopCount + bodyCount + localIndex", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+      const pinnedBottomRows = makeLeafRows(3);
+      const onCellMouseDown = vi.fn();
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          pinnedBottomRows={pinnedBottomRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+          onCellMouseDown={onCellMouseDown}
+        />,
+      );
+
+      const pinnedBottom = document.querySelector(".vgrid-pinned-bottom");
+      const cells = pinnedBottom?.querySelectorAll(".vgrid-cell");
+      expect(cells?.length).toBeGreaterThan(0);
+      fireEvent.pointerDown(cells?.[0] as HTMLElement); // pinned-bottom row 0
+
+      // Global index = pinnedTopCount(2) + bodyCount(10) + localIndex(0) = 12
+      expect(onCellMouseDown).toHaveBeenCalledWith(
+        { rowIndex: 12, columnIndex: 0 },
+        expect.any(Object),
+      );
+    });
+
+    it("renders SelectionOverlay in pinned-top when range intersects it", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          selectedRanges={[
+            { start: { rowIndex: 0, columnIndex: 0 }, end: { rowIndex: 0, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      const overlays = Array.from(pinnedTop?.querySelectorAll("div[style]") ?? []).filter(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
+      );
+      expect(overlays.length).toBeGreaterThan(0);
+    });
+
+    it("does NOT render SelectionOverlay in pinned-top when range only covers body rows", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          selectedRanges={[
+            // Global row 5 is in body (pinnedTopCount=2, so body starts at 2)
+            { start: { rowIndex: 5, columnIndex: 0 }, end: { rowIndex: 5, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      const overlays = Array.from(pinnedTop?.querySelectorAll("div[style]") ?? []).filter(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
+      );
+      expect(overlays.length).toBe(0);
+    });
+
+    it("cross-partition selection renders overlays in both pinned-top and body", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          selectedRanges={[
+            // Range spanning pinned-top row 1 (global 1) through body row 1 (global 3)
+            { start: { rowIndex: 1, columnIndex: 0 }, end: { rowIndex: 3, columnIndex: 1 } },
+          ]}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      // Check pinned-top has overlay
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      const pinnedOverlays = Array.from(pinnedTop?.querySelectorAll("div[style]") ?? []).filter(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
+      );
+      expect(pinnedOverlays.length).toBeGreaterThan(0);
+
+      // Check body has overlay
+      const body = document.querySelector(".vgrid-rows");
+      const bodyOverlays = Array.from(body?.querySelectorAll("div[style]") ?? []).filter(
+        (el) =>
+          (el as HTMLElement).style.pointerEvents === "none" &&
+          (el as HTMLElement).style.border.includes("solid"),
+      );
+      expect(bodyOverlays.length).toBeGreaterThan(0);
+    });
+
+    it("focused cell renders in correct section based on global index", () => {
+      const bodyRows = makeLeafRows(10);
+      const pinnedTopRows = makeLeafRows(2);
+
+      render(
+        <VirtualGrid
+          rows={bodyRows}
+          pinnedTopRows={pinnedTopRows}
+          columns={columns}
+          totalWidth={TOTAL_WIDTH}
+          rowHeight={ROW_HEIGHT}
+          containerHeight={CONTAINER_HEIGHT}
+          focusedCell={{ rowIndex: 1, columnIndex: 0 }}
+          renderCell={(row, col) => <span>{String(row.getValue(col.id))}</span>}
+          renderHeaderCell={(col) => <span>{col.header}</span>}
+        />,
+      );
+
+      // Focused cell should appear in pinned-top (global index 1 < pinnedTopCount 2)
+      const pinnedTop = document.querySelector(".vgrid-pinned-top");
+      const focusInPinned = pinnedTop?.querySelector(".vgrid-cell--focused");
+      expect(focusInPinned).not.toBeNull();
+      expect(focusInPinned?.getAttribute("data-row-index")).toBe("1");
+
+      // Should NOT appear in body
+      const body = document.querySelector(".vgrid-rows");
+      const focusInBody = body?.querySelector(".vgrid-cell--focused");
+      expect(focusInBody).toBeNull();
+    });
+  });
 });

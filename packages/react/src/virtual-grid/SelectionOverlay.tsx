@@ -8,8 +8,8 @@ interface SelectionOverlayProps<TData> {
   ranges: CellRange[];
   columns: Column<TData>[];
   rowHeight: number;
-  rangeOffsetTop: number;
-  totalRowCount: number;
+  rowIndexOffset: number;
+  sectionRowCount: number;
   selectionAnchor: CellCoord | null | undefined;
   focusedCell: CellCoord | null | undefined;
 }
@@ -25,16 +25,16 @@ const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
  *
  * All overlays use pointer-events: none so clicks pass through to cells.
  *
- * Positioned inside the transform wrapper, so coordinates are relative
- * to virtualRange.offsetTop, not scrollTop. This means the overlay
- * only re-renders when the virtual range shifts, not on every scroll pixel.
+ * Selection coordinates are in global space. This component clips ranges
+ * to [rowIndexOffset, rowIndexOffset + sectionRowCount - 1] and converts
+ * to local Y positions by subtracting rowIndexOffset.
  */
 function SelectionOverlayInner<TData>({
   ranges,
   columns,
   rowHeight,
-  rangeOffsetTop,
-  totalRowCount,
+  rowIndexOffset,
+  sectionRowCount,
   selectionAnchor,
   focusedCell,
 }: SelectionOverlayProps<TData>): ReactNode {
@@ -48,11 +48,13 @@ function SelectionOverlayInner<TData>({
     return sums;
   }, [columns]);
 
+  const sectionEnd = rowIndexOffset + sectionRowCount - 1;
+
   // Render focused cell indicator (even when no selection ranges exist)
   const focusedOverlay =
     focusedCell != null &&
-    focusedCell.rowIndex >= 0 &&
-    focusedCell.rowIndex < totalRowCount &&
+    focusedCell.rowIndex >= rowIndexOffset &&
+    focusedCell.rowIndex <= sectionEnd &&
     focusedCell.columnIndex >= 0 &&
     focusedCell.columnIndex < columns.length ? (
       <div
@@ -62,7 +64,7 @@ function SelectionOverlayInner<TData>({
         style={{
           position: "absolute",
           left: colPrefixSums[focusedCell.columnIndex] ?? 0,
-          top: focusedCell.rowIndex * rowHeight - rangeOffsetTop,
+          top: (focusedCell.rowIndex - rowIndexOffset) * rowHeight,
           width:
             (colPrefixSums[focusedCell.columnIndex + 1] ?? 0) -
             (colPrefixSums[focusedCell.columnIndex] ?? 0),
@@ -90,9 +92,9 @@ function SelectionOverlayInner<TData>({
     if (!range) continue;
     const nr = normalizeRange(range);
 
-    // Clamp to valid bounds
-    const startRow = Math.max(0, nr.start.rowIndex);
-    const endRow = Math.min(totalRowCount - 1, nr.end.rowIndex);
+    // Clamp to this section's bounds (global coords)
+    const startRow = Math.max(rowIndexOffset, nr.start.rowIndex);
+    const endRow = Math.min(sectionEnd, nr.end.rowIndex);
     const startCol = Math.max(0, nr.start.columnIndex);
     const endCol = Math.min(columns.length - 1, nr.end.columnIndex);
 
@@ -100,7 +102,7 @@ function SelectionOverlayInner<TData>({
 
     const x = colPrefixSums[startCol] ?? 0;
     const width = (colPrefixSums[endCol + 1] ?? 0) - x;
-    const y = startRow * rowHeight - rangeOffsetTop;
+    const y = (startRow - rowIndexOffset) * rowHeight;
     const height = (endRow - startRow + 1) * rowHeight;
 
     // Border: full range, continuous outline
@@ -126,8 +128,9 @@ function SelectionOverlayInner<TData>({
 
     for (const bgRange of bgRanges) {
       const bgNr = normalizeRange(bgRange);
-      const bgStartRow = Math.max(0, bgNr.start.rowIndex);
-      const bgEndRow = Math.min(totalRowCount - 1, bgNr.end.rowIndex);
+      // Clamp bg ranges to this section too
+      const bgStartRow = Math.max(rowIndexOffset, bgNr.start.rowIndex);
+      const bgEndRow = Math.min(sectionEnd, bgNr.end.rowIndex);
       const bgStartCol = Math.max(0, bgNr.start.columnIndex);
       const bgEndCol = Math.min(columns.length - 1, bgNr.end.columnIndex);
 
@@ -135,7 +138,7 @@ function SelectionOverlayInner<TData>({
 
       const bgX = colPrefixSums[bgStartCol] ?? 0;
       const bgW = (colPrefixSums[bgEndCol + 1] ?? 0) - bgX;
-      const bgY = bgStartRow * rowHeight - rangeOffsetTop;
+      const bgY = (bgStartRow - rowIndexOffset) * rowHeight;
       const bgH = (bgEndRow - bgStartRow + 1) * rowHeight;
 
       overlays.push(

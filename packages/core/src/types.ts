@@ -101,6 +101,12 @@ export interface VirtualRange {
   offsetTop: number;
 }
 
+export interface PinnedPartition<TData> {
+  pinnedTop: LeafRow<TData>[];
+  body: GridRow<TData>[];
+  pinnedBottom: LeafRow<TData>[];
+}
+
 export interface VirtualRangeParams {
   totalRowCount: number;
   scrollTop: number;

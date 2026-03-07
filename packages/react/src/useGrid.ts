@@ -19,6 +19,7 @@ import {
   filterRows,
   flattenGroupedRows,
   groupRows,
+  partitionPinnedRows,
   sortRows,
 } from "@qigrid/core";
 import {
@@ -41,6 +42,8 @@ export interface UseGridOptions<TData> {
   grouping?: GroupingState;
   groupDisplayType?: GroupDisplayType;
   hideGroupedColumns?: boolean;
+  pinnedTopPredicate?: (row: TData, index: number) => boolean;
+  pinnedBottomPredicate?: (row: TData, index: number) => boolean;
 }
 
 export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TData> {
@@ -148,6 +151,30 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     return flattenGroupedRows(groupedTree, state.collapsedGroupIds, baseColumnModel);
   }, [groupedTree, sortedRows, state.collapsedGroupIds, baseColumnModel]);
 
+  // Stage 6: Partition pinned rows
+  const {
+    pinnedTop: pinnedTopRows,
+    body: bodyRows,
+    pinnedBottom: pinnedBottomRows,
+  } = useMemo(
+    () =>
+      partitionPinnedRows(
+        rows,
+        options.pinnedTopPredicate,
+        options.pinnedBottomPredicate,
+        state.grouping.length > 0,
+      ),
+    [rows, options.pinnedTopPredicate, options.pinnedBottomPredicate, state.grouping.length],
+  );
+
+  // Stage 7: Total row count and allRows for selection (global coordinate space)
+  const totalRowCount = pinnedTopRows.length + bodyRows.length + pinnedBottomRows.length;
+
+  const allRows = useMemo<GridRow<TData>[]>(() => {
+    if (pinnedTopRows.length === 0 && pinnedBottomRows.length === 0) return bodyRows;
+    return [...pinnedTopRows, ...bodyRows, ...pinnedBottomRows];
+  }, [pinnedTopRows, bodyRows, pinnedBottomRows]);
+
   // Stable updater functions — dispatch is stable per React guarantees.
   // Sort/filter/group dispatches are wrapped in startTransition so React can
   // show stale rows while the pipeline recomputes (concurrent rendering).
@@ -221,8 +248,12 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
 
   const selectAll = useCallback(
     () =>
-      dispatch({ type: "SELECT_ALL", rowCount: rows.length, colCount: displayColumnModel.length }),
-    [rows.length, displayColumnModel.length],
+      dispatch({
+        type: "SELECT_ALL",
+        rowCount: totalRowCount,
+        colCount: displayColumnModel.length,
+      }),
+    [totalRowCount, displayColumnModel.length],
   );
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
@@ -246,17 +277,20 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         deltaRow,
         deltaCol,
         extend,
-        rowCount: rows.length,
+        rowCount: totalRowCount,
         colCount: displayColumnModel.length,
       }),
-    [rows.length, displayColumnModel.length],
+    [totalRowCount, displayColumnModel.length],
   );
 
   return useMemo(
     () => ({
       isPending,
       pendingAction: isPending ? pendingAction : null,
-      rows,
+      rows: bodyRows,
+      pinnedTopRows,
+      pinnedBottomRows,
+      allRows,
       columns: displayColumnModel,
       totalWidth,
       sorting: state.sorting,
@@ -290,7 +324,10 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     [
       isPending,
       pendingAction,
-      rows,
+      bodyRows,
+      pinnedTopRows,
+      pinnedBottomRows,
+      allRows,
       displayColumnModel,
       totalWidth,
       state.sorting,

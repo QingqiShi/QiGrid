@@ -39,6 +39,8 @@ function PinnedSection<TData>({
   rowIndexOffset,
   sectionRowCount,
   pinMeta,
+  scrollLeft,
+  containerWidth,
 }: {
   rows: LeafRowType<TData>[];
   className: string;
@@ -57,6 +59,8 @@ function PinnedSection<TData>({
   rowIndexOffset: number;
   sectionRowCount: number;
   pinMeta?: ColumnPinMeta[] | undefined;
+  scrollLeft: number;
+  containerWidth: number;
 }) {
   return (
     <div
@@ -93,6 +97,9 @@ function PinnedSection<TData>({
         sectionRowCount={sectionRowCount}
         selectionAnchor={selectionAnchor}
         focusedCell={focusedCell}
+        pinMeta={pinMeta}
+        scrollLeft={scrollLeft}
+        containerWidth={containerWidth}
       />
     </div>
   );
@@ -135,6 +142,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Virtualization ---
 
   const [scrollTop, setScrollTop] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
   const rangeChangeRef = useRef(onVirtualRangeChange);
   useEffect(() => {
     rangeChangeRef.current = onVirtualRangeChange;
@@ -186,7 +195,10 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   // --- Scroll handler ---
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const el = e.currentTarget;
+    setScrollTop(el.scrollTop);
+    setScrollLeft(el.scrollLeft);
+    setContainerWidth(el.clientWidth);
   };
 
   // --- Selection state ---
@@ -282,6 +294,13 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     };
   }, []);
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+
+  // Measure initial containerWidth (scroll handler captures subsequent changes)
+  useEffect(() => {
+    const el = scrollBodyRef.current;
+    if (el) setContainerWidth(el.clientWidth);
+  }, []);
+
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef, pinnedTopCount, bodyCount);
 
   // --- Keyboard: skip events from interactive elements (e.g. filter inputs) ---
@@ -357,6 +376,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               rowIndexOffset={0}
               sectionRowCount={pinnedTopCount}
               pinMeta={pinMeta}
+              scrollLeft={scrollLeft}
+              containerWidth={containerWidth}
             />
           )}
 
@@ -433,6 +454,9 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                 sectionRowCount={bodyCount}
                 selectionAnchor={selectionAnchor}
                 focusedCell={focusedCell}
+                pinMeta={pinMeta}
+                scrollLeft={scrollLeft}
+                containerWidth={containerWidth}
               />
             </div>
           </div>
@@ -455,6 +479,8 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               rowIndexOffset={pinnedBottomOffset}
               sectionRowCount={pinnedBottomRows.length}
               pinMeta={pinMeta}
+              scrollLeft={scrollLeft}
+              containerWidth={containerWidth}
             />
           )}
         </div>

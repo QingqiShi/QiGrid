@@ -1,4 +1,4 @@
-import type { Column, GroupRow } from "@qigrid/core";
+import type { Column, ColumnPinMeta, GroupRow } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { GridCell } from "./GridCell";
@@ -14,6 +14,7 @@ interface CellGroupRowProps<TData> {
   interaction: CellInteraction;
   renderGroupCell?: ((row: GroupRow, column: Column<TData>) => ReactNode) | undefined;
   onToggleGroupExpansion?: ((groupId: string) => void) | undefined;
+  pinMeta?: ColumnPinMeta[] | undefined;
 }
 
 function getGroupCellContent<TData>(
@@ -67,6 +68,7 @@ function CellGroupRowInner<TData>({
   interaction,
   renderGroupCell,
   onToggleGroupExpansion,
+  pinMeta,
 }: CellGroupRowProps<TData>): ReactNode {
   return (
     <RowContainer
@@ -84,6 +86,7 @@ function CellGroupRowInner<TData>({
           colIndex={colIndex}
           rowIndex={row.index}
           interaction={interaction}
+          pinMeta={pinMeta?.[colIndex]}
         >
           {getGroupCellContent(row, col, renderGroupCell, onToggleGroupExpansion)}
         </GridCell>

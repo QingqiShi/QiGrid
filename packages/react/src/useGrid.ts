@@ -15,11 +15,13 @@ import {
   buildColumnModel,
   buildGroupColumns,
   collectAllGroupIds,
+  computePinOffsets,
   computeTotalWidth,
   filterRows,
   flattenGroupedRows,
   groupRows,
   partitionPinnedRows,
+  reorderColumnsForPinning,
   sortRows,
 } from "@qigrid/core";
 import {
@@ -94,17 +96,32 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
     return [...groupColumnsWithWidths, ...visibleDataColumns];
   }, [groupColumnsWithWidths, dataColumnModel, hideGroupedColumns, state.grouping]);
 
+  // Stage 1e-ii: Reorder columns for pinning (left | unpinned | right)
+  const pinnedDisplayColumnModel = useMemo(
+    () => reorderColumnsForPinning(displayColumnModel),
+    [displayColumnModel],
+  );
+
+  // Stage 1e-iii: Compute sticky offsets for pinned columns
+  const pinMeta = useMemo(
+    () => computePinOffsets(pinnedDisplayColumnModel),
+    [pinnedDisplayColumnModel],
+  );
+
   // Stage 1f: Total width
-  const totalWidth = useMemo(() => computeTotalWidth(displayColumnModel), [displayColumnModel]);
+  const totalWidth = useMemo(
+    () => computeTotalWidth(pinnedDisplayColumnModel),
+    [pinnedDisplayColumnModel],
+  );
 
   // Clear selection when display column count changes (e.g. display type change)
-  const prevColCountRef = useRef(displayColumnModel.length);
+  const prevColCountRef = useRef(pinnedDisplayColumnModel.length);
   useEffect(() => {
-    if (prevColCountRef.current !== displayColumnModel.length) {
-      prevColCountRef.current = displayColumnModel.length;
+    if (prevColCountRef.current !== pinnedDisplayColumnModel.length) {
+      prevColCountRef.current = pinnedDisplayColumnModel.length;
       dispatch({ type: "CLEAR_SELECTION" });
     }
-  }, [displayColumnModel.length]);
+  }, [pinnedDisplayColumnModel.length]);
 
   // Stage 2: Filtered data (uses baseColumnModel to avoid re-filtering on width changes)
   const filteredData = useMemo(
@@ -251,9 +268,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       dispatch({
         type: "SELECT_ALL",
         rowCount: totalRowCount,
-        colCount: displayColumnModel.length,
+        colCount: pinnedDisplayColumnModel.length,
       }),
-    [totalRowCount, displayColumnModel.length],
+    [totalRowCount, pinnedDisplayColumnModel.length],
   );
 
   const clearSelection = useCallback(() => dispatch({ type: "CLEAR_SELECTION" }), []);
@@ -278,9 +295,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
         deltaCol,
         extend,
         rowCount: totalRowCount,
-        colCount: displayColumnModel.length,
+        colCount: pinnedDisplayColumnModel.length,
       }),
-    [totalRowCount, displayColumnModel.length],
+    [totalRowCount, pinnedDisplayColumnModel.length],
   );
 
   return useMemo(
@@ -291,8 +308,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       pinnedTopRows,
       pinnedBottomRows,
       allRows,
-      columns: displayColumnModel,
+      columns: pinnedDisplayColumnModel,
       totalWidth,
+      pinMeta,
       sorting: state.sorting,
       columnFilters: state.columnFilters,
       grouping: state.grouping,
@@ -328,8 +346,9 @@ export function useGrid<TData>(options: UseGridOptions<TData>): UseGridReturn<TD
       pinnedTopRows,
       pinnedBottomRows,
       allRows,
-      displayColumnModel,
+      pinnedDisplayColumnModel,
       totalWidth,
+      pinMeta,
       state.sorting,
       state.columnFilters,
       state.grouping,

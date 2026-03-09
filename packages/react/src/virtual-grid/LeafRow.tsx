@@ -1,4 +1,4 @@
-import type { Column, LeafRow as LeafRowType } from "@qigrid/core";
+import type { Column, ColumnPinMeta, LeafRow as LeafRowType } from "@qigrid/core";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { GridCell } from "./GridCell";
@@ -13,6 +13,7 @@ interface LeafRowProps<TData> {
   offsetY: number;
   interaction: CellInteraction;
   renderCell: (row: LeafRowType<TData>, column: Column<TData>) => ReactNode;
+  pinMeta?: ColumnPinMeta[] | undefined;
 }
 
 function LeafRowInner<TData>({
@@ -23,6 +24,7 @@ function LeafRowInner<TData>({
   offsetY,
   interaction,
   renderCell,
+  pinMeta,
 }: LeafRowProps<TData>): ReactNode {
   return (
     <RowContainer
@@ -39,6 +41,7 @@ function LeafRowInner<TData>({
           colIndex={colIndex}
           rowIndex={row.index}
           interaction={interaction}
+          pinMeta={pinMeta?.[colIndex]}
         >
           {col.groupFor ? null : renderCell(row, col)}
         </GridCell>

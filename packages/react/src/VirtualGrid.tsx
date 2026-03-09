@@ -39,6 +39,7 @@ function PinnedSection<TData>({
   rowIndexOffset,
   sectionRowCount,
   pinMeta,
+  overlayClipPath,
 }: {
   rows: LeafRowType<TData>[];
   className: string;
@@ -57,6 +58,7 @@ function PinnedSection<TData>({
   rowIndexOffset: number;
   sectionRowCount: number;
   pinMeta?: ColumnPinMeta[] | undefined;
+  overlayClipPath?: string | undefined;
 }) {
   return (
     <div
@@ -85,15 +87,39 @@ function PinnedSection<TData>({
           pinMeta={pinMeta}
         />
       ))}
-      <SelectionOverlay
-        ranges={selectedRanges}
-        columns={columns}
-        rowHeight={rowHeight}
-        rowIndexOffset={rowIndexOffset}
-        sectionRowCount={sectionRowCount}
-        selectionAnchor={selectionAnchor}
-        focusedCell={focusedCell}
-      />
+      {overlayClipPath ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: totalWidth,
+            height,
+            pointerEvents: "none",
+            clipPath: overlayClipPath,
+          }}
+        >
+          <SelectionOverlay
+            ranges={selectedRanges}
+            columns={columns}
+            rowHeight={rowHeight}
+            rowIndexOffset={rowIndexOffset}
+            sectionRowCount={sectionRowCount}
+            selectionAnchor={selectionAnchor}
+            focusedCell={focusedCell}
+          />
+        </div>
+      ) : (
+        <SelectionOverlay
+          ranges={selectedRanges}
+          columns={columns}
+          rowHeight={rowHeight}
+          rowIndexOffset={rowIndexOffset}
+          sectionRowCount={sectionRowCount}
+          selectionAnchor={selectionAnchor}
+          focusedCell={focusedCell}
+        />
+      )}
     </div>
   );
 }
@@ -183,10 +209,30 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
 
   const handleResizePointerDown = useColumnResize(onColumnResize);
 
+  // --- Overlay clip for pinned columns ---
+
+  const overlayClipPath = useMemo(() => {
+    if (!pinMeta) return undefined;
+    let leftW = 0;
+    let rightW = 0;
+    for (let i = 0; i < pinMeta.length; i++) {
+      const p = pinMeta[i]?.pin;
+      if (p === "left") leftW += columns[i]?.width ?? 0;
+      else if (p === "right") rightW += columns[i]?.width ?? 0;
+    }
+    if (leftW === 0 && rightW === 0) return undefined;
+    return `inset(0 calc(${totalWidth}px - var(--vgrid-sl, 0px) - var(--vgrid-vw, ${totalWidth}px) + ${rightW}px) 0 calc(var(--vgrid-sl, 0px) + ${leftW}px))`;
+  }, [pinMeta, columns, totalWidth]);
+
   // --- Scroll handler ---
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const target = e.currentTarget;
+    setScrollTop(target.scrollTop);
+    if (overlayClipPath) {
+      target.style.setProperty("--vgrid-sl", `${target.scrollLeft}px`);
+      target.style.setProperty("--vgrid-vw", `${target.clientWidth}px`);
+    }
   };
 
   // --- Selection state ---
@@ -285,6 +331,19 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
 
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef, pinnedTopCount, bodyCount);
 
+  // --- Initialize & maintain CSS variables for overlay clip-path ---
+  useEffect(() => {
+    const el = scrollBodyRef.current;
+    if (!el || !overlayClipPath) return undefined;
+    el.style.setProperty("--vgrid-sl", `${el.scrollLeft}px`);
+    el.style.setProperty("--vgrid-vw", `${el.clientWidth}px`);
+    const observer = new ResizeObserver(() => {
+      el.style.setProperty("--vgrid-vw", `${el.clientWidth}px`);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [overlayClipPath]);
+
   // --- Keyboard: skip events from interactive elements (e.g. filter inputs) ---
 
   const handleKeyDown = useCallback(
@@ -358,6 +417,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               rowIndexOffset={0}
               sectionRowCount={pinnedTopCount}
               pinMeta={pinMeta}
+              overlayClipPath={overlayClipPath}
             />
           )}
 
@@ -426,15 +486,39 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
                   />
                 );
               })}
-              <SelectionOverlay
-                ranges={ranges}
-                columns={columns}
-                rowHeight={rowHeight}
-                rowIndexOffset={pinnedTopCount}
-                sectionRowCount={bodyCount}
-                selectionAnchor={selectionAnchor}
-                focusedCell={focusedCell}
-              />
+              {overlayClipPath ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: totalWidth,
+                    height: virtualRange.totalHeight,
+                    pointerEvents: "none",
+                    clipPath: overlayClipPath,
+                  }}
+                >
+                  <SelectionOverlay
+                    ranges={ranges}
+                    columns={columns}
+                    rowHeight={rowHeight}
+                    rowIndexOffset={pinnedTopCount}
+                    sectionRowCount={bodyCount}
+                    selectionAnchor={selectionAnchor}
+                    focusedCell={focusedCell}
+                  />
+                </div>
+              ) : (
+                <SelectionOverlay
+                  ranges={ranges}
+                  columns={columns}
+                  rowHeight={rowHeight}
+                  rowIndexOffset={pinnedTopCount}
+                  sectionRowCount={bodyCount}
+                  selectionAnchor={selectionAnchor}
+                  focusedCell={focusedCell}
+                />
+              )}
             </div>
           </div>
 
@@ -456,6 +540,7 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
               rowIndexOffset={pinnedBottomOffset}
               sectionRowCount={pinnedBottomRows.length}
               pinMeta={pinMeta}
+              overlayClipPath={overlayClipPath}
             />
           )}
         </div>

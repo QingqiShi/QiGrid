@@ -18,9 +18,9 @@ interface GridHeaderProps<TData> {
 function buildPinStyle(meta: ColumnPinMeta | undefined): React.CSSProperties | undefined {
   if (!meta?.pin) return undefined;
   if (meta.pin === "left") {
-    return { position: "sticky", left: meta.stickyOffset, zIndex: 1 };
+    return { position: "sticky", left: meta.stickyOffset, zIndex: 3 };
   }
-  return { position: "sticky", right: meta.stickyOffset, zIndex: 1 };
+  return { position: "sticky", right: meta.stickyOffset, zIndex: 3 };
 }
 
 function buildPinClasses(meta: ColumnPinMeta | undefined, base: string): string {

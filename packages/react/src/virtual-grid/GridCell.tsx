@@ -28,11 +28,11 @@ export function GridCell<TData>({
     if (pinMeta.pin === "left") {
       className += " vgrid-cell-pinned-left";
       if (pinMeta.isLastPinLeft) className += " vgrid-cell-pinned-last-left";
-      stickyStyle = { position: "sticky", left: pinMeta.stickyOffset, zIndex: 1 };
+      stickyStyle = { position: "sticky", left: pinMeta.stickyOffset, zIndex: 3 };
     } else {
       className += " vgrid-cell-pinned-right";
       if (pinMeta.isFirstPinRight) className += " vgrid-cell-pinned-first-right";
-      stickyStyle = { position: "sticky", right: pinMeta.stickyOffset, zIndex: 1 };
+      stickyStyle = { position: "sticky", right: pinMeta.stickyOffset, zIndex: 3 };
     }
   }
 

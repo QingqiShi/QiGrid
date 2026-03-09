@@ -28,7 +28,6 @@ interface PinOverlay {
   rightW: number;
   rightColStart: number;
   rightXStart: number;
-  clipPath: string;
 }
 
 function PinnedColumnOverlays<TData>({
@@ -56,30 +55,33 @@ function PinnedColumnOverlays<TData>({
 }): ReactNode {
   return (
     <>
+      {/* Left-pinned overlay: sticky to left edge, compositor-driven */}
       {pinOverlay.leftCount > 0 && (
         <div
           style={{
-            position: "absolute",
-            left: "var(--vgrid-sl, 0px)",
-            top: 0,
+            position: "sticky",
+            left: 0,
             width: pinOverlay.leftW,
-            height,
-            pointerEvents: "none",
+            height: 0,
             zIndex: 4,
+            pointerEvents: "none",
           }}
         >
-          <SelectionOverlay
-            ranges={ranges}
-            columns={columns}
-            rowHeight={rowHeight}
-            rowIndexOffset={rowIndexOffset}
-            sectionRowCount={sectionRowCount}
-            selectionAnchor={selectionAnchor}
-            focusedCell={focusedCell}
-            colEnd={pinOverlay.leftCount - 1}
-          />
+          <div style={{ position: "absolute", top: 0, width: pinOverlay.leftW, height }}>
+            <SelectionOverlay
+              ranges={ranges}
+              columns={columns}
+              rowHeight={rowHeight}
+              rowIndexOffset={rowIndexOffset}
+              sectionRowCount={sectionRowCount}
+              selectionAnchor={selectionAnchor}
+              focusedCell={focusedCell}
+              colEnd={pinOverlay.leftCount - 1}
+            />
+          </div>
         </div>
       )}
+      {/* Body overlay: absolute, colStart/colEnd clip to body columns */}
       <div
         style={{
           position: "absolute",
@@ -88,7 +90,6 @@ function PinnedColumnOverlays<TData>({
           width: totalWidth,
           height,
           pointerEvents: "none",
-          clipPath: pinOverlay.clipPath,
         }}
       >
         <SelectionOverlay
@@ -103,29 +104,32 @@ function PinnedColumnOverlays<TData>({
           colEnd={pinOverlay.rightColStart - 1}
         />
       </div>
+      {/* Right-pinned overlay: sticky to right edge, compositor-driven */}
       {pinOverlay.rightCount > 0 && (
         <div
           style={{
-            position: "absolute",
-            left: `calc(var(--vgrid-sl, 0px) + var(--vgrid-vw, ${totalWidth}px) - ${pinOverlay.rightW}px)`,
-            top: 0,
+            position: "sticky",
+            right: 0,
+            marginLeft: "auto",
             width: pinOverlay.rightW,
-            height,
-            pointerEvents: "none",
+            height: 0,
             zIndex: 4,
+            pointerEvents: "none",
           }}
         >
-          <SelectionOverlay
-            ranges={ranges}
-            columns={columns}
-            rowHeight={rowHeight}
-            rowIndexOffset={rowIndexOffset}
-            sectionRowCount={sectionRowCount}
-            selectionAnchor={selectionAnchor}
-            focusedCell={focusedCell}
-            colStart={pinOverlay.rightColStart}
-            xAdjust={pinOverlay.rightXStart}
-          />
+          <div style={{ position: "absolute", top: 0, width: pinOverlay.rightW, height }}>
+            <SelectionOverlay
+              ranges={ranges}
+              columns={columns}
+              rowHeight={rowHeight}
+              rowIndexOffset={rowIndexOffset}
+              sectionRowCount={sectionRowCount}
+              selectionAnchor={selectionAnchor}
+              focusedCell={focusedCell}
+              colStart={pinOverlay.rightColStart}
+              xAdjust={pinOverlay.rightXStart}
+            />
+          </div>
         </div>
       )}
     </>
@@ -335,19 +339,13 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
     for (let i = 0; i < rightColStart; i++) {
       rightXStart += columns[i]?.width ?? 0;
     }
-    const clipPath = `inset(0 calc(${totalWidth}px - var(--vgrid-sl, 0px) - var(--vgrid-vw, ${totalWidth}px) + ${rightW}px) 0 calc(var(--vgrid-sl, 0px) + ${leftW}px))`;
-    return { leftCount, rightCount, leftW, rightW, rightColStart, rightXStart, clipPath };
-  }, [pinMeta, columns, totalWidth]);
+    return { leftCount, rightCount, leftW, rightW, rightColStart, rightXStart };
+  }, [pinMeta, columns]);
 
   // --- Scroll handler ---
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    setScrollTop(target.scrollTop);
-    if (pinOverlay) {
-      target.style.setProperty("--vgrid-sl", `${target.scrollLeft}px`);
-      target.style.setProperty("--vgrid-vw", `${target.clientWidth}px`);
-    }
+    setScrollTop(e.currentTarget.scrollTop);
   };
 
   // --- Selection state ---
@@ -445,19 +443,6 @@ export function VirtualGrid<TData>(props: VirtualGridProps<TData>): ReactNode {
   const scrollBodyRef = useRef<HTMLDivElement>(null);
 
   useScrollToFocus(focusedCell, rowHeight, rowAreaHeight, scrollBodyRef, pinnedTopCount, bodyCount);
-
-  // --- Initialize & maintain CSS variables for overlay clip-path ---
-  useEffect(() => {
-    const el = scrollBodyRef.current;
-    if (!el || !pinOverlay) return undefined;
-    el.style.setProperty("--vgrid-sl", `${el.scrollLeft}px`);
-    el.style.setProperty("--vgrid-vw", `${el.clientWidth}px`);
-    const observer = new ResizeObserver(() => {
-      el.style.setProperty("--vgrid-vw", `${el.clientWidth}px`);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [pinOverlay]);
 
   // --- Keyboard: skip events from interactive elements (e.g. filter inputs) ---
 

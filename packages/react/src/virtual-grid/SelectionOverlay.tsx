@@ -12,6 +12,12 @@ interface SelectionOverlayProps<TData> {
   sectionRowCount: number;
   selectionAnchor: CellCoord | null | undefined;
   focusedCell: CellCoord | null | undefined;
+  /** First column index to render (default 0) */
+  colStart?: number;
+  /** Last column index to render (default columns.length - 1) */
+  colEnd?: number;
+  /** Value subtracted from x positions (for repositioning within a container) */
+  xAdjust?: number;
 }
 
 const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
@@ -29,9 +35,9 @@ const SELECTION_BG = "rgba(14, 101, 235, 0.08)";
  * to [rowIndexOffset, rowIndexOffset + sectionRowCount - 1] and converts
  * to local Y positions by subtracting rowIndexOffset.
  *
- * Pinned (sticky) columns have z-index above the overlay, so the overlay
- * naturally hides behind them during horizontal scroll — no scroll-tracking
- * needed.
+ * When pinned columns are present, the caller renders multiple instances
+ * with colStart/colEnd/xAdjust to split the overlay into left-pinned,
+ * body, and right-pinned segments.
  */
 function SelectionOverlayInner<TData>({
   ranges,
@@ -41,7 +47,13 @@ function SelectionOverlayInner<TData>({
   sectionRowCount,
   selectionAnchor,
   focusedCell,
+  colStart: colStartProp,
+  colEnd: colEndProp,
+  xAdjust = 0,
 }: SelectionOverlayProps<TData>): ReactNode {
+  const cStart = colStartProp ?? 0;
+  const cEnd = colEndProp ?? columns.length - 1;
+
   // Column prefix sums for x positioning
   const colPrefixSums = useMemo(() => {
     const sums = new Array<number>(columns.length + 1);
@@ -59,15 +71,15 @@ function SelectionOverlayInner<TData>({
     focusedCell != null &&
     focusedCell.rowIndex >= rowIndexOffset &&
     focusedCell.rowIndex <= sectionEnd &&
-    focusedCell.columnIndex >= 0 &&
-    focusedCell.columnIndex < columns.length ? (
+    focusedCell.columnIndex >= cStart &&
+    focusedCell.columnIndex <= cEnd ? (
       <div
         className="vgrid-cell--focused"
         data-row-index={focusedCell.rowIndex}
         data-col-index={focusedCell.columnIndex}
         style={{
           position: "absolute",
-          left: colPrefixSums[focusedCell.columnIndex] ?? 0,
+          left: (colPrefixSums[focusedCell.columnIndex] ?? 0) - xAdjust,
           top: (focusedCell.rowIndex - rowIndexOffset) * rowHeight,
           width:
             (colPrefixSums[focusedCell.columnIndex + 1] ?? 0) -
@@ -99,13 +111,14 @@ function SelectionOverlayInner<TData>({
     // Clamp to this section's bounds (global coords)
     const startRow = Math.max(rowIndexOffset, nr.start.rowIndex);
     const endRow = Math.min(sectionEnd, nr.end.rowIndex);
-    const startCol = Math.max(0, nr.start.columnIndex);
-    const endCol = Math.min(columns.length - 1, nr.end.columnIndex);
+    const startCol = Math.max(cStart, nr.start.columnIndex);
+    const endCol = Math.min(cEnd, nr.end.columnIndex);
 
     if (startRow > endRow || startCol > endCol) continue;
 
-    const x = colPrefixSums[startCol] ?? 0;
-    const width = (colPrefixSums[endCol + 1] ?? 0) - x;
+    const rawX = colPrefixSums[startCol] ?? 0;
+    const width = (colPrefixSums[endCol + 1] ?? 0) - rawX;
+    const x = rawX - xAdjust;
     const y = (startRow - rowIndexOffset) * rowHeight;
     const height = (endRow - startRow + 1) * rowHeight;
 
@@ -135,13 +148,14 @@ function SelectionOverlayInner<TData>({
       // Clamp bg ranges to this section too
       const bgStartRow = Math.max(rowIndexOffset, bgNr.start.rowIndex);
       const bgEndRow = Math.min(sectionEnd, bgNr.end.rowIndex);
-      const bgStartCol = Math.max(0, bgNr.start.columnIndex);
-      const bgEndCol = Math.min(columns.length - 1, bgNr.end.columnIndex);
+      const bgStartCol = Math.max(cStart, bgNr.start.columnIndex);
+      const bgEndCol = Math.min(cEnd, bgNr.end.columnIndex);
 
       if (bgStartRow > bgEndRow || bgStartCol > bgEndCol) continue;
 
-      const bgX = colPrefixSums[bgStartCol] ?? 0;
-      const bgW = (colPrefixSums[bgEndCol + 1] ?? 0) - bgX;
+      const bgRawX = colPrefixSums[bgStartCol] ?? 0;
+      const bgW = (colPrefixSums[bgEndCol + 1] ?? 0) - bgRawX;
+      const bgX = bgRawX - xAdjust;
       const bgY = (bgStartRow - rowIndexOffset) * rowHeight;
       const bgH = (bgEndRow - bgStartRow + 1) * rowHeight;
 
